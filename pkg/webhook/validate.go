@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	csmetadata "github.com/google/nomos/pkg/metadata"
@@ -16,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -63,7 +63,7 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 	// Until then, we will not configure the webhook to intercept subresources so
 	// this block should never be reached.
 	if req.SubResource != "" {
-		glog.Errorf("Unable to review admission request for sub-resource: %v", req)
+		klog.Errorf("Unable to review admission request for sub-resource: %v", req)
 		return allow()
 	}
 
@@ -78,13 +78,13 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 		// can manage the object.
 		mgr, oldObj, err := objectManager(req)
 		if err != nil {
-			glog.Error(err.Error())
+			klog.Error(err.Error())
 			return allow()
 		}
 		if canManage(username, mgr) {
 			return allow()
 		}
-		glog.Errorf("%s can not manage object %q which is already managed by %s", username, core.GKNN(oldObj), mgr)
+		klog.Errorf("%s can not manage object %q which is already managed by %s", username, core.GKNN(oldObj), mgr)
 		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s can not manage object %q which is already managed by %s", username, core.GKNN(oldObj), mgr))
 	}
 
@@ -96,7 +96,7 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 	// Convert to client.Objects for convenience.
 	oldObj, newObj, err := convertObjects(req)
 	if err != nil {
-		glog.Error(err.Error())
+		klog.Error(err.Error())
 		return allow()
 	}
 
@@ -108,14 +108,14 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 	case admissionv1.Update:
 		return v.handleUpdate(oldObj, newObj, username)
 	default:
-		glog.Errorf("Unsupported operation: %v from %s", req.Operation, username)
+		klog.Errorf("Unsupported operation: %v from %s", req.Operation, username)
 		return allow()
 	}
 }
 
 func (v *Validator) handleCreate(newObj client.Object, username string) admission.Response {
 	if differ.ManagedByConfigSync(newObj) {
-		glog.Errorf("%s is not authorized to create managed resource %q", username, core.GKNN(newObj))
+		klog.Errorf("%s is not authorized to create managed resource %q", username, core.GKNN(newObj))
 		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s is not authorized to create managed resource %q", username, core.GKNN(newObj)))
 	}
 	return allow()
@@ -128,7 +128,7 @@ func (v *Validator) handleDelete(oldObj client.Object, username string) admissio
 		return allow()
 	}
 	if differ.ManagedByConfigSync(oldObj) {
-		glog.Errorf("%s is not authorized to delete managed resource %q", username, core.GKNN(oldObj))
+		klog.Errorf("%s is not authorized to delete managed resource %q", username, core.GKNN(oldObj))
 		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s is not authorized to delete managed resource %q", username, core.GKNN(oldObj)))
 	}
 	return allow()
@@ -139,21 +139,21 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object, username string) 
 		// Both oldObj and newObj are not managed by Config Sync.
 		// The webhook should be configured to only intercept resources which are
 		// managed by Config Sync.
-		glog.Warningf("Received admission request from %s for unmanaged object %q", username, core.GKNN(newObj))
+		klog.Warningf("Received admission request from %s for unmanaged object %q", username, core.GKNN(newObj))
 		return allow()
 	}
 
 	// Build a diff set between old and new objects.
 	diffSet, err := v.differ.FieldDiff(oldObj, newObj)
 	if err != nil {
-		glog.Errorf("Failed to generate field diff set for object %q: %v", core.GKNN(oldObj), err)
+		klog.Errorf("Failed to generate field diff set for object %q: %v", core.GKNN(oldObj), err)
 		return allow()
 	}
 
 	// If the diff set includes any ConfigSync labels or annotations, reject the
 	// request immediately.
 	if csSet := ConfigSyncMetadata(diffSet); !csSet.Empty() {
-		glog.Errorf("%s cannot modify Config Sync metadata of object %q: %s", username, core.GKNN(oldObj), csSet.String())
+		klog.Errorf("%s cannot modify Config Sync metadata of object %q: %s", username, core.GKNN(oldObj), csSet.String())
 		return deny(metav1.StatusReasonForbidden, fmt.Sprintf("%s cannot modify Config Sync metadata of object %q: %s", username, core.GKNN(oldObj), csSet.String()))
 	}
 
@@ -167,7 +167,7 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object, username string) 
 	// which should not be modified.
 	declaredSet, err := DeclaredFields(oldObj)
 	if err != nil {
-		glog.Errorf("Failed to decoded declared fields for object %q: %v", core.GKNN(oldObj), err)
+		klog.Errorf("Failed to decoded declared fields for object %q: %v", core.GKNN(oldObj), err)
 		return allow()
 	}
 
@@ -175,7 +175,7 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object, username string) 
 	// request. Otherwise allow it.
 	invalidSet := diffSet.Intersection(declaredSet)
 	if !invalidSet.Empty() {
-		glog.Errorf("%s cannot modify fields of object %q managed by Config Sync: %s", username, core.GKNN(oldObj), invalidSet.String())
+		klog.Errorf("%s cannot modify fields of object %q managed by Config Sync: %s", username, core.GKNN(oldObj), invalidSet.String())
 		return deny(metav1.StatusReasonForbidden, fmt.Sprintf("%s cannot modify fields of object %q managed by Config Sync: %s", username, core.GKNN(oldObj), invalidSet.String()))
 	}
 	return allow()

@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policycontroller/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -35,11 +35,11 @@ func (c *constraintReconciler) Reconcile(ctx context.Context, request reconcile.
 	resource.SetGroupVersionKind(c.gvk)
 	if err := c.client.Get(ctx, request.NamespacedName, &resource); err != nil {
 		if errors.IsNotFound(err) {
-			glog.Infof("%s %q was deleted", c.gvk, request.NamespacedName)
+			klog.Infof("%s %q was deleted", c.gvk, request.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 
-		glog.Errorf("Error getting %s %q: %v", c.gvk, request.NamespacedName, err)
+		klog.Errorf("Error getting %s %q: %v", c.gvk, request.NamespacedName, err)
 		return reconcile.Result{}, err
 	}
 
@@ -48,14 +48,14 @@ func (c *constraintReconciler) Reconcile(ctx context.Context, request reconcile.
 	annotateConstraint(resource)
 
 	if !util.AnnotationsChanged(&resource, resCopy) {
-		glog.V(3).Infof("%s %q was upserted, but annotations are unchanged", c.gvk, request.NamespacedName)
+		klog.V(3).Infof("%s %q was upserted, but annotations are unchanged", c.gvk, request.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 
-	glog.Infof("%s %q was upserted", c.gvk, request.NamespacedName)
+	klog.Infof("%s %q was upserted", c.gvk, request.NamespacedName)
 	err := c.client.Patch(ctx, &resource, patch)
 	if err != nil {
-		glog.Errorf("Failed to patch annotations for %s: %v", c.gvk, err)
+		klog.Errorf("Failed to patch annotations for %s: %v", c.gvk, err)
 	}
 	return reconcile.Result{}, err
 }
@@ -94,7 +94,7 @@ func annotateConstraint(con unstructured.Unstructured) {
 
 	status, err := unmarshalConstraint(con)
 	if err != nil {
-		glog.Errorf("Failed to unmarshal %s %q: %v", con.GroupVersionKind(), con.GetName(), err)
+		klog.Errorf("Failed to unmarshal %s %q: %v", con.GroupVersionKind(), con.GetName(), err)
 		return
 	}
 

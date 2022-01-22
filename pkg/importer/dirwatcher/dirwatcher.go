@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 type scan struct {
@@ -39,7 +39,7 @@ type Watcher struct {
 
 // NewWatcher creates a new watcher for the given directory.
 func NewWatcher(dir string) *Watcher {
-	glog.Infof("Setting up recursive watch for %s", dir)
+	klog.Infof("Setting up recursive watch for %s", dir)
 	w := &Watcher{
 		dir:  dir,
 		scan: newScan(),
@@ -56,7 +56,7 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration) {
 		case <-time.After(period):
 			w.probe(w.dir)
 		case <-ctx.Done():
-			glog.Infof("Stop requested, terminating watch")
+			klog.Infof("Stop requested, terminating watch")
 			return
 		}
 	}
@@ -67,29 +67,29 @@ func (w *Watcher) probe(dir string) {
 	if _, lstatErr := os.Lstat(dir); lstatErr == nil {
 		walkErr := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				glog.Errorf("got error while walking %s at %s", dir, path)
+				klog.Errorf("got error while walking %s at %s", dir, path)
 				return err
 			}
 			scan.manifest[path] = info
 			if prevInfo, found := w.scan.manifest[path]; found {
 				if diff := w.diff(prevInfo, info); diff != "" {
-					glog.Infof("modify %s %s %s", typeStr(info), path, diff)
+					klog.Infof("modify %s %s %s", typeStr(info), path, diff)
 				}
 			} else {
 				// add
-				glog.Infof("add %s %s %s", typeStr(info), path, w.infoStr(info))
+				klog.Infof("add %s %s %s", typeStr(info), path, w.infoStr(info))
 			}
 			return nil
 		})
 		if walkErr != nil {
-			glog.Errorf("got error from filepath.Walk for %s: %v", dir, walkErr)
+			klog.Errorf("got error from filepath.Walk for %s: %v", dir, walkErr)
 		}
 	} else {
 		switch {
 		case os.IsNotExist(lstatErr):
 		// does not exist, diff logic will take care of printing removal
 		default:
-			glog.Errorf("got error from os.Lstat %s: %v", dir, lstatErr)
+			klog.Errorf("got error from os.Lstat %s: %v", dir, lstatErr)
 		}
 	}
 	scan.setEnd()
@@ -97,7 +97,7 @@ func (w *Watcher) probe(dir string) {
 	// deletes
 	for path, prevInfo := range w.scan.manifest {
 		if _, found := scan.manifest[path]; !found {
-			glog.Infof("remove %s %s", typeStr(prevInfo), path)
+			klog.Infof("remove %s %s", typeStr(prevInfo), path)
 		}
 	}
 	w.scan = scan

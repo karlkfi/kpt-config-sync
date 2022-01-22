@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -78,13 +78,13 @@ func (r *repoStatus) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 func (r *repoStatus) reconcile(ctx context.Context) (reconcile.Result, error) {
 	repoObj, sErr := r.rClient.GetOrCreateRepo(ctx)
 	if sErr != nil {
-		glog.Errorf("Failed to fetch Repo: %v", sErr)
+		klog.Errorf("Failed to fetch Repo: %v", sErr)
 		return reconcile.Result{Requeue: true}, sErr
 	}
 
 	state, err := r.buildState(ctx)
 	if err != nil {
-		glog.Errorf("Failed to build sync state: %v", err)
+		klog.Errorf("Failed to build sync state: %v", err)
 		return reconcile.Result{Requeue: true}, sErr
 	}
 
@@ -97,7 +97,7 @@ func (r *repoStatus) reconcile(ctx context.Context) (reconcile.Result, error) {
 	// new sync status is equal to the old one.
 	updatedRepo, err := r.rClient.UpdateSyncStatus(ctx, repoObj)
 	if err != nil {
-		glog.Errorf("Failed to update RepoSyncStatus: %v", err)
+		klog.Errorf("Failed to update RepoSyncStatus: %v", err)
 		return reconcile.Result{Requeue: true}, sErr
 	}
 
@@ -183,18 +183,18 @@ func (s syncState) merge(repoStatus *v1.RepoStatus, now func() metav1.Time) {
 	var updated bool
 	if len(s.unreconciledCommits) == 0 {
 		if len(repoStatus.Source.Errors) > 0 || len(repoStatus.Import.Errors) > 0 {
-			glog.Infof("No unreconciled commits but there are source/import errors. RepoStatus sync token will remain at %q.", repoStatus.Sync.LatestToken)
+			klog.Infof("No unreconciled commits but there are source/import errors. RepoStatus sync token will remain at %q.", repoStatus.Sync.LatestToken)
 		} else if repoStatus.Sync.LatestToken != repoStatus.Import.Token {
-			glog.Infof("All commits are reconciled, updating RepoStatus sync token to %q.", repoStatus.Import.Token)
+			klog.Infof("All commits are reconciled, updating RepoStatus sync token to %q.", repoStatus.Import.Token)
 			repoStatus.Sync.LatestToken = repoStatus.Import.Token
 			updated = true
 		}
 	} else {
-		glog.Infof("RepoStatus import token at %q, but %d commits are unreconciled. RepoStatus sync token will remain at %q.",
+		klog.Infof("RepoStatus import token at %q, but %d commits are unreconciled. RepoStatus sync token will remain at %q.",
 			repoStatus.Import.Token, len(s.unreconciledCommits), repoStatus.Sync.LatestToken)
-		if glog.V(2) {
+		if klog.V(2).Enabled() {
 			for token, cfgs := range s.unreconciledCommits {
-				glog.Infof("Unreconciled configs for commit %q: %v", token, cfgs)
+				klog.Infof("Unreconciled configs for commit %q: %v", token, cfgs)
 			}
 		}
 	}

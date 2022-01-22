@@ -4,9 +4,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -60,7 +60,7 @@ func (s *reconcilerState) checkpoint() {
 	if applied == s.lastApplied {
 		return
 	}
-	glog.Infof("Reconciler checkpoint updated to %s", applied)
+	klog.Infof("Reconciler checkpoint updated to %s", applied)
 	s.cache.errs = nil
 	s.lastApplied = applied
 	s.cache.needToRetry = false
@@ -72,7 +72,7 @@ func (s *reconcilerState) checkpoint() {
 // reset sets the reconciler to retry in the next second because the rendering
 // status is not available
 func (s *reconcilerState) reset() {
-	glog.Infof("Resetting reconciler checkpoint because the rendering status is not available yet")
+	klog.Infof("Resetting reconciler checkpoint because the rendering status is not available yet")
 	s.resetCache()
 	s.lastApplied = ""
 	s.cache.needToRetry = true
@@ -82,7 +82,7 @@ func (s *reconcilerState) reset() {
 // invalidate logs the errors, clears the state tracking information.
 // invalidate does not clean up the `s.cache`.
 func (s *reconcilerState) invalidate(errs status.MultiError) {
-	glog.Errorf("Invalidating reconciler checkpoint: %v", status.FormatSingleLine(errs))
+	klog.Errorf("Invalidating reconciler checkpoint: %v", status.FormatSingleLine(errs))
 	oldErrs := s.cache.errs
 	s.cache.errs = errs
 	// Invalidate state on error since this could be the result of switching

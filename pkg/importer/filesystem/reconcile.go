@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/declared"
@@ -31,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -148,7 +148,7 @@ func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err erro
 	} else {
 		err = fmt.Errorf(gitSyncError)
 	}
-	glog.Errorf("Failed to resolve config directory: %v", status.FormatSingleLine(err))
+	klog.Errorf("Failed to resolve config directory: %v", status.FormatSingleLine(err))
 	sErr := errBuilder.Sprintf("unable to sync repo\n%s", gitSyncError).Build()
 	c.updateSourceStatus(ctx, nil, sErr.ToCME())
 	return reconcile.Result{}, nil
@@ -174,7 +174,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
-	glog.V(4).Infof("Reconciling: %v", request)
+	klog.V(4).Infof("Reconciling: %v", request)
 	startTime := time.Now()
 
 	// Check if the source configs are synced successfully.
@@ -197,10 +197,10 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// Detect whether symlink has changed, if the reconcile trigger is to periodically poll the filesystem.
 	if request.Name == pollFilesystem && c.appliedGitDir == absGitDir.OSPath() {
-		glog.V(4).Info("no new changes, nothing to do.")
+		klog.V(4).Info("no new changes, nothing to do.")
 		return reconcile.Result{}, nil
 	}
-	glog.Infof("Resolved config dir: %s. Polling config dir: %s", absPolicyDir,
+	klog.Infof("Resolved config dir: %s. Polling config dir: %s", absPolicyDir,
 		filepath.Join(c.absGitDir.OSPath(), c.policyDir.OSPath()))
 	// Unset applied git dir. Only set this on complete import success.
 	c.appliedGitDir = ""
@@ -208,7 +208,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// Parse the commit hash from the new directory to use as an import token.
 	token, err := git.CommitHash(absGitDir.OSPath())
 	if err != nil {
-		glog.Warningf("Invalid format for config directory format: %v", err)
+		klog.Warningf("Invalid format for config directory format: %v", err)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateSourceStatus(ctx, nil, status.SourceError.Wrap(err).Sprintf("unable to parse commit hash").Build().ToCME())
 		return reconcile.Result{}, nil
@@ -218,30 +218,30 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// cluster has seen the change even if it runs into issues parsing/importing it.
 	repoObj := c.updateSourceStatus(ctx, &token)
 	if repoObj == nil {
-		glog.Warningf("Repo object is missing. Restarting import of %s.", token)
+		klog.Warningf("Repo object is missing. Restarting import of %s.", token)
 		// If we failed to get the Repo, restart the controller loop to try to fetch it again.
 		return reconcile.Result{}, nil
 	}
 
 	currentConfigs, err := namespaceconfig.ListConfigs(ctx, c.cache)
 	if err != nil {
-		glog.Errorf("failed to list current configs: %v", err)
+		klog.Errorf("failed to list current configs: %v", err)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		return reconcile.Result{}, nil
 	}
 
 	// check git status, blow up if we see issues
 	if err = git.CheckClean(absGitDir.OSPath()); err != nil {
-		glog.Errorf("git check clean returned error: %v", err)
+		klog.Errorf("git check clean returned error: %v", err)
 		logWalkDirectory(absGitDir.OSPath())
 		importer.Metrics.Violations.Inc()
 		return reconcile.Result{}, err
 	}
 
-	glog.Infof("listing policy files in %s", absPolicyDir.OSPath())
+	klog.Infof("listing policy files in %s", absPolicyDir.OSPath())
 	wantFiles, err := git.ListFiles(absPolicyDir)
 	if err != nil {
-		glog.Error(err)
+		klog.Error(err)
 		return reconcile.Result{}, errors.Wrap(err, "listing git files")
 	}
 	if c.format == SourceFormatHierarchy {
@@ -257,14 +257,14 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
 	syncedCRDs, err := clusterconfig.GetCRDs(decoder, currentConfigs.CRDClusterConfig)
 	if err != nil {
-		glog.Error(err)
+		klog.Error(err)
 		return reconcile.Result{}, errors.Wrap(err, "reading synced CRDs")
 	}
 
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
 	fileObjects, mErr := c.parser.Parse(filePaths)
 	if mErr != nil {
-		glog.Warningf("Failed to parse: %v", status.FormatSingleLine(mErr))
+		klog.Warningf("Failed to parse: %v", status.FormatSingleLine(mErr))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
 		return reconcile.Result{}, nil
@@ -287,7 +287,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		fileObjects, validationErrs = validate.Hierarchical(fileObjects, options)
 	}
 	if validationErrs != nil {
-		glog.Warningf("Failed to validate: %v", status.FormatSingleLine(validationErrs))
+		klog.Warningf("Failed to validate: %v", status.FormatSingleLine(validationErrs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(validationErrs))
 		if status.HasBlockingErrors(validationErrs) {
@@ -297,14 +297,14 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	gs := makeGitState(absGitDir.OSPath(), fileObjects)
 	if c.parsedGit == nil {
-		glog.Infof("Importer state initialized at git revision %s. Unverified file list: %s", gs.rev, gs.filePaths)
+		klog.Infof("Importer state initialized at git revision %s. Unverified file list: %s", gs.rev, gs.filePaths)
 	} else if c.parsedGit.rev != gs.rev {
-		glog.Infof("Importer state updated to git revision %s. Unverified files list: %s", gs.rev, gs.filePaths)
+		klog.Infof("Importer state updated to git revision %s. Unverified files list: %s", gs.rev, gs.filePaths)
 	} else if c.parsedGit.filePaths == gs.filePaths {
-		glog.V(2).Infof("Importer state remains at git revision %s. Verified files hash: %s", gs.rev, gs.filePaths)
+		klog.V(2).Infof("Importer state remains at git revision %s. Verified files hash: %s", gs.rev, gs.filePaths)
 	} else {
-		glog.Errorf("Importer read inconsistent files at git revision %s. Expected files hash: %s, Diff: %s", gs.rev, c.parsedGit.filePaths, cmp.Diff(c.parsedGit.filePathList, gs.filePathList))
-		glog.Errorf("Inconsistent files: %s", dumpForFiles(fileObjects))
+		klog.Errorf("Importer read inconsistent files at git revision %s. Expected files hash: %s, Diff: %s", gs.rev, c.parsedGit.filePaths, cmp.Diff(c.parsedGit.filePathList, gs.filePathList))
+		klog.Errorf("Inconsistent files: %s", dumpForFiles(fileObjects))
 		return c.filesystemError(ctx, absGitDir.OSPath())
 	}
 	c.parsedGit = gs
@@ -325,12 +325,12 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
 
 	if err = c.updateDecoderWithAPIResources(currentConfigs.Syncs, desiredConfigs.Syncs); err != nil {
-		glog.Warningf("Failed to parse sync resources: %v", err)
+		klog.Warningf("Failed to parse sync resources: %v", err)
 		return reconcile.Result{}, nil
 	}
 
 	if errs := differ.Update(ctx, c.client, c.decoder, *currentConfigs, *desiredConfigs, c.initTime); errs != nil {
-		glog.Warningf("Failed to apply actions: %v", status.FormatSingleLine(errs))
+		klog.Warningf("Failed to apply actions: %v", status.FormatSingleLine(errs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(status.Append(errs, validationErrs)))
 		return reconcile.Result{}, nil
@@ -341,7 +341,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
 	c.updateImportStatus(ctx, repoObj, token, startTime, nil)
 
-	glog.V(4).Infof("Reconcile completed")
+	klog.V(4).Infof("Reconcile completed")
 	return reconcile.Result{}, nil
 }
 
@@ -352,18 +352,18 @@ func (c *reconciler) safetyCheck(desired, current *namespaceconfig.AllConfigs) s
 	if len(desired.NamespaceConfigs) == 0 {
 		count := len(current.NamespaceConfigs)
 		if count > 1 {
-			glog.Errorf("Importer parsed 0 NamespaceConfigs from mounted git repo but detected %d NamespaceConfigs on the cluster. This is a dangerous change, so it will be rejected.", count)
+			klog.Errorf("Importer parsed 0 NamespaceConfigs from mounted git repo but detected %d NamespaceConfigs on the cluster. This is a dangerous change, so it will be rejected.", count)
 			return status.EmptySourceError(count, "namespaces")
 		}
-		glog.Warningf("Importer did not parse any NamespaceConfigs in git repo. Cluster currently has %d NamespaceConfigs, so this will proceed.", count)
+		klog.Warningf("Importer did not parse any NamespaceConfigs in git repo. Cluster currently has %d NamespaceConfigs, so this will proceed.", count)
 	}
 	if desired.ClusterScopedCount() == 0 {
 		count := current.ClusterScopedCount()
 		if count > 1 {
-			glog.Errorf("Importer parsed 0 cluster-scoped resources from mounted git repo but detected %d resources on the cluster. This is a dangerous change, so it will be rejected.", count)
+			klog.Errorf("Importer parsed 0 cluster-scoped resources from mounted git repo but detected %d resources on the cluster. This is a dangerous change, so it will be rejected.", count)
 			return status.EmptySourceError(count, "cluster-scoped resources")
 		}
-		glog.Warningf("Importer did not parse any cluster-scoped resources in git repo. Cluster currently has %d resources, so this will proceed.", count)
+		klog.Warningf("Importer did not parse any cluster-scoped resources in git repo. Cluster currently has %d resources, so this will proceed.", count)
 	}
 	return nil
 }
@@ -373,7 +373,7 @@ func (c *reconciler) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 	// Try to get a fresh copy of Repo since it is has high contention with syncer.
 	freshRepoObj, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
-		glog.Errorf("failed to get fresh Repo: %v", err)
+		klog.Errorf("failed to get fresh Repo: %v", err)
 	} else {
 		repoObj = freshRepoObj
 	}
@@ -383,7 +383,7 @@ func (c *reconciler) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 	repoObj.Status.Import.Errors = errs
 
 	if _, err = c.repoClient.UpdateImportStatus(ctx, repoObj); err != nil {
-		glog.Errorf("failed to update Repo import status: %v", err)
+		klog.Errorf("failed to update Repo import status: %v", err)
 	}
 }
 
@@ -394,7 +394,7 @@ func (c *reconciler) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 func (c *reconciler) updateSourceStatus(ctx context.Context, token *string, errs ...v1.ConfigManagementError) *v1.Repo {
 	r, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
-		glog.Errorf("failed to get fresh Repo: %v", err)
+		klog.Errorf("failed to get fresh Repo: %v", err)
 		return nil
 	}
 	if token != nil {
@@ -403,7 +403,7 @@ func (c *reconciler) updateSourceStatus(ctx context.Context, token *string, errs
 	r.Status.Source.Errors = errs
 
 	if _, err = c.repoClient.UpdateSourceStatus(ctx, r); err != nil {
-		glog.Errorf("failed to update Repo source status: %v", err)
+		klog.Errorf("failed to update Repo source status: %v", err)
 	}
 	return r
 }

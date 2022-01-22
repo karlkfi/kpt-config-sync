@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 // WalkDirectory exported for testing.
@@ -29,14 +29,14 @@ func walkDirectory(dir string) ([]string, error) {
 	return seen, err
 }
 
-// logWalkDirectory logs a directory walk to glog.Error
+// logWalkDirectory logs a directory walk to klog.Error
 func logWalkDirectory(dir string) {
 	files, err := walkDirectory(dir)
 	if err != nil {
-		glog.Errorf("error while walking %s: %s", dir, err)
+		klog.Errorf("error while walking %s: %s", dir, err)
 	}
-	glog.Errorf("walked %d files in %s", len(files), dir)
+	klog.Errorf("walked %d files in %s", len(files), dir)
 	for _, file := range files {
-		glog.Errorf("  %s", file)
+		klog.Errorf("  %s", file)
 	}
 }

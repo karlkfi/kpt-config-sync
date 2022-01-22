@@ -1,7 +1,6 @@
 package objects
 
 import (
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/customresources"
@@ -9,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/klog/v2"
 )
 
 // RawVisitor is a function that validates or hydrates Raw objects.
@@ -45,7 +45,7 @@ func (r *Raw) Scoped() (*Scoped, status.MultiError) {
 		s, err := scoper.GetObjectScope(obj)
 		if err != nil {
 			if r.AllowUnknownKinds {
-				glog.V(6).Infof("ignoring error: %v", err)
+				klog.V(6).Infof("ignoring error: %v", err)
 			} else {
 				errs = status.Append(errs, err)
 			}

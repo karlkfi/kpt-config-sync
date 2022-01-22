@@ -2,10 +2,10 @@
 package constrainttemplate
 
 import (
-	"github.com/golang/glog"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -35,7 +35,7 @@ func MatchesGK(crd *apiextensionsv1.CustomResourceDefinition) bool {
 
 // AddController adds the ConstraintTemplate controller to the given Manager.
 func AddController(mgr manager.Manager) error {
-	glog.Info("Adding controller for ConstraintTemplates")
+	klog.Info("Adding controller for ConstraintTemplates")
 	r := newReconciler(mgr.GetClient())
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {

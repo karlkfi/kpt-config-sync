@@ -20,9 +20,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
-	github.com/go-logr/glogr v0.3.0
 	github.com/go-logr/logr v0.4.0
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/google/uuid v1.2.0
@@ -45,6 +43,8 @@ require (
 	k8s.io/cli-runtime v0.21.1
 	k8s.io/client-go v0.21.1
 	k8s.io/cluster-registry v0.0.6
+	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.9.0
 	k8s.io/kube-openapi v0.0.0-20210527164424-3c818078ee3d
 	k8s.io/kubectl v0.21.1
 	k8s.io/utils v0.0.0-20210707171843-4b05e18ac7d9

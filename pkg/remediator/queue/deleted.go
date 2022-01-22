@@ -3,9 +3,9 @@ package queue
 import (
 	"context"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/metrics"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -25,7 +25,7 @@ func (d *deleted) DeepCopyObject() runtime.Object {
 // the returned Object to Add().
 func MarkDeleted(ctx context.Context, obj client.Object) client.Object {
 	if obj == nil {
-		glog.Warning("Attempting to mark nil object as deleted")
+		klog.Warning("Attempting to mark nil object as deleted")
 		metrics.RecordInternalError(ctx, "remediator")
 		return obj
 	}
@@ -36,7 +36,7 @@ func MarkDeleted(ctx context.Context, obj client.Object) client.Object {
 // deleted from the cluster.
 func WasDeleted(ctx context.Context, obj client.Object) bool {
 	if obj == nil {
-		glog.Warning("Attempting to check nil object for WasDeleted")
+		klog.Warning("Attempting to check nil object for WasDeleted")
 		metrics.RecordInternalError(ctx, "remediator")
 		return false
 	}

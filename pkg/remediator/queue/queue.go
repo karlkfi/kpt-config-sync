@@ -3,10 +3,10 @@ package queue
 import (
 	"sync"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -90,7 +90,7 @@ func (q *ObjectQueue) Add(obj client.Object) {
 	// generation is equal, we default to accepting the new object as it may have
 	// new labels or annotations or other metadata.
 	if current, ok := q.objects[gvknn]; ok && current.GetGeneration() > obj.GetGeneration() {
-		glog.V(4).Infof("Queue already contains object %q with generation %d; ignoring object: %v", gvknn, current.GetGeneration(), obj)
+		klog.V(4).Infof("Queue already contains object %q with generation %d; ignoring object: %v", gvknn, current.GetGeneration(), obj)
 		return
 	}
 
@@ -109,7 +109,7 @@ func (q *ObjectQueue) Add(obj client.Object) {
 	// 9. The gvknn is no longer marked dirty.
 	// 10. The reconciler finishes processing gen2 of the resource and calls Done().
 	// 11. Since the gvknn is not marked dirty, we remove the resource from q.objects.
-	glog.V(2).Infof("Upserting object into queue: %v", obj)
+	klog.V(2).Infof("Upserting object into queue: %v", obj)
 	q.objects[gvknn] = obj
 	q.underlying.Add(gvknn)
 
@@ -151,7 +151,7 @@ func (q *ObjectQueue) Get() (client.Object, bool) {
 
 	gvknn, isID := item.(GVKNN)
 	if !isID {
-		glog.Warningf("Got non GVKNN from work queue: %v", item)
+		klog.Warningf("Got non GVKNN from work queue: %v", item)
 		q.underlying.Done(item)
 		q.rateLimiter.Forget(item)
 		return nil, false
@@ -159,7 +159,7 @@ func (q *ObjectQueue) Get() (client.Object, bool) {
 
 	obj := q.objects[gvknn]
 	delete(q.dirty, gvknn)
-	glog.V(4).Infof("Fetched object for processing: %v", obj)
+	klog.V(4).Infof("Fetched object for processing: %v", obj)
 	return obj.DeepCopyObject().(client.Object), false
 }
 
@@ -174,10 +174,10 @@ func (q *ObjectQueue) Done(obj client.Object) {
 	q.underlying.Done(gvknn)
 
 	if q.dirty[gvknn] {
-		glog.V(4).Infof("Leaving dirty object reference in place: %v", q.objects[gvknn])
+		klog.V(4).Infof("Leaving dirty object reference in place: %v", q.objects[gvknn])
 		q.cond.Signal()
 	} else {
-		glog.V(2).Infof("Removing clean object reference: %v", q.objects[gvknn])
+		klog.V(2).Infof("Removing clean object reference: %v", q.objects[gvknn])
 		delete(q.objects, gvknn)
 	}
 }

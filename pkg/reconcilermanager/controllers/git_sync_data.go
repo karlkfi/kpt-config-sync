@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/metrics"
+	"k8s.io/klog/v2"
 )
 
 // GitConfig constants.
@@ -100,7 +100,7 @@ func gitSyncData(ctx context.Context, opts options) map[string]string {
 		}
 	default:
 		// TODO b/168553377 Return error while setting up gitSyncData.
-		glog.Errorf("Unrecognized secret type %s", opts.secretType)
+		klog.Errorf("Unrecognized secret type %s", opts.secretType)
 	}
 	return result
 }

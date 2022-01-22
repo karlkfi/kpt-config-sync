@@ -4,12 +4,12 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/bugreport"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 // Cmd retrieves readers for all relevant nomos container logs and cluster state commands and writes them to a zip file
@@ -21,10 +21,10 @@ var Cmd = &cobra.Command{
 		// Don't show usage on error, as argument validation passed.
 		cmd.SilenceUsage = true
 
-		// hack to set the hidden variable in glog to also print info statements
+		// hack to set the hidden variable in klog to also print info statements
 		// cobra does not expose core golang-style flags
 		if err := flag.CommandLine.Parse([]string{"--stderrthreshold=0"}); err != nil {
-			glog.Errorf("could not increase logging verbosity: %v", err)
+			klog.Errorf("could not increase logging verbosity: %v", err)
 		}
 
 		cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)

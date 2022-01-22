@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/golang/glog"
 	"github.com/google/nomos/cmd/nomos/flags"
 	nomosparse "github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/pkg/declared"
@@ -25,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	"gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -101,13 +101,13 @@ func mustDeleteOutput(err error, output string) {
 		if err == nil {
 			return
 		}
-		glog.Errorf("Unable to delete directory %s: %v", output, err)
+		klog.Errorf("Unable to delete directory %s: %v", output, err)
 		retries++
 	}
 	if err != nil {
-		glog.Error(err)
+		klog.Error(err)
 	}
-	glog.Fatalf("Attempted to delete the output directory %s for %d times, but all failed. Exiting now...", output, retries)
+	klog.Fatalf("Attempted to delete the output directory %s for %d times, but all failed. Exiting now...", output, retries)
 }
 
 // kustomizeBuild runs the 'kustomize build' command to render the configs.

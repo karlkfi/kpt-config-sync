@@ -3,7 +3,6 @@ package reconcile
 import (
 	"context"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/metadata"
@@ -12,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 )
 
 // HandleDiff updates objects on the cluster based on the difference between actual and declared resources.
@@ -44,6 +44,6 @@ func warnInvalidAnnotationResource(recorder record.EventRecorder, declared *unst
 		declared,
 		declared.GetAnnotations()[metadata.ResourceManagementKey],
 	)
-	glog.Warning(err)
+	klog.Warning(err)
 	recorder.Event(declared, corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation, err.Error())
 }

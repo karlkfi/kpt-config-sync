@@ -3,11 +3,11 @@ package configuration
 import (
 	"sort"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 )
 
 // Merge merges two sets of ValidatingWebhookConfigurations so that the
@@ -37,7 +37,7 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 			// We do NOT want to fail here as the Configuration on the API Server
 			// may have been changed by a user. We don't want to put ourselves in an
 			// infinite error loop.
-			glog.Warning(InvalidWebhookWarning("removed admission webhook specifying no API Groups"))
+			klog.Warning(InvalidWebhookWarning("removed admission webhook specifying no API Groups"))
 			continue
 		}
 		group := webhook.Rules[0].APIGroups[0]
@@ -47,7 +47,7 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 		if webhook.ObjectSelector == nil || webhook.ObjectSelector.MatchLabels == nil {
 			// The webhook is configured to match objects in a way we don't support, so
 			// ignore it.
-			glog.Warning(InvalidWebhookWarning("removed admission webhook missing objectSelector.matchLabels"))
+			klog.Warning(InvalidWebhookWarning("removed admission webhook missing objectSelector.matchLabels"))
 			continue
 		}
 		version := webhook.ObjectSelector.MatchLabels[metadata.DeclaredVersionLabel]
@@ -55,7 +55,7 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 		if group == "*" || version == "*" {
 			// This was probably added by a user. It can cause the webhook to have
 			// unexpected effects, so we ignore these rules when merging.
-			glog.Warning(InvalidWebhookWarning("removed admission webhook matching wildcard group or version"))
+			klog.Warning(InvalidWebhookWarning("removed admission webhook matching wildcard group or version"))
 			continue
 		}
 

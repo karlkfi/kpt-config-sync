@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -15,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 )
 
 // updater mutates the most-recently-seen versions of objects stored in memory.
@@ -62,7 +62,7 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 		objs, err := u.resources.Update(ctx, objs)
 		metrics.RecordDeclaredResources(ctx, len(objs))
 		if err != nil {
-			glog.Infof("Terminate the reconciliation (failed to update the declared resources): %v", err)
+			klog.Infof("Terminate the reconciliation (failed to update the declared resources): %v", err)
 			return err
 		}
 

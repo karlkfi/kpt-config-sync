@@ -2,44 +2,41 @@
 package main
 
 import (
-	"flag"
-
-	"github.com/go-logr/glogr"
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/monitor"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
+	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {
-	flag.Parse()
 	log.Setup()
-	ctrl.SetLogger(glogr.New())
+	ctrl.SetLogger(klogr.New())
 
 	cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 	if err != nil {
-		glog.Fatalf("Failed to create rest config: %v", err)
+		klog.Fatalf("Failed to create rest config: %v", err)
 	}
 
 	// Create a new Manager to provide shared dependencies and start components.
 	mgr, err := manager.New(cfg, manager.Options{})
 	if err != nil {
-		glog.Fatalf("Failed to create manager: %v", err)
+		klog.Fatalf("Failed to create manager: %v", err)
 	}
 
 	go service.ServeMetrics()
 
 	// Setup all Controllers
 	if err := monitor.AddToManager(mgr); err != nil {
-		glog.Fatalf("Failed to add controller to manager: %v", err)
+		klog.Fatalf("Failed to add controller to manager: %v", err)
 	}
 
 	// Start the Manager.
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		glog.Fatalf("Error starting controller: %v", err)
+		klog.Fatalf("Error starting controller: %v", err)
 	}
 }

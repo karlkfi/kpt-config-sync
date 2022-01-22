@@ -5,7 +5,6 @@ package diff
 import (
 	"context"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/lifecycle"
@@ -15,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -78,7 +78,7 @@ func (d Diff) Operation(ctx context.Context, manager declared.Scope) Operation {
 		// cluster, so we need to figure out whether we delete the resource.
 		return d.deleteType(manager)
 	default:
-		glog.Warning("Calculated diff for object with no declaration and not on the cluster")
+		klog.Warning("Calculated diff for object with no declaration and not on the cluster")
 		metrics.RecordInternalError(ctx, "differ")
 		// Nothing to do; no resource exists.
 		return NoOp
@@ -225,7 +225,7 @@ func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]client.Object) [
 			}
 			diffs = append(diffs, toCreate)
 		} else if IsUnknown(actual) {
-			glog.Infof("Skipping diff for resource in unknown state: %s", coreID)
+			klog.Infof("Skipping diff for resource in unknown state: %s", coreID)
 		} else {
 			toUpdate := Diff{
 				Declared: newDecl,

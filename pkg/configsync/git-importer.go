@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer/dirwatcher"
@@ -16,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/meta"
 	"github.com/google/nomos/pkg/syncer/reconcile"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -40,7 +40,7 @@ func RunImporter() {
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 	if err != nil {
-		glog.Fatalf("failed to create rest config: %+v", err)
+		klog.Fatalf("failed to create rest config: %+v", err)
 	}
 
 	// Create a new Manager to provide shared dependencies and start components.
@@ -48,12 +48,12 @@ func RunImporter() {
 		SyncPeriod: resyncPeriod,
 	})
 	if err != nil {
-		glog.Fatalf("Failed to create manager: %+v", err)
+		klog.Fatalf("Failed to create manager: %+v", err)
 	}
 
 	// Set up Scheme for nomos resources.
 	if err := v1.AddToScheme(mgr.GetScheme()); err != nil {
-		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
+		klog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
 
 	// Normalize policyDirRelative.
@@ -64,29 +64,29 @@ func RunImporter() {
 
 	// Set up controllers.
 	if err := meta.AddControllers(mgr); err != nil {
-		glog.Fatalf("Error adding Sync controller: %+v", err)
+		klog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
 	if err := filesystem.AddController(*clusterName, mgr, *gitDir,
 		dir, *pollPeriod); err != nil {
-		glog.Fatalf("Error adding Importer controller: %+v", err)
+		klog.Fatalf("Error adding Importer controller: %+v", err)
 	}
 
 	if err := controller.AddRepoStatus(mgr); err != nil {
-		glog.Fatalf("Error adding RepoStatus controller: %+v", err)
+		klog.Fatalf("Error adding RepoStatus controller: %+v", err)
 	}
 
 	ctx := signals.SetupSignalHandler()
 	if err := policycontroller.AddControllers(ctx, mgr); err != nil {
-		glog.Fatalf("Error adding PolicyController controller: %+v", err)
+		klog.Fatalf("Error adding PolicyController controller: %+v", err)
 	}
 
 	// Start the Manager.
 	if err := mgr.Start(ctx); err != nil {
-		glog.Fatalf("Error starting controller: %+v", err)
+		klog.Fatalf("Error starting controller: %+v", err)
 	}
 
-	glog.Info("Exiting")
+	klog.Info("Exiting")
 }
 
 // DirWatcher watches the filesystem of a given directory until a shutdown signal is received.

@@ -4,13 +4,13 @@ import (
 	"context"
 	"sync"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
@@ -151,9 +151,9 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 	}
 
 	if startedWatches > 0 || stoppedWatches > 0 {
-		glog.Infof("The remediator made new progress: started %d new watches, and stopped %d watches", startedWatches, stoppedWatches)
+		klog.Infof("The remediator made new progress: started %d new watches, and stopped %d watches", startedWatches, stoppedWatches)
 	} else {
-		glog.V(4).Infof("The remediator made no new progress")
+		klog.V(4).Infof("The remediator made no new progress")
 	}
 	return errs
 }
@@ -197,7 +197,7 @@ func (m *Manager) startWatcher(ctx context.Context, gvk schema.GroupVersionKind)
 // threadsafe.
 func (m *Manager) runWatcher(ctx context.Context, r Runnable, gvk schema.GroupVersionKind) {
 	if err := r.Run(ctx); err != nil {
-		glog.Warningf("Error running watcher for %s: %v", gvk.String(), status.FormatSingleLine(err))
+		klog.Warningf("Error running watcher for %s: %v", gvk.String(), status.FormatSingleLine(err))
 		m.mux.Lock()
 		delete(m.watcherMap, gvk)
 		m.needsUpdate = true

@@ -12,12 +12,12 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -80,7 +80,7 @@ var Cmd = &cobra.Command{
 				return errors.Wrapf(err, "failed to create client configs")
 			}
 
-			glog.Fatalf("Failed to get clients: %v", err)
+			klog.Fatalf("Failed to get clients: %v", err)
 		}
 		if len(clientMap) == 0 {
 			return errors.New("no clusters found")
@@ -181,6 +181,6 @@ func clearTerminal(out io.Writer) {
 
 	cmd.Stdout = out
 	if err := cmd.Run(); err != nil {
-		glog.Warningf("Failed to execute command: %v", err)
+		klog.Warningf("Failed to execute command: %v", err)
 	}
 }

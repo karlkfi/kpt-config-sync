@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -100,7 +100,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	metrics.ReconcileDuration.WithLabelValues("crd", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
 	if err != nil {
-		glog.Errorf("Could not reconcile CRD ClusterConfig: %v", err)
+		klog.Errorf("Could not reconcile CRD ClusterConfig: %v", err)
 		return reconcile.Result{}, err
 	}
 
@@ -143,7 +143,7 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 			return nil
 		}
 		err = errors.Wrapf(err, "could not retrieve ClusterConfig %q", v1.CRDClusterConfigName)
-		glog.Error(err)
+		klog.Error(err)
 		mErr = status.Append(mErr, err)
 		return mErr
 	}
@@ -222,7 +222,7 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		// We've updated CRDs on the cluster; restart the NamespaceConfig and ClusterConfig controllers.
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, v1.EventReasonReconcileComplete,
 			"crd cluster config was successfully reconciled: %d changes", reconcileCount)
-		glog.Info("Triggering restart due to repo CRD change")
+		klog.Info("Triggering restart due to repo CRD change")
 	}
 
 	crdList, err := r.listCrds(ctx)
@@ -234,7 +234,7 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 			needRestart = true
 			r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, v1.EventReasonCRDChange,
 				"crds changed on the cluster restarting syncer controllers")
-			glog.Info("Triggering restart due to external CRD change")
+			klog.Info("Triggering restart due to external CRD change")
 		}
 		r.allCrds = allCrds
 	}

@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
@@ -29,6 +28,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/util"
 	"k8s.io/kubectl/pkg/util/openapi"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,13 +113,13 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	m.RecordApplyOperation(ctx, "create", m.StatusTagKey(err), intendedState.GroupVersionKind())
 
 	if err != nil {
-		glog.V(3).Infof("Failed to create object %v: %v", core.GKNN(intendedState), err)
+		klog.V(3).Infof("Failed to create object %v: %v", core.GKNN(intendedState), err)
 		return false, err
 	}
 	if c.fights.detectFight(ctx, time.Now(), intendedState, &c.fLogger, "create") {
-		glog.Warningf("Fight detected on create of %s.", description(intendedState))
+		klog.Warningf("Fight detected on create of %s.", description(intendedState))
 	}
-	glog.V(3).Infof("Created object %v", core.GKNN(intendedState))
+	klog.V(3).Infof("Created object %v", core.GKNN(intendedState))
 	return true, nil
 }
 
@@ -142,11 +142,11 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 	if updated {
 		if c.fights.detectFight(ctx, time.Now(), intendedState, &c.fLogger, "update") {
 			diff := cmp.Diff(currentState, intendedState)
-			glog.Warningf("Fight detected on update of %s with difference %s", description(intendedState), diff)
+			klog.Warningf("Fight detected on update of %s with difference %s", description(intendedState), diff)
 		}
-		glog.V(3).Infof("The object %v was updated with the patch %v", core.GKNN(currentState), string(patch))
+		klog.V(3).Infof("The object %v was updated with the patch %v", core.GKNN(currentState), string(patch))
 	} else {
-		glog.V(3).Infof("The object %v is up to date.", core.GKNN(currentState))
+		klog.V(3).Infof("The object %v is up to date.", core.GKNN(currentState))
 	}
 	return updated, nil
 }
@@ -165,9 +165,9 @@ func (c *clientApplier) RemoveNomosMeta(ctx context.Context, u *unstructured.Uns
 	m.RecordApplyOperation(ctx, "update", m.StatusTagKey(err), u.GroupVersionKind())
 
 	if changed {
-		glog.V(3).Infof("RemoveNomosMeta changed the object %v", core.GKNN(u))
+		klog.V(3).Infof("RemoveNomosMeta changed the object %v", core.GKNN(u))
 	} else {
-		glog.V(3).Infof("RemoveNomosMeta did not change the object %v", core.GKNN(u))
+		klog.V(3).Infof("RemoveNomosMeta did not change the object %v", core.GKNN(u))
 	}
 	return changed, err
 }
@@ -179,13 +179,13 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	m.RecordApplyOperation(ctx, "delete", m.StatusTagKey(err), obj.GroupVersionKind())
 
 	if err != nil {
-		glog.V(3).Infof("Failed to delete object %v: %v", core.GKNN(obj), err)
+		klog.V(3).Infof("Failed to delete object %v: %v", core.GKNN(obj), err)
 		return false, err
 	}
 	if c.fights.detectFight(ctx, time.Now(), obj, &c.fLogger, "delete") {
-		glog.Warningf("Fight detected on delete of %s.", description(obj))
+		klog.Warningf("Fight detected on delete of %s.", description(obj))
 	}
-	glog.V(3).Infof("Deleted object %v", core.GKNN(obj))
+	klog.V(3).Infof("Deleted object %v", core.GKNN(obj))
 	return true, nil
 }
 
@@ -272,9 +272,9 @@ func (c *clientApplier) updateAPIService(ctx context.Context, intendedState, cur
 	}
 	if previous == nil {
 		if c.multirepoEnabled {
-			glog.Warningf("3-way merge patch for %s may be incorrect due to missing last-applied-configuration annotation.", resourceDescription)
+			klog.Warningf("3-way merge patch for %s may be incorrect due to missing last-applied-configuration annotation.", resourceDescription)
 		} else {
-			glog.Warningf("3-way merge patch for %s may be incorrect due to missing declared-config annotation.", resourceDescription)
+			klog.Warningf("3-way merge patch for %s may be incorrect due to missing declared-config annotation.", resourceDescription)
 		}
 	}
 
@@ -312,7 +312,7 @@ func (c *clientApplier) updateAPIService(ctx context.Context, intendedState, cur
 			if apierrors.IsUnsupportedMediaType(err) {
 				patch = nil
 			} else {
-				glog.Warningf("strategic merge patch for %s failed: %v", resourceDescription, err)
+				klog.Warningf("strategic merge patch for %s failed: %v", resourceDescription, err)
 			}
 		}
 	}
@@ -332,10 +332,10 @@ func (c *clientApplier) updateAPIService(ctx context.Context, intendedState, cur
 	}
 
 	if isNoOpPatch(patch) {
-		glog.V(3).Infof("Ignoring no-op patch %s for %q", patch, resourceDescription)
+		klog.V(3).Infof("Ignoring no-op patch %s for %q", patch, resourceDescription)
 	} else {
-		glog.Infof("Patched %s", resourceDescription)
-		glog.V(1).Infof("Patched with %s", patch)
+		klog.Infof("Patched %s", resourceDescription)
+		klog.V(1).Infof("Patched with %s", patch)
 	}
 
 	return patch, nil
@@ -350,7 +350,7 @@ func (c *clientApplier) calculateStrategic(resourceDescription string, gvk schem
 	patchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: gvkSchema}
 	patch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, patchMeta, true)
 	if err != nil {
-		glog.Infof("strategic patch unavailable for %s (will use JSON patch instead): %v", resourceDescription, err)
+		klog.Infof("strategic patch unavailable for %s (will use JSON patch instead): %v", resourceDescription, err)
 		return nil
 	}
 	return patch

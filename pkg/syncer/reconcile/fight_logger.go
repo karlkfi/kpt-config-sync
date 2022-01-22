@@ -3,8 +3,8 @@ package reconcile
 import (
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/status"
+	"k8s.io/klog/v2"
 )
 
 // fightLogger is used to log errors about fights from fightDetector at most
@@ -25,7 +25,7 @@ func newFightLogger() fightLogger {
 
 // markUpdated marks that API resource `resource` was updated at time `now`.
 // If the estimated frequency of updates is greater than `fightThreshold`, logs
-// this to glog.Warning. The log message appears at most once per minute.
+// this to klog.Warning. The log message appears at most once per minute.
 //
 // Returns true if the new estimated update frequency is at least `fightThreshold`.
 func (d *fightLogger) logFight(now time.Time, err status.ResourceError) bool {
@@ -40,7 +40,7 @@ func (d *fightLogger) logFight(now time.Time, err status.ResourceError) bool {
 		return false
 	}
 
-	glog.Warning(err)
+	klog.Warning(err)
 	d.lastLogged[i] = now
 	return true
 }

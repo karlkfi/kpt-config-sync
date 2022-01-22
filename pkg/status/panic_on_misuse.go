@@ -3,7 +3,7 @@ package status
 import (
 	"flag"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 var panicOnMisuse = false
@@ -22,7 +22,7 @@ func EnablePanicOnMisuse() {
 	panicOnMisuse = true
 }
 
-// reportMisuse either panics, or logs an error with glog.Errorf depending on
+// reportMisuse either panics, or logs an error with klog.Errorf depending on
 // whether panicOnMisuse is true.
 func reportMisuse(message string) {
 	if panicOnMisuse {
@@ -31,6 +31,6 @@ func reportMisuse(message string) {
 		panic(message)
 	} else {
 		// Show it in the logs, but don't kill the application in production.
-		glog.Errorf("internal error: %s", message)
+		klog.Errorf("internal error: %s", message)
 	}
 }

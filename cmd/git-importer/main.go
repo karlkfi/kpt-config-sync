@@ -7,12 +7,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-logr/glogr"
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/configsync"
 	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
+	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -29,17 +29,16 @@ func getEnvDuration(key string, defaultDuration time.Duration) time.Duration {
 
 	duration, err := time.ParseDuration(val)
 	if err != nil {
-		glog.Errorf("Failed to parse duration %q from env var %s: %s", val, key, err)
+		klog.Errorf("Failed to parse duration %q from env var %s: %s", val, key, err)
 		return defaultDuration
 	}
 	return duration
 }
 
 func main() {
-	flag.Parse()
 	log.Setup()
 	profiler.Service()
-	ctrl.SetLogger(glogr.New())
+	ctrl.SetLogger(klogr.New())
 	if *watchDirectory != "" {
 		configsync.DirWatcher(*watchDirectory, *watchPeriod)
 		os.Exit(0)

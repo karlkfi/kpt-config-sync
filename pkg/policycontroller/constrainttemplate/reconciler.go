@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policycontroller/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -26,11 +26,11 @@ func (c *constraintTemplateReconciler) Reconcile(ctx context.Context, request re
 	ct := emptyConstraintTemplate()
 	if err := c.client.Get(ctx, request.NamespacedName, &ct); err != nil {
 		if !errors.IsNotFound(err) {
-			glog.Errorf("Error getting ConstraintTemplate %q: %v", request.NamespacedName, err)
+			klog.Errorf("Error getting ConstraintTemplate %q: %v", request.NamespacedName, err)
 			return reconcile.Result{}, err
 		}
 
-		glog.Infof("ConstraintTemplate %q was deleted", request.NamespacedName)
+		klog.Infof("ConstraintTemplate %q was deleted", request.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 
@@ -39,14 +39,14 @@ func (c *constraintTemplateReconciler) Reconcile(ctx context.Context, request re
 	annotateConstraintTemplate(ct)
 
 	if !util.AnnotationsChanged(&ct, ctCopy) {
-		glog.V(3).Infof("ConstraintTemplate %q was upserted, but annotations are unchanged", request.NamespacedName)
+		klog.V(3).Infof("ConstraintTemplate %q was upserted, but annotations are unchanged", request.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 
-	glog.Infof("ConstraintTemplate %q was upserted", request.NamespacedName)
+	klog.Infof("ConstraintTemplate %q was upserted", request.NamespacedName)
 	err := c.client.Patch(ctx, &ct, patch)
 	if err != nil {
-		glog.Errorf("Failed to patch annotations for ConstraintTemplate: %v", err)
+		klog.Errorf("Failed to patch annotations for ConstraintTemplate: %v", err)
 	}
 	return reconcile.Result{}, err
 }
@@ -84,7 +84,7 @@ func annotateConstraintTemplate(ct unstructured.Unstructured) {
 
 	status, err := unmarshalCT(ct)
 	if err != nil {
-		glog.Errorf("Failed to unmarshal ConstraintTemplate %q: %v", ct.GetName(), err)
+		klog.Errorf("Failed to unmarshal ConstraintTemplate %q: %v", ct.GetName(), err)
 		return
 	}
 

@@ -3,7 +3,6 @@ package hydrate
 import (
 	"errors"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
@@ -13,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
 )
 
@@ -22,7 +22,7 @@ import (
 // from being changed by another controller or user.
 func DeclaredFields(objs *objects.Raw) status.MultiError {
 	if objs.Converter == nil {
-		glog.Warning("Skipping declared field hydration. This should only happen for offline executions of nomos vet/hydrate/init.")
+		klog.Warning("Skipping declared field hydration. This should only happen for offline executions of nomos vet/hydrate/init.")
 		return nil
 	}
 
@@ -50,11 +50,11 @@ func DeclaredFields(objs *objects.Raw) status.MultiError {
 		// Refresh the converter so that the new schema of types can be used in the next loop of parsing/validating.
 		// If the error returned by `encodeDeclaredFields` is due to the
 		// out of date schema in the Converter, it will be gone in the next loop of hydration/validation.
-		glog.Info("Got error from encoding declared fields. It might be due to an out of date schemas. Refreshing the schemas from the discovery client")
+		klog.Info("Got error from encoding declared fields. It might be due to an out of date schemas. Refreshing the schemas from the discovery client")
 		if err := objs.Converter.Refresh(); err != nil {
 			// No special handling for the error here.
 			// If Refresh function fails, the next loop of hydration/validation will trigger it again.
-			glog.Warningf("failed to refresh the schemas %v", err)
+			klog.Warningf("failed to refresh the schemas %v", err)
 		}
 	}
 	return errs

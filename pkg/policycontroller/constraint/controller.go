@@ -2,10 +2,10 @@
 package constraint
 
 import (
-	"github.com/golang/glog"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -38,11 +38,11 @@ func AddController(mgr manager.Manager, kind string) error {
 	gvk := GVK(kind)
 	r := newReconciler(mgr.GetClient(), gvk)
 
-	glog.Infof("Adding controller for constraint: %s", gvk)
+	klog.Infof("Adding controller for constraint: %s", gvk)
 	controllerName := controllerPrefix + gvk.String()
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		glog.Errorf("Error creating %s: %v", controllerName, err)
+		klog.Errorf("Error creating %s: %v", controllerName, err)
 		return err
 	}
 
@@ -50,7 +50,7 @@ func AddController(mgr manager.Manager, kind string) error {
 	resource.SetGroupVersionKind(gvk)
 	err = c.Watch(&source.Kind{Type: &resource}, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		glog.Errorf("Error setting up watch for %s: %v", gvk.String(), err)
+		klog.Errorf("Error setting up watch for %s: %v", gvk.String(), err)
 		return err
 	}
 

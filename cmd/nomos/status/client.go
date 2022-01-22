@@ -12,7 +12,6 @@ import (
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/Masterminds/semver"
-	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	"github.com/google/nomos/cmd/nomos/flags"
@@ -33,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
@@ -456,9 +456,9 @@ func ClusterClients(ctx context.Context, contexts []string) (map[string]*Cluster
 	wg.Wait()
 
 	if unreachableClusters {
-		// We can't stop the underlying libraries from spamming to glog when a cluster is unreachable,
+		// We can't stop the underlying libraries from spamming to klog when a cluster is unreachable,
 		// so just flush it out and print a blank line to at least make a clean separation.
-		glog.Flush()
+		klog.Flush()
 		fmt.Println()
 	}
 	return clientMap, nil

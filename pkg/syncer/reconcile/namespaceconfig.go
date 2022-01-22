@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -79,9 +79,9 @@ func (r *namespaceConfigReconciler) Reconcile(ctx context.Context, request recon
 	metrics.ReconcileEventTimes.WithLabelValues("namespace").Set(float64(start.Unix()))
 
 	name := request.Name
-	glog.V(2).Infof("Reconciling NamespaceConfig: %q", name)
+	klog.V(2).Infof("Reconciling NamespaceConfig: %q", name)
 	if configmanagement.IsControllerNamespace(name) {
-		glog.Errorf("Trying to reconcile a NamespaceConfig corresponding to a reserved namespace: %q", name)
+		klog.Errorf("Trying to reconcile a NamespaceConfig corresponding to a reserved namespace: %q", name)
 		// We don't return an error, because we should never be reconciling these NamespaceConfigs in the first place.
 		return reconcile.Result{}, nil
 	}
@@ -94,7 +94,7 @@ func (r *namespaceConfigReconciler) Reconcile(ctx context.Context, request recon
 
 	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
 	if filtered := filterContextCancelled(err); filtered != nil {
-		glog.Errorf("Could not reconcile namespaceconfig %q: %v", name, status.FormatSingleLine(filtered))
+		klog.Errorf("Could not reconcile namespaceconfig %q: %v", name, status.FormatSingleLine(filtered))
 	}
 	return reconcile.Result{}, err
 }
@@ -153,14 +153,14 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 		Actual:   ns,
 	}
 
-	glog.V(3).Infof("ns:%q: diffType=%v", name, diff.Type())
+	klog.V(3).Infof("ns:%q: diffType=%v", name, diff.Type())
 	var syncErrs []v1.ConfigManagementError
 	switch diff.Type() {
 	case differ.Create:
 		if err := r.createNamespace(ctx, config); err != nil {
 			syncErrs = append(syncErrs, newSyncError(config, err))
 			if err2 := r.setNamespaceConfigStatus(ctx, config, r.mgrInitTime, syncErrs, nil); err2 != nil {
-				glog.Warningf("Failed to set status on NamespaceConfig after namespace creation error: %s", err2)
+				klog.Warningf("Failed to set status on NamespaceConfig after namespace creation error: %s", err2)
 			}
 			return err
 		}
@@ -185,7 +185,7 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 		// Remove defunct labels and annotations.
 		unmanageErr := r.unmanageNamespace(ctx, ns)
 		if unmanageErr != nil {
-			glog.Warningf("Failed to remove management labels and annotations from namespace: %s", unmanageErr.Error())
+			klog.Warningf("Failed to remove management labels and annotations from namespace: %s", unmanageErr.Error())
 			return unmanageErr
 		}
 
@@ -194,7 +194,7 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 
 	case differ.Error:
 		value := config.GetAnnotations()[metadata.ResourceManagementKey]
-		glog.Warningf("Namespace %q has invalid management annotation %q", name, value)
+		klog.Warningf("Namespace %q has invalid management annotation %q", name, value)
 		r.recorder.Eventf(
 			config,
 			corev1.EventTypeWarning,
@@ -227,7 +227,7 @@ func (r *namespaceConfigReconciler) manageConfigs(ctx context.Context, namespace
 	}
 
 	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); len(gks) != 0 {
-		glog.Warningf("NamespaceConfig reconciler encountered GroupKinds that were not present in a sync: %s. Waiting for reconciler restart",
+		klog.Warningf("NamespaceConfig reconciler encountered GroupKinds that were not present in a sync: %s. Waiting for reconciler restart",
 			strings.Join(gks, ", "))
 		// We only reach this case on a race condition where the reconciler is run before the
 		// changes to Sync objects are picked up.  We exit early since there are resources we can't
@@ -305,7 +305,7 @@ func needsUpdate(config *v1.NamespaceConfig, initTime metav1.Time, errs []v1.Con
 		return false
 	}
 	if !config.Spec.ImportTime.After(initTime.Time) || !config.Spec.ImportTime.After(config.Spec.DeleteSyncedTime.Time) {
-		glog.V(3).Infof("Ignoring previously imported config %q", config.Name)
+		klog.V(3).Infof("Ignoring previously imported config %q", config.Name)
 		return false
 	}
 	return !config.Status.SyncState.IsSynced() ||
@@ -324,7 +324,7 @@ func needsUpdate(config *v1.NamespaceConfig, initTime metav1.Time, errs []v1.Con
 // repostatus-reconciler can force-update the stalled configs on startup.
 func (r *namespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context, config *v1.NamespaceConfig, initTime metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
 	if !needsUpdate(config, initTime, errs, rcs) {
-		glog.V(3).Infof("Skipping status update for NamespaceConfig %q; status is already up-to-date.", config.Name)
+		klog.V(3).Infof("Skipping status update for NamespaceConfig %q; status is already up-to-date.", config.Name)
 		return nil
 	}
 
@@ -381,7 +381,7 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 }
 
 func (r *namespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
-	glog.V(2).Infof("Creating namespace %q based upon NamespaceConfig declaration.", namespaceConfig.Name)
+	klog.V(2).Infof("Creating namespace %q based upon NamespaceConfig declaration.", namespaceConfig.Name)
 	namespace := asNamespace(namespaceConfig)
 	u, err := AsUnstructuredSanitized(namespace)
 	if err == nil {
@@ -397,7 +397,7 @@ func (r *namespaceConfigReconciler) createNamespace(ctx context.Context, namespa
 }
 
 func (r *namespaceConfigReconciler) updateNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig, actual *corev1.Namespace) error {
-	glog.V(2).Infof("Updating namespace %q based upon NamespaceConfig declaration.", namespaceConfig.Name)
+	klog.V(2).Infof("Updating namespace %q based upon NamespaceConfig declaration.", namespaceConfig.Name)
 	intended := asNamespace(namespaceConfig)
 
 	uActual, err := AsUnstructuredSanitized(actual)
@@ -420,7 +420,7 @@ func (r *namespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 }
 
 func (r *namespaceConfigReconciler) deleteNamespace(ctx context.Context, namespace *corev1.Namespace) error {
-	glog.V(2).Infof("Deleting namespace %q because it is marked for deletion in corresponding NamespaceConfig.", namespace.GetName())
+	klog.V(2).Infof("Deleting namespace %q because it is marked for deletion in corresponding NamespaceConfig.", namespace.GetName())
 
 	err := r.client.Delete(ctx, namespace)
 
@@ -436,13 +436,13 @@ func (r *namespaceConfigReconciler) deleteNamespace(ctx context.Context, namespa
 func (r *namespaceConfigReconciler) deleteNsConfig(ctx context.Context, config *v1.NamespaceConfig) error {
 	if config == nil {
 		// We should never reach this code path.
-		glog.Warningf("Attempted to delete nonexistent NamespaceConfig")
+		klog.Warningf("Attempted to delete nonexistent NamespaceConfig")
 		return nil
 	}
-	glog.V(2).Infof("Namespace %q was removed, deleting corresponding NamespaceConfig", config.GetName())
+	klog.V(2).Infof("Namespace %q was removed, deleting corresponding NamespaceConfig", config.GetName())
 
 	if differ.ManagementDisabled(config) {
-		glog.Infof("Namespace %q is management disabled, deleting corresponding NamespaceConfig", config.GetName())
+		klog.Infof("Namespace %q is management disabled, deleting corresponding NamespaceConfig", config.GetName())
 	} else {
 		ns := &corev1.Namespace{}
 		err := r.client.Get(ctx, apitypes.NamespacedName{Name: config.Name}, ns)
@@ -480,10 +480,10 @@ func (r *namespaceConfigReconciler) deleteManageableSystem(ctx context.Context, 
 
 	if config == nil {
 		// We should never reach this code path.
-		glog.Warningf("Attempted to delete nonexistent NamespaceConfig")
+		klog.Warningf("Attempted to delete nonexistent NamespaceConfig")
 		return nil
 	}
-	glog.V(2).Infof("System Namespace %q was unmanaged; deleting corresponding NamespaceConfig", config.GetName())
+	klog.V(2).Infof("System Namespace %q was unmanaged; deleting corresponding NamespaceConfig", config.GetName())
 
 	if err := r.client.Delete(ctx, config); err != nil {
 		return errors.Wrapf(err, "Error deleting NamespaceConfig %s after unmanaging namespace", config.GetName())

@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
@@ -25,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -93,7 +93,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 	}
 	builder := utildiscovery.ScoperBuilder(p.discoveryInterface)
 
-	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	klog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	objs, err := p.parser.Parse(filePaths)
 	if err != nil {
 		return nil, err
@@ -161,7 +161,7 @@ func (p *root) setSourceStatusWithRetries(ctx context.Context, newStatus gitStat
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
 		if isRequestTooLargeError(err) {
-			glog.Infof("Failed to update RootSync source status (total error count: %d, denominator: %d): %s.", rs.Status.Source.ErrorSummary.TotalCount, denominator, err)
+			klog.Infof("Failed to update RootSync source status (total error count: %d, denominator: %d): %s.", rs.Status.Source.ErrorSummary.TotalCount, denominator, err)
 			return p.setSourceStatusWithRetries(ctx, newStatus, denominator*2)
 		}
 		return status.APIServerError(err, "failed to update RootSync source status from parser")
@@ -231,7 +231,7 @@ func (p *root) setRenderingStatusWithRetires(ctx context.Context, newStatus rend
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
 		if isRequestTooLargeError(err) {
-			glog.Infof("Failed to update RootSync rendering status (total error count: %d, denominator: %d): %s.", rs.Status.Rendering.ErrorSummary.TotalCount, denominator, err)
+			klog.Infof("Failed to update RootSync rendering status (total error count: %d, denominator: %d): %s.", rs.Status.Rendering.ErrorSummary.TotalCount, denominator, err)
 			return p.setRenderingStatusWithRetires(ctx, newStatus, denominator*2)
 		}
 		return status.APIServerError(err, "failed to update RootSync rendering status from parser")
@@ -301,7 +301,7 @@ func (p *root) setSyncStatusWithRetries(ctx context.Context, errs status.MultiEr
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
 		if isRequestTooLargeError(err) {
-			glog.Infof("Failed to update RootSync sync status (total error count: %d, denominator: %d): %s.", rs.Status.Sync.ErrorSummary.TotalCount, denominator, err)
+			klog.Infof("Failed to update RootSync sync status (total error count: %d, denominator: %d): %s.", rs.Status.Sync.ErrorSummary.TotalCount, denominator, err)
 			return p.setSyncStatusWithRetries(ctx, errs, denominator*2)
 		}
 		return status.APIServerError(err, "failed to update RootSync sync status")

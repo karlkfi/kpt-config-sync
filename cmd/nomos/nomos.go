@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	pkgversion "github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -36,11 +37,8 @@ func init() {
 }
 
 func main() {
-	// glog gripes if you don't parse flags before making any logging statements.
-	if err := flag.CommandLine.Parse([]string{}); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	klog.InitFlags(nil)
+	flag.Parse()
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

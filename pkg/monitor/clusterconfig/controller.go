@@ -7,11 +7,11 @@ import (
 
 	"github.com/google/nomos/pkg/util/repo"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/monitor/state"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -37,7 +37,7 @@ type reconciler struct {
 // Reconcile is the callback for Reconciler.
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	if request.Name != v1.ClusterConfigName && request.Name != v1.CRDClusterConfigName {
-		glog.Errorf("ClusterConfig has invalid name %q", request.Name)
+		klog.Errorf("ClusterConfig has invalid name %q", request.Name)
 		// Return nil since we don't want to queue a retry.
 		return reconcile.Result{}, nil
 	}
@@ -53,14 +53,14 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		r.state.DeleteConfig(request.Name)
 		err = nil
 	default:
-		glog.Errorf("Failed to fetch ClusterConfig for %q.", request.Name)
+		klog.Errorf("Failed to fetch ClusterConfig for %q.", request.Name)
 	}
 	if err != nil {
-		glog.Errorf("Could not reconcile ClusterConfig %q: %v", request.Name, err)
+		klog.Errorf("Could not reconcile ClusterConfig %q: %v", request.Name, err)
 	}
 
 	if repoObj, err := r.repoCl.GetOrCreateRepo(ctx); err != nil {
-		glog.Errorf("Failed to fetch Repo: %v", err)
+		klog.Errorf("Failed to fetch Repo: %v", err)
 	} else {
 		r.state.ProcessRepo(repoObj)
 	}

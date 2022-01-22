@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // kubectl auth provider plugins
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 // DefaultTimeout is the default REST config timeout.
@@ -41,8 +41,8 @@ func NewRestConfig(timeout time.Duration) (*rest.Config, error) {
 	for _, source := range configSources {
 		config, err := source.create()
 		if err == nil {
-			glog.V(1).Infof("Created rest config from source %s", source.name)
-			glog.V(7).Infof("Config: %#v", *config)
+			klog.V(1).Infof("Created rest config from source %s", source.name)
+			klog.V(7).Infof("Config: %#v", *config)
 			// Comfortable QPS limits for us to run smoothly.
 			// The defaults are too low. It is probably safe to increase these if
 			// we see problems in the future or need to accommodate VERY large numbers
@@ -56,7 +56,7 @@ func NewRestConfig(timeout time.Duration) (*rest.Config, error) {
 			return config, nil
 		}
 
-		glog.V(5).Infof("Failed to create from %s: %s", source.name, err)
+		klog.V(5).Infof("Failed to create from %s: %s", source.name, err)
 		errorStrs = append(errorStrs, fmt.Sprintf("%s: %s", source.name, err))
 	}
 

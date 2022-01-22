@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/id"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -135,7 +135,7 @@ func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
 func (eb ErrorBuilder) Wrap(toWrap error) ErrorBuilder {
 	if e, isStatusError := toWrap.(Error); isStatusError {
 		// We don't allow wrapping KNV errors in other KNV errors.
-		glog.Info(e.Code())
+		klog.Info(e.Code())
 		reportMisuse("attempted wrap a status.Error in another status.Error")
 	}
 	if toWrap == nil {

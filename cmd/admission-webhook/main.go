@@ -4,11 +4,11 @@ import (
 	"flag"
 	"os"
 
-	"github.com/go-logr/glogr"
 	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/google/nomos/pkg/webhook"
 	"github.com/google/nomos/pkg/webhook/configuration"
+	"k8s.io/klog/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -23,11 +23,10 @@ func main() {
 	// Default to true since not restarting doesn't make sense?
 	flag.BoolVar(&restartOnSecretRefresh, "cert-restart-on-secret-refresh", true, "Kills the process when secrets are refreshed so that the pod can be restarted (secrets take up to 60s to be updated by running pods)")
 
-	flag.Parse()
 	log.Setup()
 
 	profiler.Service()
-	ctrl.SetLogger(glogr.New())
+	ctrl.SetLogger(klogr.New())
 
 	setupLog.Info("starting manager")
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

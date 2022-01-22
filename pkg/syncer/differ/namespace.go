@@ -1,11 +1,11 @@
 package differ
 
 import (
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metadata"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 )
 
 // NamespaceDiff represents a diff between a Namespace config and the one on the cluster.
@@ -67,7 +67,7 @@ func (d *NamespaceDiff) Type() Type {
 		// uninstall Nomos, remove the declaration of the namespace from the repo, then reinstall
 		// Nomos with the actual namespace still present and annotated from when it was managed. We
 		// can't infer the user's intent so we just NoOp.
-		glog.Warningf("Ignoring Namespace %q which has management annotations but there is no NamespaceConfig.", d.Name)
+		klog.Warningf("Ignoring Namespace %q which has management annotations but there is no NamespaceConfig.", d.Name)
 	}
 
 	// The Namespace does not exist on the API Server and has no corresponding NamespaceConfig, so do nothing.

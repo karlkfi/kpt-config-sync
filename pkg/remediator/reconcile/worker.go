@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/metrics"
@@ -15,6 +14,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -79,17 +79,17 @@ func (w *Worker) process(ctx context.Context, obj client.Object) bool {
 			metrics.RecordResourceConflict(ctx, obj.GetObjectKind().GroupVersionKind())
 			err := w.refresh(ctx, obj)
 			if err != nil {
-				glog.Errorf("Worker unable to update cached version of %q: %v", core.IDOf(obj), err)
+				klog.Errorf("Worker unable to update cached version of %q: %v", core.IDOf(obj), err)
 			}
 		}
 
-		glog.Errorf("Worker received an error while reconciling %q: %v", core.IDOf(obj), err)
+		klog.Errorf("Worker received an error while reconciling %q: %v", core.IDOf(obj), err)
 		w.objectQueue.Retry(obj)
 
 		return false
 	}
 
-	glog.V(3).Infof("Worker reconciled %q", core.IDOf(obj))
+	klog.V(3).Infof("Worker reconciled %q", core.IDOf(obj))
 	w.objectQueue.Forget(obj)
 	return true
 }

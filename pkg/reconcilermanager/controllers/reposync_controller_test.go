@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -29,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -98,7 +98,7 @@ func init() {
 	var err error
 	filesystemPollingPeriod, err = time.ParseDuration(pollingPeriod)
 	if err != nil {
-		glog.Exitf("failed to parse polling period: %q, got error: %v, want error: nil", pollingPeriod, err)
+		klog.Exitf("failed to parse polling period: %q, got error: %v, want error: nil", pollingPeriod, err)
 	}
 	hydrationPollingPeriod = filesystemPollingPeriod
 }

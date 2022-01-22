@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -86,7 +86,7 @@ func (r *metaReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 	metrics.ReconcileDuration.WithLabelValues("sync", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
 	if err != nil {
-		glog.Errorf("Error while reconciling Sync resources: %v", err)
+		klog.Errorf("Error while reconciling Sync resources: %v", err)
 	}
 	return reconcile.Result{}, err
 }
@@ -138,7 +138,7 @@ func (r *metaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 		metrics.ControllerRestarts.WithLabelValues(source).Inc()
 	}
 	if err != nil {
-		glog.Errorf("Sync reconciler failed to restart SubManager: %v", err)
+		klog.Errorf("Sync reconciler failed to restart SubManager: %v", err)
 		return err
 	}
 
@@ -186,13 +186,13 @@ func (r *metaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks m
 
 	// Check if Syncer finalizer is present before finalize.
 	if !needsFinalize {
-		glog.V(2).Infof("Sync %s already finalized", sync.Name)
+		klog.V(2).Infof("Sync %s already finalized", sync.Name)
 		return nil
 	}
 
 	sync = sync.DeepCopy()
 	sync.Finalizers = newFinalizers
-	glog.Infof("beginning Sync finalize for %s", sync.Name)
+	klog.Infof("beginning Sync finalize for %s", sync.Name)
 	if err := r.gcResources(ctx, sync, gvks); err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func (r *metaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks m
 	if err != nil {
 		return err
 	}
-	glog.Infof("finalized Sync %s", sync.Name)
+	klog.Infof("finalized Sync %s", sync.Name)
 	return nil
 }
 
@@ -208,7 +208,7 @@ func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
 	if len(gvks) == 0 {
-		glog.Warningf("Could not find a gvk for %s, CRD may have been deleted, skipping garbage collection.", sync.Name)
+		klog.Warningf("Could not find a gvk for %s, CRD may have been deleted, skipping garbage collection.", sync.Name)
 		return nil
 	}
 	var gvk schema.GroupVersionKind
@@ -216,7 +216,7 @@ func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 		gvk = k
 		break
 	}
-	glog.Infof("Sync reconciler garbage collecting all %s", gvk.GroupKind())
+	klog.Infof("Sync reconciler garbage collecting all %s", gvk.GroupKind())
 	var errBuilder status.MultiError
 	// Create a new dynamic client since it's possible that the manager client is reading from the
 	// cache.
@@ -240,12 +240,12 @@ func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 		}
 		if err := cl.Delete(ctx, &u); err != nil {
 			if !apierrors.IsNotFound(err) {
-				glog.V(2).Infof("Failed to delete %s while garbage collecting", resourceDesc(&u))
+				klog.V(2).Infof("Failed to delete %s while garbage collecting", resourceDesc(&u))
 				errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to delete resource %s during garbage collection", resourceDesc(&u)))
 			}
 			continue
 		}
-		glog.Infof("garbage collected %s", resourceDesc(&u))
+		klog.Infof("garbage collected %s", resourceDesc(&u))
 	}
 	return errBuilder
 }

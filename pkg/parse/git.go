@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -16,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
 )
 
 // FileSource includes all settings to configure where a Parser reads files from.
@@ -67,9 +67,9 @@ func (o *files) readConfigFiles(state *gitState, rendered bool) status.Error {
 	}
 	policyDir := state.policyDir
 	if policyDir.OSPath() == o.currentPolicyDir {
-		glog.V(4).Infof("The configs directory is unchanged: %s", policyDir.OSPath())
+		klog.V(4).Infof("The configs directory is unchanged: %s", policyDir.OSPath())
 	} else {
-		glog.Infof("Reading updated configs dir: %s", policyDir.OSPath())
+		klog.Infof("Reading updated configs dir: %s", policyDir.OSPath())
 		o.currentPolicyDir = policyDir.OSPath()
 	}
 

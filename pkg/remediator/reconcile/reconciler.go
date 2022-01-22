@@ -3,7 +3,6 @@ package reconcile
 import (
 	"context"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
@@ -12,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,7 +63,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj client.Objec
 	case diff.NoOp:
 		return nil
 	case diff.Create:
-		glog.V(3).Infof("The remediator is about to create object %v", core.GKNN(declU))
+		klog.V(3).Infof("The remediator is about to create object %v", core.GKNN(declU))
 		_, err := r.applier.Create(ctx, declU)
 		return err
 	case diff.Update:
@@ -71,7 +71,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj client.Objec
 		if err != nil {
 			return err
 		}
-		glog.V(3).Infof("The remediator is about to update object %v", core.GKNN(actual))
+		klog.V(3).Infof("The remediator is about to update object %v", core.GKNN(actual))
 		_, err = r.applier.Update(ctx, declU, actual)
 		return err
 	case diff.Delete:
@@ -79,7 +79,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj client.Objec
 		if err != nil {
 			return err
 		}
-		glog.V(3).Infof("The remediator is about to delete object %v", core.GKNN(actual))
+		klog.V(3).Infof("The remediator is about to delete object %v", core.GKNN(actual))
 		_, err = r.applier.Delete(ctx, actual)
 		return err
 	case diff.Error:
@@ -94,7 +94,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj client.Objec
 		if err != nil {
 			return err
 		}
-		glog.V(3).Infof("The remediator is about to unmanage object %v", core.GKNN(actual))
+		klog.V(3).Infof("The remediator is about to unmanage object %v", core.GKNN(actual))
 		_, err = r.applier.RemoveNomosMeta(ctx, actual)
 		return err
 	default:

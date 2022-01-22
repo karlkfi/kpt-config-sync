@@ -15,12 +15,12 @@ import (
 	"time"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/policycontroller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/util"
@@ -219,13 +219,13 @@ func (b *BugReporter) logSourcesForProduct(ctx context.Context, product Product,
 	if err != nil {
 		switch {
 		case errorIs(err, missingNamespace) && !enabled[product]:
-			glog.Infof("%s is not enabled", string(product))
+			klog.Infof("%s is not enabled", string(product))
 			return nil, nil
 		case errorIs(err, notManagedByACM) && !enabled[product]:
-			glog.Infof("%s is not managed by ACM", string(product))
+			klog.Infof("%s is not managed by ACM", string(product))
 			return nil, nil
 		case errorIs(err, notManagedByACM) && enabled[product]:
-			glog.Errorf("%s is not managed by ACM, but it should be", string(product))
+			klog.Errorf("%s is not managed by ACM, but it should be", string(product))
 			return nil, err
 		default:
 			return nil, err
@@ -233,9 +233,9 @@ func (b *BugReporter) logSourcesForProduct(ctx context.Context, product Product,
 	}
 	if !enabled[product] {
 		if len(ls) == 0 {
-			glog.Infof("%s is not enabled", string(product))
+			klog.Infof("%s is not enabled", string(product))
 		} else {
-			glog.Infof("%s is not enabled but log sources found. It may be in the process of uninstalling. Adding logs to report.", string(product))
+			klog.Infof("%s is not enabled but log sources found. It may be in the process of uninstalling. Adding logs to report.", string(product))
 		}
 	}
 	return ls, err
@@ -539,18 +539,18 @@ func (b *BugReporter) Close() {
 	}
 
 	if len(b.WritingErrors) == 0 {
-		glog.Infof("Bug report written to zip file: %v\n", b.name)
+		klog.Infof("Bug report written to zip file: %v\n", b.name)
 	} else {
-		glog.Warningf("Some errors returned while writing zip file.  May exist at: %v\n", b.name)
+		klog.Warningf("Some errors returned while writing zip file.  May exist at: %v\n", b.name)
 	}
 	b.ErrorList = append(b.ErrorList, b.WritingErrors...)
 
 	if len(b.ErrorList) > 0 {
 		for _, e := range b.ErrorList {
-			glog.Errorf("Error: %v\n", e)
+			klog.Errorf("Error: %v\n", e)
 		}
 
-		glog.Errorf("Partial bug report may have succeeded.  Look for file: %s\n", b.name)
+		klog.Errorf("Partial bug report may have succeeded.  Look for file: %s\n", b.name)
 	} else {
 		fmt.Println("Created file " + b.name)
 	}

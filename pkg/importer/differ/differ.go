@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
@@ -14,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -79,7 +79,7 @@ func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Deco
 		}
 	}
 
-	glog.Infof("NamespaceConfig operations: create %d, update %d, delete %d", creates, updates, deletes)
+	klog.Infof("NamespaceConfig operations: create %d, update %d, delete %d", creates, updates, deletes)
 }
 
 // deleteNamespaceConfig marks the given NamespaceConfig for deletion by the syncer. This tombstone is more explicit
@@ -211,7 +211,7 @@ func (d *differ) updateSyncs(ctx context.Context, current, desired namespaceconf
 		}
 	}
 
-	glog.Infof("Sync operations: %d updates, %d creates, %d deletes", updates, creates, deletes)
+	klog.Infof("Sync operations: %d updates, %d creates, %d deletes", updates, creates, deletes)
 }
 
 // syncsEqual returns true if the syncs are equivalent.

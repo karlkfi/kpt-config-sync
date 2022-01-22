@@ -4,12 +4,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/google/nomos/pkg/core"
@@ -34,7 +34,7 @@ func (r *Resources) Update(ctx context.Context, objects []client.Object) ([]clie
 	newObjects := []client.Object{}
 	for _, obj := range objects {
 		if obj == nil {
-			glog.Warning("Resources received nil declared resource")
+			klog.Warning("Resources received nil declared resource")
 			metrics.RecordInternalError(ctx, "parser")
 			continue
 		}

@@ -4,12 +4,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 )
 
 // cacheForCommit tracks the progress made by the reconciler for a git commit.
@@ -104,7 +104,7 @@ func splitObjects(objs []ast.FileObject) ([]ast.FileObject, []ast.FileObject) {
 	}
 	if len(unknownScopeIDs) > 0 {
 		sort.Strings(unknownScopeIDs)
-		glog.Infof("Skip sending %v unknown-scoped objects to the applier: %v", len(unknownScopeIDs), unknownScopeIDs)
+		klog.Infof("Skip sending %v unknown-scoped objects to the applier: %v", len(unknownScopeIDs), unknownScopeIDs)
 	}
 	return knownScopeObjs, unknownScopeObjs
 }

@@ -16,8 +16,8 @@ import (
 
 	"github.com/google/nomos/pkg/syncer/decode"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -46,7 +46,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	pollPeriod time.Duration) error {
 	syncerClient := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 
-	glog.Infof("Policy dir: %s", path.Join(gitDir, policyDirRelative))
+	klog.Infof("Policy dir: %s", path.Join(gitDir, policyDirRelative))
 
 	var err error
 	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())

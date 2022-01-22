@@ -10,12 +10,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -61,21 +61,21 @@ func (h *Hydrator) Run(ctx context.Context) {
 		case <-tickerRehydrate.C:
 			commit, syncDir, err := SourceCommitAndDir(absSourceDir, h.SyncDir, h.ReconcilerName)
 			if err != nil {
-				glog.Errorf("failed to get the commit hash and sync directory from the source directory %s: %v", absSourceDir.OSPath(), err)
+				klog.Errorf("failed to get the commit hash and sync directory from the source directory %s: %v", absSourceDir.OSPath(), err)
 			} else {
 				h.rehydrateOnError(commit, syncDir.OSPath())
 			}
 		case <-tickerPoll.C:
 			commit, syncDir, err := SourceCommitAndDir(absSourceDir, h.SyncDir, h.ReconcilerName)
 			if err != nil {
-				glog.Errorf("failed to get the commit hash and sync directory from the source directory %s: %v", absSourceDir.OSPath(), err)
+				klog.Errorf("failed to get the commit hash and sync directory from the source directory %s: %v", absSourceDir.OSPath(), err)
 			} else if DoneCommit(h.DonePath.OSPath()) != commit {
 				// If the commit has been processed before, regardless of success or failure,
 				// skip the hydration to avoid repeated execution.
 				// The rehydrate ticker will retry on the failed commit.
 				hydrateErr := h.hydrate(commit, syncDir.OSPath())
 				if err := h.complete(commit, hydrateErr); err != nil {
-					glog.Errorf("failed to complete the rendering execution for commit %q: %v", commit, err)
+					klog.Errorf("failed to complete the rendering execution for commit %q: %v", commit, err)
 				}
 			}
 		}
@@ -93,7 +93,7 @@ func (h *Hydrator) runHydrate(sourceCommit, syncDir string) HydrationError {
 	if err := updateSymlink(h.HydratedRoot.OSPath(), h.HydratedLink, newHydratedDir.OSPath()); err != nil {
 		return NewInternalError(errors.Wrapf(err, "unable to update the symbolic link to %s", newHydratedDir.OSPath()))
 	}
-	glog.Infof("Successfully rendered %s for commit %s", syncDir, sourceCommit)
+	klog.Infof("Successfully rendered %s for commit %s", syncDir, sourceCommit)
 	return nil
 }
 
@@ -113,7 +113,7 @@ func (h *Hydrator) hydrate(sourceCommit, syncDir string) HydrationError {
 				"To fix, either add kustomization.yaml in the sync directory to trigger the rendering process, "+
 				"or remove kustomizaiton.yaml from all sub directories to skip rendering.", syncDir))
 		}
-		glog.V(5).Infof("no rendering is needed because of no Kustomization config file in the source configs with commit %s", sourceCommit)
+		klog.V(5).Infof("no rendering is needed because of no Kustomization config file in the source configs with commit %s", sourceCommit)
 		if err := os.RemoveAll(h.HydratedRoot.OSPath()); err != nil {
 			return NewInternalError(err)
 		}
@@ -132,14 +132,14 @@ func (h *Hydrator) rehydrateOnError(sourceCommit, syncDir string) {
 	errorFile := h.HydratedRoot.Join(cmpath.RelativeSlash(ErrorFile))
 	if _, err := os.Stat(errorFile.OSPath()); err != nil {
 		if !os.IsNotExist(err) {
-			glog.Warningf("unable to check the error file %s: %v", errorFile, err)
+			klog.Warningf("unable to check the error file %s: %v", errorFile, err)
 		}
 		return
 	}
-	glog.Infof("retry rendering commit %s", sourceCommit)
+	klog.Infof("retry rendering commit %s", sourceCommit)
 	hydrationErr := h.runHydrate(sourceCommit, syncDir)
 	if err := h.complete(sourceCommit, hydrationErr); err != nil {
-		glog.Errorf("failed to complete the re-rendering execution for commit %q: %v", sourceCommit, err)
+		klog.Errorf("failed to complete the re-rendering execution for commit %q: %v", sourceCommit, err)
 	}
 }
 
@@ -175,7 +175,7 @@ func updateSymlink(hydratedRoot, link, newDir string) error {
 
 	if deleteOldDir {
 		if err := os.RemoveAll(oldDir); err != nil {
-			glog.Warningf("unable to remove the previously hydrated directory %s: %v", oldDir, err)
+			klog.Warningf("unable to remove the previously hydrated directory %s: %v", oldDir, err)
 		}
 	}
 	return nil
@@ -202,7 +202,7 @@ func (h *Hydrator) complete(commit string, hydrationErr HydrationError) error {
 		return errors.Wrapf(err, "unable to write to commit hash to the done file: %s", h.DonePath)
 	}
 	if err := done.Close(); err != nil {
-		glog.Warningf("unable to close the done file %s: %v", h.DonePath.OSPath(), err)
+		klog.Warningf("unable to close the done file %s: %v", h.DonePath.OSPath(), err)
 	}
 	return nil
 }
@@ -215,19 +215,19 @@ func DoneCommit(donePath string) string {
 	if _, err := os.Stat(donePath); err == nil {
 		commit, err := ioutil.ReadFile(donePath)
 		if err != nil {
-			glog.Warningf("unable to read the done file %s: %v", donePath, err)
+			klog.Warningf("unable to read the done file %s: %v", donePath, err)
 			return ""
 		}
 		return string(commit)
 	} else if !os.IsNotExist(err) {
-		glog.Warningf("unable to check the status of the done file %s: %v", donePath, err)
+		klog.Warningf("unable to check the status of the done file %s: %v", donePath, err)
 	}
 	return ""
 }
 
 // exportError writes the error content to the error file.
 func exportError(commit, root, errorFile string, hydrationError HydrationError) error {
-	glog.Errorf("rendering error for commit %s: %v", commit, hydrationError)
+	klog.Errorf("rendering error for commit %s: %v", commit, hydrationError)
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		fileMode := os.FileMode(0755)
 		if err := os.Mkdir(root, fileMode); err != nil {
@@ -241,7 +241,7 @@ func exportError(commit, root, errorFile string, hydrationError HydrationError) 
 	}
 	defer func() {
 		if err := tmpFile.Close(); err != nil {
-			glog.Warningf("unable to close temporary error-file: %s", tmpFile.Name())
+			klog.Warningf("unable to close temporary error-file: %s", tmpFile.Name())
 		}
 	}()
 
@@ -252,7 +252,7 @@ func exportError(commit, root, errorFile string, hydrationError HydrationError) 
 
 	jb, err := json.Marshal(payload)
 	if err != nil {
-		glog.Errorf("can't encode hydration error payload: %v", err)
+		klog.Errorf("can't encode hydration error payload: %v", err)
 		return err
 	}
 
@@ -265,7 +265,7 @@ func exportError(commit, root, errorFile string, hydrationError HydrationError) 
 	if err := os.Chmod(errorFile, 0644); err != nil {
 		return errors.Wrapf(err, "unable to change permissions on the error-file: %s", errorFile)
 	}
-	glog.Infof("Saved the rendering error in file: %s", errorFile)
+	klog.Infof("Saved the rendering error in file: %s", errorFile)
 	return nil
 }
 

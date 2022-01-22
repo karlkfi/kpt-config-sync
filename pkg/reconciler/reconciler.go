@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
@@ -21,6 +20,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -91,22 +91,22 @@ func Run(opts Options) {
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 	if err != nil {
-		glog.Fatalf("failed to create rest config: %v", err)
+		klog.Fatalf("failed to create rest config: %v", err)
 	}
 
 	s := scheme.Scheme
 	if err := v1.AddToScheme(s); err != nil {
-		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
+		klog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
 	if err := v1beta1.AddToScheme(s); err != nil {
-		glog.Fatalf("Error adding configsync resources to scheme: %v", err)
+		klog.Fatalf("Error adding configsync resources to scheme: %v", err)
 	}
 
 	// Use the DynamicRESTMapper as the default RESTMapper does not detect when
 	// new types become available.
 	mapper, err := apiutil.NewDynamicRESTMapper(cfg)
 	if err != nil {
-		glog.Fatalf("Error creating DynamicRESTMapper: %v", err)
+		klog.Fatalf("Error creating DynamicRESTMapper: %v", err)
 	}
 
 	cl, err := client.New(cfg, client.Options{
@@ -114,14 +114,14 @@ func Run(opts Options) {
 		Mapper: mapper,
 	})
 	if err != nil {
-		glog.Fatalf("failed to create client: %v", err)
+		klog.Fatalf("failed to create client: %v", err)
 	}
 
 	// Configure the Applier.
 	genericClient := syncerclient.New(cl, metrics.APICallDuration)
 	baseApplier, err := reconcile.NewApplierForMultiRepo(cfg, genericClient)
 	if err != nil {
-		glog.Fatalf("Instantiating Applier: %v", err)
+		klog.Fatalf("Instantiating Applier: %v", err)
 	}
 
 	var a *applier.Applier
@@ -131,7 +131,7 @@ func Run(opts Options) {
 		a, err = applier.NewNamespaceApplier(cl, opts.ReconcilerScope)
 	}
 	if err != nil {
-		glog.Fatalf("failed to create the applier: %v", err)
+		klog.Fatalf("failed to create the applier: %v", err)
 	}
 
 	// Configure the Remediator.
@@ -142,12 +142,12 @@ func Run(opts Options) {
 	// idle watches too frequently.
 	cfgForRemediator, err := restconfig.NewRestConfig(watch.RESTConfigTimeout)
 	if err != nil {
-		glog.Fatalf("failed to create rest config for the remediator: %v", err)
+		klog.Fatalf("failed to create rest config for the remediator: %v", err)
 	}
 
 	rem, err := remediator.New(opts.ReconcilerScope, cfgForRemediator, baseApplier, decls, opts.NumWorkers)
 	if err != nil {
-		glog.Fatalf("Instantiating Remediator: %v", err)
+		klog.Fatalf("Instantiating Remediator: %v", err)
 	}
 
 	// Configure the Parser.
@@ -166,13 +166,13 @@ func Run(opts Options) {
 		parser, err = parse.NewRootRunner(opts.ClusterName, RootSyncName, opts.SourceFormat, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
-			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
+			klog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser, err = parse.NewNamespaceRunner(opts.ClusterName, RepoSyncName(string(opts.ReconcilerScope)), opts.ReconcilerScope, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
-			glog.Fatalf("Instantiating Namespace Repository Parser: %v", err)
+			klog.Fatalf("Instantiating Namespace Repository Parser: %v", err)
 		}
 	}
 

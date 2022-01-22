@@ -1,10 +1,10 @@
 package discovery
 
 import (
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
+	"k8s.io/klog/v2"
 )
 
 // ServerResourcer returns a the API Groups and API Resources available on the
@@ -49,7 +49,7 @@ func GetResources(discoveryClient ServerResourcer) ([]*metav1.APIResourceList, s
 		// Kubernetes so we are going to continue onward in the name of eventual
 		// consistency, tally-ho!
 		if discovery.IsGroupDiscoveryFailedError(discoveryErr) {
-			glog.Warningf("failed to discover some APIGroups: %s", discoveryErr)
+			klog.Warningf("failed to discover some APIGroups: %s", discoveryErr)
 		} else {
 			return nil, status.APIServerError(discoveryErr, "failed to get server resources")
 		}

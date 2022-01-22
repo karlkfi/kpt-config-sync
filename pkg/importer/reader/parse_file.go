@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/kinds"
@@ -15,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 )
 
 // yamlWhitespace records the two valid YAML whitespace characters.
@@ -29,7 +29,7 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	case ".yml", ".yaml":
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
-			glog.Errorf("Failed to read file declared in git from mounted filesystem: %s", path)
+			klog.Errorf("Failed to read file declared in git from mounted filesystem: %s", path)
 			importer.Metrics.Violations.Inc()
 			return nil, err
 		}
@@ -37,7 +37,7 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	case ".json":
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
-			glog.Errorf("Failed to read file declared in git from mounted filesystem: %s", path)
+			klog.Errorf("Failed to read file declared in git from mounted filesystem: %s", path)
 			importer.Metrics.Violations.Inc()
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func hasStatusField(u runtime.Unstructured) bool {
 	m, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status")
 	if err != nil {
 		// This should never happen!!!
-		glog.Errorf("unexpected error retrieving status field: %v:\n%v", err, u)
+		klog.Errorf("unexpected error retrieving status field: %v:\n%v", err, u)
 	}
 	return ok && m != nil && len(m.(map[string]interface{})) != 0
 }

@@ -5,13 +5,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policycontroller/constraint"
 	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
 	"github.com/google/nomos/pkg/util/watch"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -58,11 +58,11 @@ func (c *crdReconciler) Reconcile(ctx context.Context, request reconcile.Request
 	crd := &apiextensionsv1.CustomResourceDefinition{}
 	if err := c.client.Get(ctx, request.NamespacedName, crd); err != nil {
 		if !errors.IsNotFound(err) {
-			glog.Errorf("Error getting CustomResourceDefinition %q: %v", request.NamespacedName, err)
+			klog.Errorf("Error getting CustomResourceDefinition %q: %v", request.NamespacedName, err)
 			return reconcile.Result{}, err
 		}
 
-		glog.Infof("CustomResourceDefinition %q was deleted", request.NamespacedName)
+		klog.Infof("CustomResourceDefinition %q was deleted", request.NamespacedName)
 		if kind, ok := c.crdKinds[request.NamespacedName.String()]; ok {
 			delete(c.constraintKinds, kind)
 			delete(c.crdKinds, request.NamespacedName.String())
@@ -134,9 +134,9 @@ func (t *throttler) start(ctx context.Context, mgr watch.RestartableManager) {
 			dirty = !reflect.DeepEqual(lastGVKs, gvks)
 		case <-ticker.C:
 			if dirty {
-				glog.Infof("Restarting manager with GVKs: %v", gvks)
+				klog.Infof("Restarting manager with GVKs: %v", gvks)
 				if _, err := mgr.Restart(gvks, false); err != nil {
-					glog.Errorf("Failed to restart submanager: %v", err)
+					klog.Errorf("Failed to restart submanager: %v", err)
 				} else {
 					lastGVKs = gvks
 					dirty = false

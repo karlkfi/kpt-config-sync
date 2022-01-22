@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/reconciler"
+	"k8s.io/klog/v2"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +33,7 @@ func mapSecretToRootSync() handler.MapFunc {
 			return nil
 		}
 
-		glog.Infof("Changes to the secret (name: %s, namespace: %s) triggers a reconciliation for the RootSync object", a.GetName(), a.GetNamespace())
+		klog.Infof("Changes to the secret (name: %s, namespace: %s) triggers a reconciliation for the RootSync object", a.GetName(), a.GetNamespace())
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
@@ -52,7 +52,7 @@ func mapSecretToRepoSync() handler.MapFunc {
 		if a.GetNamespace() == configsync.ControllerNamespace {
 			return reconcileRequest(a)
 		}
-		glog.Infof("Changes to the secret (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object in the same namespace", a.GetName(), a.GetNamespace())
+		klog.Infof("Changes to the secret (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object in the same namespace", a.GetName(), a.GetNamespace())
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
@@ -84,7 +84,7 @@ func reconcileRequest(a client.Object) []reconcile.Request {
 	}
 
 	// Return request with the namespace parsed from resource name.
-	glog.Infof("Changes to the %s object (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object in the %s namespace",
+	klog.Infof("Changes to the %s object (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object in the %s namespace",
 		reflect.TypeOf(a), a.GetName(), a.GetNamespace(), ns)
 	return []reconcile.Request{
 		{

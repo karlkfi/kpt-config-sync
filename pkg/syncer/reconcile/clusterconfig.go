@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -80,7 +80,7 @@ func (r *clusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 	err := r.cache.Get(ctx, name, clusterConfig)
 	if err != nil {
 		err = errors.Wrapf(err, "could not retrieve clusterconfig %q", name)
-		glog.Error(err)
+		klog.Error(err)
 		return err
 	}
 	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
@@ -88,7 +88,7 @@ func (r *clusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 	if name.Name != v1.ClusterConfigName {
 		err := errors.Errorf("ClusterConfig resource has invalid name %q. To fix, delete the ClusterConfig.", name.Name)
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, v1.EventReasonInvalidClusterConfig, err.Error())
-		glog.Warning(err)
+		klog.Warning(err)
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
 		syncErrs := []v1.ConfigManagementError{NewConfigManagementError(clusterConfig, err)}
@@ -102,7 +102,7 @@ func (r *clusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 	rErr := r.manageConfigs(ctx, clusterConfig)
 	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
 	if filtered := filterContextCancelled(rErr); filtered != nil {
-		glog.Errorf("Could not reconcile clusterconfig: %v", status.FormatSingleLine(filtered))
+		klog.Errorf("Could not reconcile clusterconfig: %v", status.FormatSingleLine(filtered))
 	}
 	return rErr
 }
@@ -160,7 +160,7 @@ func (r *clusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 	// notice the new CRD and restart the cluster config controller which will
 	// allow the constraint to get applied.
 	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); len(gks) != 0 {
-		glog.Infof(
+		klog.Infof(
 			"clusterConfigReconciler encountered "+
 				"group-kind(s) %s that were not present in a sync, "+
 				"skipping status update and waiting for reconciler restart",

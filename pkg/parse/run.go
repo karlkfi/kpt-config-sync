@@ -5,13 +5,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -51,7 +51,7 @@ func Run(ctx context.Context, p Parser) {
 		// it is time to reapply the configuration even if no changes have been detected
 		// This case should be checked first since it resets the cache
 		case <-tickerResync.C:
-			glog.Infof("It is time for a force-resync")
+			klog.Infof("It is time for a force-resync")
 			// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 			// The cached gitState will not be reset to avoid reading all the git files unnecessarily.
 			state.resetAllButGitState()
@@ -65,16 +65,16 @@ func Run(ctx context.Context, p Parser) {
 		case <-tickerRetryOrWatchUpdate.C:
 			var trigger string
 			if opts.managementConflict() {
-				glog.Infof("One of the watchers noticed a management conflict")
+				klog.Infof("One of the watchers noticed a management conflict")
 				// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 				// The cached gitState will not be reset to avoid reading all the git files unnecessarily.
 				state.resetAllButGitState()
 				trigger = triggerManagementConflict
 			} else if state.cache.needToRetry && state.cache.readyToRetry() {
-				glog.Infof("The last reconciliation failed")
+				klog.Infof("The last reconciliation failed")
 				trigger = triggerRetry
 			} else if opts.needToUpdateWatch() {
-				glog.Infof("Some watches need to be updated")
+				klog.Infof("Some watches need to be updated")
 				trigger = triggerWatchUpdate
 			} else {
 				continue
@@ -263,7 +263,7 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 		return hydrationStatus, sourceStatus
 	}
 
-	glog.Infof("New git changes (%s) detected, reset the cache", sourceState.policyDir.OSPath())
+	klog.Infof("New git changes (%s) detected, reset the cache", sourceState.policyDir.OSPath())
 
 	// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 	state.resetCache()
@@ -296,7 +296,7 @@ func parseSource(ctx context.Context, p Parser, trigger string, state *reconcile
 			// will simply never correct the type.
 			// This should be treated as a warning (go/nomos-warning) once we have
 			// that capability.
-			glog.Errorf("Failed to update admission webhook: %v", err)
+			klog.Errorf("Failed to update admission webhook: %v", err)
 			// TODO(b/178605725): Handle case where multiple reconciler Pods try to
 			//  create or update the Configuration simultaneously.
 		}
@@ -369,7 +369,7 @@ func updateSyncStatus(ctx context.Context, p Parser) {
 		case <-ticker.C:
 			// TODO (b/209689848): update the status to reflect the remediator errors
 			if err := p.setSyncStatus(ctx, p.options().updater.applier.Errors()); err != nil {
-				glog.Infof("failed to update sync status: %v", err)
+				klog.Infof("failed to update sync status: %v", err)
 				continue
 			}
 		}

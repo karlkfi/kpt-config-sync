@@ -5,12 +5,12 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -97,7 +97,7 @@ func newManager(cfg *rest.Config) (manager.Manager, error) {
 func (m *subManager) context() context.Context {
 	if m.cancel != nil {
 		m.cancel()
-		glog.Info("Stopping SubManager")
+		klog.Info("Stopping SubManager")
 	}
 	var ctx context.Context
 	ctx, m.cancel = context.WithCancel(context.Background())
@@ -125,11 +125,11 @@ func (m *subManager) Restart(gvks map[schema.GroupVersionKind]bool, force bool) 
 		return true, errors.Wrap(err, "could not start controllers")
 	}
 
-	glog.Info("Starting subManager")
+	klog.Info("Starting subManager")
 	go func(ctx context.Context) {
 		if err := m.mgr.Start(ctx); err != nil {
 			// subManager could not successfully start, so we must force it to restart next reconcile.
-			glog.Errorf("Error starting subManager, restarting: %v", err)
+			klog.Errorf("Error starting subManager, restarting: %v", err)
 
 			// TODO(b/179816931): Not an intended use case for GenericEvent. Refactor.
 			u := &unstructured.Unstructured{}

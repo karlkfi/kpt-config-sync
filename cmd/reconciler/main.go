@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/glogr"
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer"
@@ -20,6 +18,8 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/log"
+	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -83,10 +83,9 @@ var flags = struct {
 }
 
 func main() {
-	flag.Parse()
 	log.Setup()
 	profiler.Service()
-	ctrl.SetLogger(glogr.New())
+	ctrl.SetLogger(klogr.New())
 
 	if *debug {
 		status.EnablePanicOnMisuse()
@@ -94,24 +93,24 @@ func main() {
 
 	// Register the OpenCensus views
 	if err := ocmetrics.RegisterReconcilerMetricsViews(); err != nil {
-		glog.Fatalf("Failed to register OpenCensus views: %v", err)
+		klog.Fatalf("Failed to register OpenCensus views: %v", err)
 	}
 
 	// Register the OC Agent exporter
 	oce, err := ocmetrics.RegisterOCAgentExporter()
 	if err != nil {
-		glog.Fatalf("Failed to register the OC Agent exporter: %v", err)
+		klog.Fatalf("Failed to register the OC Agent exporter: %v", err)
 	}
 
 	defer func() {
 		if err := oce.Stop(); err != nil {
-			glog.Fatalf("Unable to stop the OC Agent exporter: %v", err)
+			klog.Fatalf("Unable to stop the OC Agent exporter: %v", err)
 		}
 	}()
 
 	absRepoRoot, err := cmpath.AbsoluteOS(*repoRootDir)
 	if err != nil {
-		glog.Fatalf("%s must be an absolute path: %v", flags.repoRootDir, err)
+		klog.Fatalf("%s must be an absolute path: %v", flags.repoRootDir, err)
 	}
 
 	// Normalize policyDirRelative.
@@ -122,17 +121,17 @@ func main() {
 	relPolicyDir := cmpath.RelativeOS(dir)
 	absGitDir, err := cmpath.AbsoluteOS(*gitDir)
 	if err != nil {
-		glog.Fatalf("%s must be an absolute path: %v", flags.gitDir, err)
+		klog.Fatalf("%s must be an absolute path: %v", flags.gitDir, err)
 	}
 
 	err = declared.ValidateScope(*scope)
 	if err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 
 	dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
 	if err != nil {
-		glog.Fatalf("Failed to get DiscoveryClient: %v", err)
+		klog.Fatalf("Failed to get DiscoveryClient: %v", err)
 	}
 
 	opts := reconciler.Options{
@@ -160,15 +159,15 @@ func main() {
 			format = filesystem.SourceFormatHierarchy
 		}
 
-		glog.Info("Starting reconciler for: root")
+		klog.Info("Starting reconciler for: root")
 		opts.RootOptions = &reconciler.RootOptions{
 			SourceFormat: format,
 		}
 	} else {
-		glog.Infof("Starting reconciler for: %s", *scope)
+		klog.Infof("Starting reconciler for: %s", *scope)
 
 		if *sourceFormat != "" {
-			glog.Fatalf("Flag %s and Environment variable%q must not be passed to a Namespace reconciler",
+			klog.Fatalf("Flag %s and Environment variable%q must not be passed to a Namespace reconciler",
 				flags.sourceFormat, filesystem.SourceFormatKey)
 		}
 	}

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
@@ -22,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
@@ -85,7 +85,7 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope) (*Applier, e
 		scope:         namespace,
 		policy:        inventory.AdoptIfNoInventory,
 	}
-	glog.V(4).Infof("Applier %v is initialized", namespace)
+	klog.V(4).Infof("Applier %v is initialized", namespace)
 	return a, nil
 }
 
@@ -104,7 +104,7 @@ func NewRootApplier(c client.Client) (*Applier, error) {
 		scope:         declared.RootReconciler,
 		policy:        inventory.AdoptAll,
 	}
-	glog.V(4).Infof("Root applier is initialized and synced with the API server")
+	klog.V(4).Infof("Root applier is initialized and synced with the API server")
 	return a, nil
 }
 
@@ -125,9 +125,9 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 	}
 
 	if e.Operation == event.Unchanged {
-		glog.V(7).Infof("applied [op: %v] resource %v", e.Operation, id)
+		klog.V(7).Infof("applied [op: %v] resource %v", e.Operation, id)
 	} else {
-		glog.V(4).Infof("applied [op: %v] resource %v", e.Operation, id)
+		klog.V(4).Infof("applied [op: %v] resource %v", e.Operation, id)
 		handleMetrics(ctx, "update", e.Error, id.WithVersion(""))
 		stats.eventByOp[e.Operation]++
 	}
@@ -143,19 +143,19 @@ func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEven
 
 	id := idFrom(e.Identifier)
 	if e.Operation == event.PruneSkipped {
-		glog.V(4).Infof("skipped pruning resource %v", id)
+		klog.V(4).Infof("skipped pruning resource %v", id)
 		if e.Object != nil && e.Object.GetObjectKind().GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() && differ.SpecialNamespaces[e.Object.GetName()] {
 			// the `client.lifecycle.config.k8s.io/deletion: detach` annotation is not a part of the Config Sync metadata, and will not be removed here.
 			err := cs.disableObject(ctx, e.Object)
 			if err != nil {
 				errorMsg := "failed to remove the Config Sync metadata from %v (which is a special namespace): %v"
-				glog.Errorf(errorMsg, id, err)
+				klog.Errorf(errorMsg, id, err)
 				return applierErrorBuilder.Wrap(fmt.Errorf(errorMsg, id, err)).Build()
 			}
-			glog.V(4).Infof("removed the Config Sync metadata from %v (which is a special namespace)", id)
+			klog.V(4).Infof("removed the Config Sync metadata from %v (which is a special namespace)", id)
 		}
 	} else {
-		glog.V(4).Infof("pruned resource %v", id)
+		klog.V(4).Infof("pruned resource %v", id)
 		handleMetrics(ctx, "delete", e.Error, id.WithVersion(""))
 		stats.eventByOp[e.Operation]++
 	}
@@ -183,7 +183,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	// through annotation.
 	enabledObjs, disabledObjs := partitionObjs(objs)
 	if len(disabledObjs) > 0 {
-		glog.Infof("%v objects to be disabled: %v", len(disabledObjs), core.GKNNs(disabledObjs))
+		klog.Infof("%v objects to be disabled: %v", len(disabledObjs), core.GKNNs(disabledObjs))
 		disabledCount, err := cs.handleDisabledObjects(ctx, a.inventory, disabledObjs)
 		if err != nil {
 			a.errs = status.Append(a.errs, err)
@@ -194,7 +194,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 			succeeded: disabledCount,
 		}
 	}
-	glog.Infof("%v objects to be applied: %v", len(enabledObjs), core.GKNNs(enabledObjs))
+	klog.Infof("%v objects to be applied: %v", len(enabledObjs), core.GKNNs(enabledObjs))
 	resources, toUnsErrs := toUnstructured(enabledObjs)
 	if toUnsErrs != nil {
 		return nil, toUnsErrs
@@ -217,13 +217,13 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 			a.errs = status.Append(a.errs, Error(e.ErrorEvent.Err))
 			stats.errorTypeEvents++
 		case event.WaitType:
-			glog.Info(e.WaitEvent.Error)
+			klog.Info(e.WaitEvent.Error)
 		case event.ApplyType:
 			a.errs = status.Append(a.errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
 		case event.PruneType:
 			a.errs = status.Append(a.errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent, cs))
 		default:
-			glog.V(4).Infof("skipped %v event", e.Type)
+			klog.V(4).Infof("skipped %v event", e.Type)
 		}
 	}
 
@@ -236,13 +236,13 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		gvks[resource.GetObjectKind().GroupVersionKind()] = struct{}{}
 	}
 	if a.errs == nil {
-		glog.V(4).Infof("all resources are up to date.")
+		klog.V(4).Infof("all resources are up to date.")
 	}
 
 	if stats.empty() {
-		glog.V(4).Infof("The applier made no new progress")
+		klog.V(4).Infof("The applier made no new progress")
 	} else {
-		glog.Infof("The applier made new progress: %s.", stats.string())
+		klog.Infof("The applier made new progress: %s.", stats.string())
 	}
 	return gvks, a.errs
 }

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 )
 
 // UnmarshalStatus populates the given struct from the given unstructured data.
@@ -34,7 +34,7 @@ func jsonify(strs []string) string {
 
 	// This code is not intended to be reached. It just provides a sane fallback
 	// if there is ever an error from json.Marshal().
-	glog.Errorf("Failed to JSONify strings: %v", err)
+	klog.Errorf("Failed to JSONify strings: %v", err)
 	var b strings.Builder
 	b.WriteString("[")
 	for i, statusErr := range strs {

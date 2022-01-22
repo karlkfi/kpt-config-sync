@@ -37,7 +37,7 @@ func FightWarning(frequency float64, resource client.Object) status.ResourceErro
 }
 
 // fightDetector uses a linear differential equation to estimate the frequency
-// of updates to resources, then logs to glog.Warning when it detects resources
+// of updates to resources, then logs to klog.Warning when it detects resources
 // needing updates too frequently.
 //
 // Instantiate with newFightDetector().
@@ -61,7 +61,7 @@ func newFightDetector() fightDetector {
 }
 
 // detectFight detects whether the resource is needing updates too frequently.
-// If so, it increments the resource_fights metric and logs to glog.Warning.
+// If so, it increments the resource_fights metric and logs to klog.Warning.
 func (d *fightDetector) detectFight(ctx ctx.Context, time time.Time, obj *unstructured.Unstructured, fLogger *fightLogger, operation string) bool {
 	if fight := d.markUpdated(time, obj); fight != nil {
 		m.RecordResourceFight(ctx, operation, obj.GroupVersionKind())

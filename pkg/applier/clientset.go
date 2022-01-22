@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
@@ -13,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
@@ -92,10 +92,10 @@ func (cs *clientSet) handleDisabledObjects(ctx context.Context, rg *live.Invento
 	for _, obj := range objs {
 		err := cs.disableObject(ctx, obj)
 		if err != nil {
-			glog.Warningf("failed to disable object %v", core.IDOf(obj))
+			klog.Warningf("failed to disable object %v", core.IDOf(obj))
 			errs = status.Append(errs, Error(err))
 		} else {
-			glog.V(4).Infof("disabled object %v", core.IDOf(obj))
+			klog.V(4).Infof("disabled object %v", core.IDOf(obj))
 			disabledCount++
 		}
 	}

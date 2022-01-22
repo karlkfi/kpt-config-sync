@@ -1,10 +1,10 @@
 package diff
 
 import (
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/syncer/differ"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -49,7 +49,7 @@ func CanManage(reconciler declared.Scope, obj client.Object) bool {
 			// If it isn't actually managed, we'll show this message every time the
 			// object is updated - it is on the user to not mess with these annotations
 			// if they don't want to see the error message.
-			glog.Warningf("Invalid manager annotation %s=%q", metadata.ResourceManagerKey, manager)
+			klog.Warningf("Invalid manager annotation %s=%q", metadata.ResourceManagerKey, manager)
 		}
 	}
 	switch manager {

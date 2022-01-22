@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 
-	"github.com/go-logr/glogr"
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
@@ -15,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/klog/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	// +kubebuilder:scaffold:imports
 )
@@ -34,7 +34,7 @@ var (
 )
 
 func init() {
-	// glogr flags
+	// klogr flags
 	_ = flag.Set("v", "1")
 	_ = flag.Set("logtostderr", "true")
 
@@ -54,7 +54,7 @@ func main() {
 	flag.Parse()
 
 	profiler.Service()
-	ctrl.SetLogger(glogr.New())
+	ctrl.SetLogger(klogr.New())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,

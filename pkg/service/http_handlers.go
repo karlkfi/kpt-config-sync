@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/klog/v2"
 )
 
 var metricsPort = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
@@ -30,9 +30,9 @@ func ServeMetrics() {
 	// Expose prometheus metrics via HTTP.
 	http.Handle("/metrics", promhttp.Handler())
 	http.Handle("/threads", noCache(http.HandlerFunc(goRoutineHandler)))
-	glog.Infof("Serving metrics on :%d/metrics", *metricsPort)
+	klog.Infof("Serving metrics on :%d/metrics", *metricsPort)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
 	if err != nil {
-		glog.Fatalf("HTTP ListenAndServe for metrics: %+v", err)
+		klog.Fatalf("HTTP ListenAndServe for metrics: %+v", err)
 	}
 }

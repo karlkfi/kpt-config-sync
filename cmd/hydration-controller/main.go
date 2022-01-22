@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/glogr"
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -17,6 +15,8 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/util/log"
 	"gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics"
+	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -55,31 +55,30 @@ var (
 )
 
 func main() {
-	flag.Parse()
 	log.Setup()
 	profiler.Service()
-	ctrl.SetLogger(glogr.New())
+	ctrl.SetLogger(klogr.New())
 
 	// Register the kustomize usage metric views.
 	if err := kmetrics.RegisterKustomizeMetricsViews(); err != nil {
-		glog.Fatalf("Failed to register OpenCensus views: %v", err)
+		klog.Fatalf("Failed to register OpenCensus views: %v", err)
 	}
 
 	// Register the OC Agent exporter
 	oce, err := kmetrics.RegisterOCAgentExporter()
 	if err != nil {
-		glog.Fatalf("Failed to register the OC Agent exporter: %v", err)
+		klog.Fatalf("Failed to register the OC Agent exporter: %v", err)
 	}
 
 	defer func() {
 		if err := oce.Stop(); err != nil {
-			glog.Fatalf("Unable to stop the OC Agent exporter: %v", err)
+			klog.Fatalf("Unable to stop the OC Agent exporter: %v", err)
 		}
 	}()
 
 	absRepoRootDir, err := cmpath.AbsoluteOS(*repoRootDir)
 	if err != nil {
-		glog.Fatalf("--repo-root must be an absolute path: %v", err)
+		klog.Fatalf("--repo-root must be an absolute path: %v", err)
 	}
 	absSourceRootDir := absRepoRootDir.Join(cmpath.RelativeSlash(*sourceRootDir))
 	absHydratedRootDir := absRepoRootDir.Join(cmpath.RelativeSlash(*hydratedRootDir))
@@ -94,7 +93,7 @@ func main() {
 
 	hydrationPollingPeriod, err := time.ParseDuration(*hydrationPollingPeriodStr)
 	if err != nil {
-		glog.Fatalf("Failed to get hydration polling period: %v", err)
+		klog.Fatalf("Failed to get hydration polling period: %v", err)
 	}
 
 	var reconcilerName string

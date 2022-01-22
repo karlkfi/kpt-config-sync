@@ -10,11 +10,11 @@ import (
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/metadata"
@@ -66,7 +66,7 @@ func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementErr
 // - if resourceConditions are not empty.
 func clusterConfigNeedsUpdate(config *v1.ClusterConfig, initTime metav1.Time, errs []v1.ConfigManagementError, resConditions []v1.ResourceCondition) bool {
 	if !config.Spec.ImportTime.After(initTime.Time) {
-		glog.V(3).Infof("Ignoring previously imported config %q", config.Name)
+		klog.V(3).Infof("Ignoring previously imported config %q", config.Name)
 		return false
 	}
 	return !config.Status.SyncState.IsSynced() ||
@@ -84,7 +84,7 @@ func clusterConfigNeedsUpdate(config *v1.ClusterConfig, initTime metav1.Time, er
 // repostatus-reconciler can force-update the stalled configs on startup.
 func SetClusterConfigStatus(ctx context.Context, c *syncerclient.Client, config *v1.ClusterConfig, initTime metav1.Time, now func() metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
 	if !clusterConfigNeedsUpdate(config, initTime, errs, rcs) {
-		glog.V(3).Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
+		klog.V(3).Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
 		return nil
 	}
 
@@ -129,7 +129,7 @@ func makeResourceCondition(obj unstructured.Unstructured, token string) v1.Resou
 		var reconciling []string
 		err := json.Unmarshal([]byte(val), &reconciling)
 		if err != nil {
-			glog.Errorf("Invalid resource state reconciling annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
+			klog.Errorf("Invalid resource state reconciling annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
 			reconciling = []string{val}
 		}
 
@@ -140,7 +140,7 @@ func makeResourceCondition(obj unstructured.Unstructured, token string) v1.Resou
 		var errs []string
 		err := json.Unmarshal([]byte(val), &errs)
 		if err != nil {
-			glog.Errorf("Invalid resource state error annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
+			klog.Errorf("Invalid resource state error annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
 			errs = []string{val}
 		} else {
 			resourceCondition.Errors = append(resourceCondition.Errors, errs...)
