@@ -86,9 +86,9 @@ spec:
                       is set to true, it tells Git to skip the SSL certificate verification.'
                     type: boolean
                   period:
-                    description: 'Period is the time duration in seconds between consecutive
-                      syncs.  Default: 15 seconds. Note to developers that customers
-                      specify this value using string (https://golang.org/pkg/time/#Duration.String)
+                    description: 'Period is the time duration between consecutive
+                      syncs. Default: 15s. Note to developers that customers specify
+                      this value using string (https://golang.org/pkg/time/#Duration.String)
                       like "3s" in their Custom Resource YAML. However, time.Duration
                       is at a nanosecond granularity, and it''s easy to introduce
                       a bug where it looks like the code is dealing with seconds but
@@ -786,9 +786,9 @@ spec:
                       is set to true, it tells Git to skip the SSL certificate verification.'
                     type: boolean
                   period:
-                    description: 'Period is the time duration in seconds between consecutive
-                      syncs.  Default: 15 seconds. Note to developers that customers
-                      specify this value using string (https://golang.org/pkg/time/#Duration.String)
+                    description: 'Period is the time duration between consecutive
+                      syncs. Default: 15s. Note to developers that customers specify
+                      this value using string (https://golang.org/pkg/time/#Duration.String)
                       like "3s" in their Custom Resource YAML. However, time.Duration
                       is at a nanosecond granularity, and it''s easy to introduce
                       a bug where it looks like the code is dealing with seconds but

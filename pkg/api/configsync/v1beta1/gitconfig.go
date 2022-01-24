@@ -24,8 +24,7 @@ type Git struct {
 	// +optional
 	Dir string `json:"dir,omitempty"`
 
-	// Period is the time duration in seconds between consecutive
-	// syncs.  Default: 15 seconds.
+	// Period is the time duration between consecutive syncs. Default: 15s.
 	// Note to developers that customers specify this value using
 	// string (https://golang.org/pkg/time/#Duration.String) like "3s"
 	// in their Custom Resource YAML. However, time.Duration is at a nanosecond
