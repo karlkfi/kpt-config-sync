@@ -10,7 +10,7 @@ licenseRegex="\(LICEN\(S\|C\)E\|COPYING\|README\|NOTICE\)"
 # Find all license files in vendor/
 # Note that packages may contain multiple license, or may have both a LICENSE
 # and a NOTICE which must BOTH be distributed with the code.
-licenses="${tmp}"/licenses.txt
+licenses="${tmp}"/LICENSES.txt
 
 # Ensure the vendor directory only includes the project's build dependencies.
 go mod tidy
@@ -18,8 +18,8 @@ go mod vendor
 find vendor/ -regex ".*/${licenseRegex}" > "${licenses}"
 sort "${licenses}" -dufo "${licenses}"
 
-# Default to LICENSE as the output file, but allow overriding it.
-out="LICENSE"
+# Default to LICENSES.txt as the output file, but allow overriding it.
+out="LICENSES.txt"
 if [[ $# -gt 0 ]]; then
   out=$1
 fi

@@ -2,15 +2,16 @@
 
 set -euo pipefail
 
-echo "Checking LICENSE file for changes."
+echo "Checking LICENSES.txt file for changes."
 tmp=$(mktemp -d)
+filename="LICENSES.txt"
 
-bash scripts/prepare-licenses.sh "${tmp}/LICENSE"
+bash scripts/prepare-licenses.sh "${tmp}/${filename}"
 
-if ! cmp -s "${tmp}/LICENSE" "LICENSE" ; then
-  diff "LICENSE" "${tmp}/LICENSE"
-  echo "LICENSE file needs updating. To accept changes, run
-cp ${tmp}/LICENSE LICENSE"
+if ! cmp -s "${tmp}/${filename}" "${filename}" ; then
+  diff "${filename}" "${tmp}/${filename}"
+  echo "${filename} file needs updating. To accept changes, run
+cp ${tmp}/${filename} ${filename}"
   exit 1
 fi
 rm -r "${tmp}"
