@@ -52,6 +52,12 @@ func NewGitProvider(t testing.NTB, provider string) GitProvider {
 			t.Fatal(err)
 		}
 		return client
+	case e2e.GitLab:
+		client, err := newGitlabClient()
+		if err != nil {
+			t.Fatal((err))
+		}
+		return client
 	default:
 		return &LocalProvider{}
 	}
