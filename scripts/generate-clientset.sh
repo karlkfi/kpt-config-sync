@@ -52,10 +52,10 @@ done
 # This should match the k8s.io/code-generator version in go.mod.
 tag="v0.21.1"
 echo "Checking out k8s.io/code-generator at tag ${tag}"
-  # Recall that "go get" also installs packages, so we don't need to also
-  # "go install": https://golang.org/pkg/cmd/go/internal/get/#pkg-variables
+  # As of go 1.16, go install is the recommended way to build/install modules
+  # https://go.dev/doc/go1.16#go-command
   for tool in "${tools[@]}"; do
-    go get "${tool}@${tag}"
+    go install "${tool}@${tag}"
   done
 
 # If we run go mod tidy, it removes the empty code-generator declaration from
