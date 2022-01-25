@@ -7,6 +7,25 @@ We follow the following guides:
 1.  [K8S Coding Conventions](https://github.com/kubernetes/kubernetes/blob/release-1.1/docs/devel/coding-conventions.md)
 1.  [Naming](https://talks.golang.org/2014/names.slide#1)
 
+### Changing Config Sync APIs
+
+The following `make` rules should be run whenever we change the [Config Sync APIs](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/pkg/api/):
+
+```
+make generate
+make configsync-crds
+make clientgen
+```
+
+### Update the [LICENSE](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/LICENSE) file
+
+To update the [LICENSE](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/LICENSE) file after changing
+the [vendor](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/vendor/) directory, you need to run:
+
+```
+make license
+```
+
 ### Working with the Operator
 
 Nomos is installed via the Nomos Operator, the code for which is in a separate
