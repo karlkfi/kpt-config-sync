@@ -138,6 +138,8 @@ func runVet(ctx context.Context, namespace string, sourceFormat filesystem.Sourc
 	if len(vetErrs) > 0 {
 		return errors.New(strings.Join(vetErrs, "\n\n"))
 	}
+
+	fmt.Println("✅ No validation issues found.")
 	return nil
 }
 
