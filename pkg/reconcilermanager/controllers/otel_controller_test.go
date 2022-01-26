@@ -22,7 +22,7 @@ import (
 
 const (
 	depAnnotationStackdriver = "070d46c0bfa1fa9e4427440cb051138b"
-	depAnnotationCustom      = "a5b98e40aa7ae6bd2326dca598900f83"
+	depAnnotationCustom      = "9182661d55e260a55da649363c03c187"
 )
 
 func setupOtelReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Client, *OtelReconciler) {

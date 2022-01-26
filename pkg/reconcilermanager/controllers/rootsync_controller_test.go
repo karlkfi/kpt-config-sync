@@ -75,6 +75,12 @@ func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRo
 }
 
 func configMapWithData(namespace, name string, data map[string]string, opts ...core.MetaMutator) *corev1.ConfigMap {
+	baseOpts := []core.MetaMutator{
+		core.Labels(map[string]string{
+			"app": reconcilermanager.Reconciler,
+		}),
+	}
+	opts = append(baseOpts, opts...)
 	result := fake.ConfigMapObject(opts...)
 	result.Namespace = namespace
 	result.Name = name

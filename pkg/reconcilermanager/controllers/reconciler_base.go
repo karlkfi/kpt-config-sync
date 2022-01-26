@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/util"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -68,6 +69,10 @@ func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []confi
 			if len(refs) > 0 {
 				childCM.OwnerReferences = refs
 			}
+			if childCM.Labels == nil {
+				childCM.Labels = make(map[string]string)
+			}
+			childCM.Labels["app"] = reconcilermanager.Reconciler
 			childCM.Data = mutation.data
 			return nil
 		})
