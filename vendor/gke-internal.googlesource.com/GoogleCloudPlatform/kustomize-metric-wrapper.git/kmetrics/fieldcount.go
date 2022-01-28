@@ -117,18 +117,20 @@ func kustomizeFieldUsageRecurse(k *types.Kustomization, path string) (*Kustomize
 			if err != nil {
 				return nil, err
 			}
-			subKtMetrics, err := kustomizeFieldUsageRecurse(subKt, basePath)
-			if err != nil {
-				return nil, err
+			if subKt != nil {
+				subKtMetrics, err := kustomizeFieldUsageRecurse(subKt, basePath)
+				if err != nil {
+					return nil, err
+				}
+				fieldCount = aggregateMapCounts(fieldCount, subKtMetrics.FieldCount)
+				topTierCount = aggregateMapCounts(topTierCount, subKtMetrics.TopTierCount)
+				patchCount = aggregateMapCounts(patchCount, subKtMetrics.PatchCount)
+				baseCount = aggregateMapCounts(baseCount, subKtMetrics.BaseCount)
+				helmMetrics = aggregateMapCounts(helmMetrics, subKtMetrics.HelmMetrics)
+				k8sMetadata = aggregateMapCounts(k8sMetadata, subKtMetrics.K8sMetadata)
+				simplMetrics = aggregateMapCounts(simplMetrics, subKtMetrics.SimplMetrics)
+				deprecationMetrics = aggregateMapCounts(deprecationMetrics, subKtMetrics.DeprecationMetrics)
 			}
-			fieldCount = aggregateMapCounts(fieldCount, subKtMetrics.FieldCount)
-			topTierCount = aggregateMapCounts(topTierCount, subKtMetrics.TopTierCount)
-			patchCount = aggregateMapCounts(patchCount, subKtMetrics.PatchCount)
-			baseCount = aggregateMapCounts(baseCount, subKtMetrics.BaseCount)
-			helmMetrics = aggregateMapCounts(helmMetrics, subKtMetrics.HelmMetrics)
-			k8sMetadata = aggregateMapCounts(k8sMetadata, subKtMetrics.K8sMetadata)
-			simplMetrics = aggregateMapCounts(simplMetrics, subKtMetrics.SimplMetrics)
-			deprecationMetrics = aggregateMapCounts(deprecationMetrics, subKtMetrics.DeprecationMetrics)
 		}
 	}
 	fieldCount = aggregateMapCounts(fieldCount, kustomizationFieldCount(k))

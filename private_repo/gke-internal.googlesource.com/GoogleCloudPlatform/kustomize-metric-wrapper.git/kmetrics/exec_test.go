@@ -52,6 +52,14 @@ spec:
 			inputDir:    "./testdata/complex",
 			expectedErr: "base/deployment.yaml: no such file or directory",
 		},
+		"missing kustomization in base": {
+			inputDir: "./testdata/missingkustomizationinbase",
+			expectedErr: "unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory",
+		},
+		"invalid kustomization": {
+			inputDir: "./testdata/invalidkustomization",
+			expectedErr: "Error: json: cannot unmarshal string into Go struct field Kustomization.resources of type []string",
+		},
 		"with generator": {
 			inputDir: "./testdata/withgenerator",
 			expected: `apiVersion: v1

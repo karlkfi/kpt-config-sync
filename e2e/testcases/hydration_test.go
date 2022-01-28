@@ -53,14 +53,17 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	nt.T.Log("Remove kustomization.yaml to make the sync fail")
 	nt.Root.Remove("./kustomize-components/kustomization.yml")
 	nt.Root.CommitAndPush("remove the Kustomize configuration to make the sync fail")
-
 	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode)
 
 	nt.T.Log("Add kustomization.yaml back")
 	nt.Root.Copy("../testdata/hydration/kustomize-components/kustomization.yml", "./kustomize-components/kustomization.yml")
 	nt.Root.CommitAndPush("add kustomization.yml back")
-
 	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("kustomize-components"))
+
+	nt.T.Log("Make kustomization.yaml invalid")
+	nt.Root.Copy("../testdata/hydration/invalid-kustomization.yaml", "./kustomize-components/kustomization.yml")
+	nt.Root.CommitAndPush("update kustomization.yaml to make it invalid")
+	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode)
 }
 
 func TestHydrateHelmComponents(t *testing.T) {

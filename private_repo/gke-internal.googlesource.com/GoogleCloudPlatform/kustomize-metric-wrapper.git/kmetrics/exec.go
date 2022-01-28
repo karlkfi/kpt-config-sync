@@ -61,13 +61,14 @@ func runKustomizeBuild(ctx context.Context, sendMetrics bool, inputDir string, c
 		wg.Done()
 	}()
 
-	kt, _ := readKustomizeFile(inputDir)
-	fieldMetrics, fieldErr := kustomizeFieldUsage(kt, inputDir)
-	if fieldErr == nil && sendMetrics {
-		// Send field count metrics to OC collector
-		RecordKustomizeFieldCountData(ctx, fieldMetrics)
+	kt, err := readKustomizeFile(inputDir)
+	if kt != nil && err == nil {
+		fieldMetrics, fieldErr := kustomizeFieldUsage(kt, inputDir)
+		if fieldErr == nil && fieldMetrics != nil && sendMetrics  {
+			// Send field count metrics to OC collector
+			RecordKustomizeFieldCountData(ctx, fieldMetrics)
+		}
 	}
-
 	wg.Wait()
 	return <-outputs, <-errors
 }

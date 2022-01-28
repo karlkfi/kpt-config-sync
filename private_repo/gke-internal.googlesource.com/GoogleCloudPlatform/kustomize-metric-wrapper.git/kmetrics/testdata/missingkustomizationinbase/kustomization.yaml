@@ -1,0 +1,3 @@
+resources:
+- ./overlay
+namePrefix: foo-
