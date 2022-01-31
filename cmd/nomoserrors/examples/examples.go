@@ -305,7 +305,7 @@ func Generate() AllExamples {
 		fmt.Errorf(".spec.version not defined")))
 
 	// 1068
-	result.add(status.NewErrorBuilder(status.ActionableHydrationErrorCode).Sprint("user actionable rendering error").Build())
+	result.add(status.HydrationError(status.ActionableHydrationErrorCode, errors.New("user actionable rendering error")))
 
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
@@ -355,7 +355,7 @@ func Generate() AllExamples {
 	result.add(configuration.InvalidWebhookWarning("invalid webhook"))
 
 	// 2015
-	result.add(status.InternalHydrationError.Sprint("internal rendering error").Build())
+	result.add(status.InternalHydrationError(errors.New("internal rendering error"), "internal rendering error"))
 
 	// 9998
 	result.add(status.InternalError("we made a mistake"))

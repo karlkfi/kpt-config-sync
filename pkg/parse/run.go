@@ -134,9 +134,7 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	if err != nil {
 		rs.message = RenderingFailed
 		rs.lastUpdate = metav1.Now()
-		rs.errs = status.InternalHydrationError.Wrap(err).
-			Sprintf("unable to read the done file: %s", doneFilePath).
-			Build()
+		rs.errs = status.InternalHydrationError(err, "unable to read the done file: %s", doneFilePath)
 		setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, rs)
 		if setRenderingStatusErr == nil {
 			state.renderingStatus = rs
@@ -234,8 +232,7 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 	absHydratedRoot, err := cmpath.AbsoluteOS(opts.HydratedRoot)
 	if err != nil {
 		hydrationStatus.message = RenderingFailed
-		hydrationStatus.errs = status.InternalHydrationError.Wrap(err).
-			Sprint("hydrated-dir must be an absolute path").Build()
+		hydrationStatus.errs = status.InternalHydrationError(err, "hydrated-dir must be an absolute path")
 		return hydrationStatus, sourceStatus
 	}
 
@@ -245,15 +242,14 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 		sourceState, hydrationErr = opts.readHydratedDir(absHydratedRoot, opts.HydratedLink, opts.reconcilerName)
 		if hydrationErr != nil {
 			hydrationStatus.message = RenderingFailed
-			hydrationStatus.errs = status.NewErrorBuilder(hydrationErr.Code()).Wrap(hydrationErr).Build()
+			hydrationStatus.errs = status.HydrationError(hydrationErr.Code(), hydrationErr)
 			return hydrationStatus, sourceStatus
 		}
 		hydrationStatus.message = RenderingSucceeded
 		rendered = true
 	} else if !os.IsNotExist(err) {
 		hydrationStatus.message = RenderingFailed
-		hydrationStatus.errs = status.InternalHydrationError.Wrap(err).
-			Sprintf("unable to evaluate the hydrated path %s", absHydratedRoot.OSPath()).Build()
+		hydrationStatus.errs = status.InternalHydrationError(err, "unable to evaluate the hydrated path %s", absHydratedRoot.OSPath())
 		return hydrationStatus, sourceStatus
 	} else {
 		hydrationStatus.message = RenderingSkipped
