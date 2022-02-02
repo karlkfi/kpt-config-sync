@@ -305,7 +305,7 @@ func TestForceRevert(t *testing.T) {
 	nt.Root.Remove("acme/system/repo.yaml")
 	nt.Root.CommitAndPush("Cause source error")
 
-	nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode)
+	nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode, "")
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
 		// Validate reconciler error metric is emitted.

@@ -90,7 +90,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 	if nt.MultiRepo {
 		nt.Root.Add("acme/namespaces/prod/anvil-v1.yaml", anvilCR("v1", "heavy", 100))
 		nt.Root.CommitAndPush("Adding Anvil CR")
-		nt.WaitForRootSyncSourceError(status.UnknownKindErrorCode)
+		nt.WaitForRootSyncSourceError(status.UnknownKindErrorCode, "")
 	} else {
 		nt.WaitForRepoImportErrorCode(status.UnknownKindErrorCode)
 	}
@@ -174,7 +174,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 	if nt.MultiRepo {
 		nt.Root.Add("acme/namespaces/foo/anvil-v1.yaml", anvilCR("v1", "heavy", 100))
 		nt.Root.CommitAndPush("Adding Anvil CR")
-		nt.WaitForRootSyncSourceError(status.UnknownKindErrorCode)
+		nt.WaitForRootSyncSourceError(status.UnknownKindErrorCode, "")
 	} else {
 		nt.WaitForRepoImportErrorCode(status.UnknownKindErrorCode)
 	}

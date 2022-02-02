@@ -878,8 +878,8 @@ func (nt *NT) ForwardToFreePort(ns, pod, port string) (int, error) {
 	return localPort, nil
 }
 
-func validateRootSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RootSyncCondition, code string, expectedErrorSourceRefs []v1beta1.ErrorSource) error {
-	if err := validateError(statusErrs, code); err != nil {
+func validateRootSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RootSyncCondition, code string, message string, expectedErrorSourceRefs []v1beta1.ErrorSource) error {
+	if err := validateError(statusErrs, code, message); err != nil {
 		return err
 	}
 	if syncingCondition == nil {
@@ -894,8 +894,8 @@ func validateRootSyncError(statusErrs []v1beta1.ConfigSyncError, syncingConditio
 	return nil
 }
 
-func validateRepoSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RepoSyncCondition, code string, expectedErrorSourceRefs []v1beta1.ErrorSource) error {
-	if err := validateError(statusErrs, code); err != nil {
+func validateRepoSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RepoSyncCondition, code string, message string, expectedErrorSourceRefs []v1beta1.ErrorSource) error {
+	if err := validateError(statusErrs, code, message); err != nil {
 		return err
 	}
 	if syncingCondition == nil {
@@ -910,14 +910,16 @@ func validateRepoSyncError(statusErrs []v1beta1.ConfigSyncError, syncingConditio
 	return nil
 }
 
-func validateError(errs []v1beta1.ConfigSyncError, code string) error {
+func validateError(errs []v1beta1.ConfigSyncError, code string, message string) error {
 	if len(errs) == 0 {
 		return errors.Errorf("no errors present")
 	}
 	var codes []string
 	for _, e := range errs {
 		if e.Code == code {
-			return nil
+			if message == "" || strings.Contains(e.ErrorMessage, message) {
+				return nil
+			}
 		}
 		codes = append(codes, e.Code)
 	}
@@ -925,7 +927,7 @@ func validateError(errs []v1beta1.ConfigSyncError, code string) error {
 }
 
 // WaitForRootSyncSourceError waits until the given error (code and message) is present on the RootSync resource
-func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
+func (nt *NT) WaitForRootSyncSourceError(code string, message string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			rs := fake.RootSyncObjectV1Beta1()
@@ -933,14 +935,14 @@ func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 				return err
 			}
 			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
-			return validateRootSyncError(rs.Status.Source.Errors, syncingCondition, code, []v1beta1.ErrorSource{v1beta1.SourceError})
+			return validateRootSyncError(rs.Status.Source.Errors, syncingCondition, code, message, []v1beta1.ErrorSource{v1beta1.SourceError})
 		},
 		opts...,
 	)
 }
 
 // WaitForRootSyncRenderingError waits until the given error (code and message) is present on the RootSync resource
-func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
+func (nt *NT) WaitForRootSyncRenderingError(code string, message string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			rs := fake.RootSyncObjectV1Beta1()
@@ -949,14 +951,30 @@ func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
 				return err
 			}
 			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
-			return validateRootSyncError(rs.Status.Rendering.Errors, syncingCondition, code, []v1beta1.ErrorSource{v1beta1.RenderingError})
+			return validateRootSyncError(rs.Status.Rendering.Errors, syncingCondition, code, message, []v1beta1.ErrorSource{v1beta1.RenderingError})
+		},
+		opts...,
+	)
+}
+
+// WaitForRootSyncSyncError waits until the given error (code and message) is present on the RootSync resource
+func (nt *NT) WaitForRootSyncSyncError(code string, message string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
+		func() error {
+			rs := fake.RootSyncObjectV1Beta1()
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
+			return validateRootSyncError(rs.Status.Sync.Errors, syncingCondition, code, message, []v1beta1.ErrorSource{v1beta1.SyncError})
 		},
 		opts...,
 	)
 }
 
 // WaitForRepoSyncSourceError waits until the given error (code and message) is present on the RepoSync resource
-func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOption) {
+func (nt *NT) WaitForRepoSyncSourceError(namespace, code, message string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			nt.T.Helper()
@@ -967,7 +985,7 @@ func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOpt
 				return err
 			}
 			syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncSyncing)
-			return validateRepoSyncError(rs.Status.Source.Errors, syncingCondition, code, []v1beta1.ErrorSource{v1beta1.SourceError})
+			return validateRepoSyncError(rs.Status.Source.Errors, syncingCondition, code, message, []v1beta1.ErrorSource{v1beta1.SourceError})
 		},
 		opts...,
 	)

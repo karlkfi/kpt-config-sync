@@ -53,7 +53,7 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	nt.T.Log("Remove kustomization.yaml to make the sync fail")
 	nt.Root.Remove("./kustomize-components/kustomization.yml")
 	nt.Root.CommitAndPush("remove the Kustomize configuration to make the sync fail")
-	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode)
+	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode, "")
 
 	nt.T.Log("Add kustomization.yaml back")
 	nt.Root.Copy("../testdata/hydration/kustomize-components/kustomization.yml", "./kustomize-components/kustomization.yml")
@@ -63,7 +63,7 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	nt.T.Log("Make kustomization.yaml invalid")
 	nt.Root.Copy("../testdata/hydration/invalid-kustomization.yaml", "./kustomize-components/kustomization.yml")
 	nt.Root.CommitAndPush("update kustomization.yaml to make it invalid")
-	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode)
+	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode, "")
 }
 
 func TestHydrateHelmComponents(t *testing.T) {
@@ -147,12 +147,12 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	nt.Root.Copy("../testdata/hydration/resource-duplicate/kustomization.yaml", "./helm-overlay/kustomization.yaml")
 	nt.Root.Copy("../testdata/hydration/resource-duplicate/namespace_tenant-a.yaml", "./helm-overlay/namespace_tenant-a.yaml")
 	nt.Root.CommitAndPush("Update kustomization.yaml with duplicated resources")
-	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode)
+	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode, "")
 
 	nt.T.Log("Make the parsing fail by checking in a deprecated group and kind")
 	nt.Root.Copy("../testdata/hydration/deprecated-GK/kustomization.yaml", "./helm-overlay/kustomization.yaml")
 	nt.Root.CommitAndPush("Update kustomization.yaml to render a deprecated group and kind")
-	nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode)
+	nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode, "")
 
 	// TODO(b/209458334) Skip the following test when running on GKE Autopilot clusters.
 	if !nt.IsGKEAutopilot {
@@ -165,7 +165,7 @@ func TestHydrateHelmOverlay(t *testing.T) {
 		nt.T.Log("Make the parsing fail again by checking in a deprecated group and kind with the render-helm-chart function")
 		nt.Root.Copy("../testdata/hydration/krm-function-deprecated-GK-kustomization.yaml", "./helm-overlay/kustomization.yaml")
 		nt.Root.CommitAndPush("Update kustomization.yaml to render a deprecated group and kind with the render-helm-chart function")
-		nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode)
+		nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode, "")
 	}
 }
 

@@ -14,7 +14,7 @@ func TestMissingRepoErrorWithHierarchicalFormat(t *testing.T) {
 	nomostest.SetPolicyDir(nt, "")
 
 	if nt.MultiRepo {
-		nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode)
+		nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode, "")
 	} else {
 		nt.WaitForRepoImportErrorCode(system.MissingRepoErrorCode)
 	}
@@ -50,7 +50,7 @@ func TestInvalidPolicyDir(t *testing.T) {
 
 	nt.T.Log("Expect an error to be present in status.source.errors")
 	if nt.MultiRepo {
-		nt.WaitForRootSyncSourceError(status.PathErrorCode)
+		nt.WaitForRootSyncSourceError(status.PathErrorCode, "")
 	} else {
 		nt.WaitForRepoSourceError(status.SourceErrorCode)
 	}

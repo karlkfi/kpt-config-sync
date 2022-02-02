@@ -20,7 +20,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 	rs := fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "invalid-branch"}}}`)
 
-	nt.WaitForRootSyncSourceError(status.SourceErrorCode)
+	nt.WaitForRootSyncSourceError(status.SourceErrorCode, "")
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
 		// Validate reconciler error metric is emitted.
@@ -58,7 +58,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 	nt.Root.Add(nomostest.StructuredNSPath(namespaceRepo, nomostest.RepoSyncFileName), rs)
 	nt.Root.CommitAndPush("Update RepoSync to invalid branch name")
 
-	nt.WaitForRepoSyncSourceError(namespaceRepo, status.SourceErrorCode)
+	nt.WaitForRepoSyncSourceError(namespaceRepo, status.SourceErrorCode, "")
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate reconciler error metric is emitted.
@@ -127,7 +127,7 @@ func TestSyncFailureAfterSuccessfulSyncs(t *testing.T) {
 	// Make the sync fail by invalidating the source repo.
 	nt.Root.RenameBranch(devBranch, "invalid-branch")
 	if nt.MultiRepo {
-		nt.WaitForRootSyncSourceError(status.SourceErrorCode)
+		nt.WaitForRootSyncSourceError(status.SourceErrorCode, "")
 	} else {
 		nt.WaitForRepoSourceError(status.SourceErrorCode)
 	}
