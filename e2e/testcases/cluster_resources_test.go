@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -72,8 +73,8 @@ func TestRevertClusterRole(t *testing.T) {
 	}
 	declaredCr := fake.ClusterRoleObject(core.Name(crName))
 	declaredCr.Rules = declaredRules
-	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredCr)
-	nt.Root.CommitAndPush("add get/list/create ClusterRole")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/clusterrole.yaml", declaredCr)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSyncs()
 
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
@@ -161,8 +162,8 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 	declaredCr := fake.ClusterRoleObject(core.Name(crName))
 	declaredCr.Rules = declaredRules
-	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredCr)
-	nt.Root.CommitAndPush("add get/list/create ClusterRole")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/clusterrole.yaml", declaredCr)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSyncs()
 
 	if !nt.MultiRepo {
@@ -206,8 +207,8 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 	updatedCr := fake.ClusterRoleObject(core.Name(crName))
 	updatedCr.Rules = updatedRules
-	nt.Root.Add("acme/cluster/clusterrole.yaml", updatedCr)
-	nt.Root.CommitAndPush("update ClusterRole to get/list")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/clusterrole.yaml", updatedCr)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("update ClusterRole to get/list")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the resource is updated.
@@ -231,8 +232,8 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 
 	// Delete the ClusterRole from the SOT.
-	nt.Root.Remove("acme/cluster/clusterrole.yaml")
-	nt.Root.CommitAndPush("deleting ClusterRole")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/cluster/clusterrole.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("deleting ClusterRole")
 	nt.WaitForRepoSyncs()
 
 	err = nt.ValidateNotFound(crName, "", &rbacv1.ClusterRole{})

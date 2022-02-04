@@ -118,7 +118,7 @@ func TestRoot_Parse(t *testing.T) {
 					parser:             &fakeParser{parse: tc.parsed},
 					syncName:           rootSyncName,
 					reconcilerName:     rootReconcilerName,
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(rootSyncName)),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					converter:          converter,
 					updater: updater{
@@ -179,7 +179,7 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 					parser:             &fakeParser{errors: tc.errors},
 					syncName:           rootSyncName,
 					reconcilerName:     rootReconcilerName,
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(rootSyncName)),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					updater: updater{
 						scope:     declared.RootReconciler,
@@ -233,7 +233,7 @@ func TestRoot_SourceReconcilerErrorsMetricValidation(t *testing.T) {
 					parser:             &fakeParser{errors: tc.parseErrors},
 					syncName:           rootSyncName,
 					reconcilerName:     rootReconcilerName,
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(rootSyncName)),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					updater: updater{
 						scope:     declared.RootReconciler,
@@ -300,7 +300,7 @@ func TestRoot_SourceAndSyncReconcilerErrorsMetricValidation(t *testing.T) {
 					},
 					syncName:           rootSyncName,
 					reconcilerName:     rootReconcilerName,
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(rootSyncName)),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					mux:                &sync.Mutex{},
 				},

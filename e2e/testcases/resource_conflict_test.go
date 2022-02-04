@@ -55,11 +55,11 @@ func namespacePodRole() *rbacv1.Role {
 }
 
 func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
-	nt := nomostest.New(t, ntopts.NamespaceRepo("shipping"), ntopts.SkipMonoRepo)
+	nt := nomostest.New(t, ntopts.NamespaceRepo("shipping", configsync.RepoSyncName), ntopts.SkipMonoRepo)
 
 	// Add a Role to root.
-	nt.Root.Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
-	nt.Root.CommitAndPush("add pod viewer role")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add pod viewer role")
 	nt.WaitForRepoSyncs()
 
 	// Validate multi-repo metrics from root reconciler.
@@ -85,8 +85,8 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	}
 
 	// Declare a conflicting Role in the shipping Namespace repo.
-	nt.NonRootRepos["shipping"].Add("acme/namespaces/shipping/pod-role.yaml", namespacePodRole())
-	nt.NonRootRepos["shipping"].CommitAndPush("add conflicting pod owner role")
+	nt.NonRootRepos[nomostest.RepoSyncNN("shipping", configsync.RepoSyncName)].Add("acme/namespaces/shipping/pod-role.yaml", namespacePodRole())
+	nt.NonRootRepos[nomostest.RepoSyncNN("shipping", configsync.RepoSyncName)].CommitAndPush("add conflicting pod owner role")
 
 	// The RootSync should report no problems - it has no way to detect there is
 	// a problem.
@@ -116,8 +116,8 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	}
 
 	// Remove the declaration from the Root repo.
-	nt.Root.Remove("acme/namespaces/shipping/pod-role.yaml")
-	nt.Root.CommitAndPush("remove conflicting pod role from Root")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/shipping/pod-role.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove conflicting pod role from Root")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Role is updated to the one in the Namespace repo.
@@ -151,11 +151,11 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 }
 
 func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
-	nt := nomostest.New(t, ntopts.NamespaceRepo("shipping"), ntopts.SkipMonoRepo)
+	nt := nomostest.New(t, ntopts.NamespaceRepo("shipping", configsync.RepoSyncName), ntopts.SkipMonoRepo)
 
 	// Add a Role to Namespace.
-	nt.NonRootRepos["shipping"].Add("acme/namespaces/shipping/pod-role.yaml", namespacePodRole())
-	nt.NonRootRepos["shipping"].CommitAndPush("declare Role")
+	nt.NonRootRepos[nomostest.RepoSyncNN("shipping", configsync.RepoSyncName)].Add("acme/namespaces/shipping/pod-role.yaml", namespacePodRole())
+	nt.NonRootRepos[nomostest.RepoSyncNN("shipping", configsync.RepoSyncName)].CommitAndPush("declare Role")
 	nt.WaitForRepoSyncs()
 
 	err := nt.Validate("pods", "shipping", &rbacv1.Role{},
@@ -180,8 +180,8 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		nt.T.Errorf("validating metrics: %v", err)
 	}
 
-	nt.Root.Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
-	nt.Root.CommitAndPush("add conflicting pod role to Root")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add conflicting pod role to Root")
 
 	nt.WaitForRepoSyncs(nomostest.RootSyncOnly())
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
@@ -207,8 +207,8 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	nt.NonRootRepos["shipping"].Remove("acme/namespaces/shipping/pod-role.yaml")
-	nt.NonRootRepos["shipping"].CommitAndPush("remove conflicting pod role from Namespace repo")
+	nt.NonRootRepos[nomostest.RepoSyncNN("shipping", configsync.RepoSyncName)].Remove("acme/namespaces/shipping/pod-role.yaml")
+	nt.NonRootRepos[nomostest.RepoSyncNN("shipping", configsync.RepoSyncName)].CommitAndPush("remove conflicting pod role from Namespace repo")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Role still matches the one in the Root repo.

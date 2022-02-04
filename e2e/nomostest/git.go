@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -28,13 +29,16 @@ const (
 	// MainBranch is static as behavior when switching branches is never under
 	// test.
 	MainBranch = "main"
-
-	// SafetyNSPath is the path to the safety namespace yaml file.
-	SafetyNSPath = "acme/namespaces/safety/ns.yaml"
-
-	// SafetyNS is the name of the safety namespace.
-	SafetyNS = "safety"
 )
+
+// RepoType represents the type of the source repository.
+type RepoType string
+
+// RootRepo indicates the resources in the repository are cluster-scoped.
+const RootRepo RepoType = "root"
+
+// NamespaceRepo indicates the resources in the repository are namespace-scoped.
+const NamespaceRepo RepoType = "namespace"
 
 // Repository is a local git repository with a connection to a repository
 // on the git-server for the test.
@@ -51,13 +55,22 @@ type Repository struct {
 
 	T testing.NTB
 
-	// Name is the local repository name.
-	Name string
+	// Type refers to the type of the repository, i.e. if it is a root repo or a namespace repo.
+	Type RepoType
+
+	// SafetyNSPath is the path to the safety namespace yaml file.
+	SafetyNSPath string
+
+	// SafetyNS is the name of the safety namespace.
+	SafetyNSName string
 
 	// RemoteRepoName is the name of the remote repository.
+	// It is the same as Name for the testing git-server.
+	// For other git providers, it appends a UUID to Name for uniqueness.
 	RemoteRepoName string
 
 	// RemoteURL is the remote URL of the repository.
+	// It is used to set the url for the remote origin using `git remote add origin <REMOTE_URL>.
 	RemoteURL string
 
 	// UpstreamRepoURL is the URL of the seed repo
@@ -67,28 +80,32 @@ type Repository struct {
 // NewRepository creates a remote repo on the git provider.
 // Locally, it writes the repository to `tmpdir`/repos/`name`.
 //
-// For root repo, `name` is `sot.git`.
-// For namespace repo, `name` is the name of the namespace.
-func NewRepository(nt *NT, name string, upstream string, sourceFormat filesystem.SourceFormat) *Repository {
+// The repo name is in the format of <NAMESPACE>/<NAME> of RootSync|RepoSync.
+func NewRepository(nt *NT, repoType RepoType, nn types.NamespacedName, upstream string, sourceFormat filesystem.SourceFormat) *Repository {
 	nt.T.Helper()
 
-	localDir := filepath.Join(nt.TmpDir, "repos", name)
+	namespacedName := nn.String()
+	safetyNs := fmt.Sprintf("safety-%s", strings.ReplaceAll(namespacedName, "/", "-"))
+
+	localDir := filepath.Join(nt.TmpDir, "repos", namespacedName)
 
 	g := &Repository{
-		Root:   localDir,
-		Format: sourceFormat,
-		T:      nt.T,
-		Name:   name,
+		Root:         localDir,
+		Format:       sourceFormat,
+		T:            nt.T,
+		Type:         repoType,
+		SafetyNSName: safetyNs,
+		SafetyNSPath: fmt.Sprintf("acme/namespaces/%s/ns.yaml", safetyNs),
 	}
 
-	repoName, err := nt.GitProvider.CreateRepository(name)
+	repoName, err := nt.GitProvider.CreateRepository(namespacedName)
 	// Add the repo to nt.RemoteRepositories immediately after it is created to reuse the repo.
-	nt.RemoteRepositories[name] = g
+	nt.RemoteRepositories[nn] = g
 	if err != nil {
 		nt.T.Fatal(err)
 	}
 	g.RemoteRepoName = repoName
-	g.RemoteURL = nt.GitProvider.RemoteURL(nt.gitRepoPort, repoName)
+	g.RemoteURL = nt.GitProvider.RemoteURL(nt.gitRepoPort, namespacedName)
 	g.UpstreamRepoURL = upstream
 
 	g.init(nt.gitPrivateKeyPath)
@@ -135,9 +152,9 @@ func (g *Repository) initialCommit(sourceFormat filesystem.SourceFormat) {
 	// exist - ACM refuses to sync to non-existent directories, and git requires
 	// at least one file in order for a directory to exist.
 	g.AddFile("acme/README.md", []byte("Test repository."))
-	if g.Name == rootRepo {
+	if g.Type == RootRepo {
 		// Keep a safety namespace to avoid failing the safety check.
-		g.Add(SafetyNSPath, fake.NamespaceObject(SafetyNS))
+		g.Add(g.SafetyNSPath, fake.NamespaceObject(g.SafetyNSName))
 	}
 	switch sourceFormat {
 	case filesystem.SourceFormatHierarchy:

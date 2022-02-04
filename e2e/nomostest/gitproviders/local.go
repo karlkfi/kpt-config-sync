@@ -15,11 +15,13 @@ func (l *LocalProvider) Type() string {
 }
 
 // RemoteURL returns the Git URL for connecting to the test git-server.
+// name refers to the repo name in the format of <NAMESPACE>/<NAME> of RootSync|RepoSync.
 func (l *LocalProvider) RemoteURL(port int, name string) string {
 	return fmt.Sprintf("ssh://git@localhost:%d/git-server/repos/%s", port, name)
 }
 
 // SyncURL returns a URL for Config Sync to sync from.
+// name refers to the repo name in the format of <NAMESPACE>/<NAME> of RootSync|RepoSync.
 func (l *LocalProvider) SyncURL(name string) string {
 	return fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", name)
 }

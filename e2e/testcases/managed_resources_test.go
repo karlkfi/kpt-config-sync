@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/api/configsync"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/nomos/e2e/nomostest"
@@ -45,8 +46,8 @@ func TestKubectlCreatesManagedNamespaceResourceMonoRepo(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMultiRepo, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore")
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	ns := []byte(`
@@ -115,8 +116,8 @@ func TestKubectlCreatesManagedNamespaceResourceMultiRepo(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore")
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	/* A new test */
@@ -244,12 +245,12 @@ func TestKubectlCreatesManagedConfigMapResource(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore")
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
-	nt.Root.Add("acme/cm.yaml", fake.ConfigMapObject(core.Name("cm-1"), core.Namespace("bookstore")))
-	nt.Root.CommitAndPush("add a configmap")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cm.yaml", fake.ConfigMapObject(core.Name("cm-1"), core.Namespace("bookstore")))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a configmap")
 	nt.WaitForRepoSyncs()
 
 	/* A new test */
@@ -424,12 +425,12 @@ func TestDeleteManagedResources(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore")
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
-	nt.Root.Add("acme/cm.yaml", fake.ConfigMapObject(core.Name("cm-1"), core.Namespace("bookstore")))
-	nt.Root.CommitAndPush("add a configmap")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cm.yaml", fake.ConfigMapObject(core.Name("cm-1"), core.Namespace("bookstore")))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a configmap")
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
@@ -486,12 +487,12 @@ func TestDeleteManagedResourcesWithIgnoreMutationAnnotation(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore", core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
-	nt.Root.Add("acme/cm.yaml", fake.ConfigMapObject(core.Name("cm-1"), core.Namespace("bookstore")))
-	nt.Root.CommitAndPush("add a configmap")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cm.yaml", fake.ConfigMapObject(core.Name("cm-1"), core.Namespace("bookstore")))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a configmap")
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
@@ -547,8 +548,8 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore")
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	// Add a new annotation into the namespace object
@@ -602,8 +603,8 @@ func TestAddFieldsIntoManagedResourcesWithIgnoreMutationAnnotation(t *testing.T)
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore", core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	// Add a new annotation into the namespace object
@@ -626,8 +627,8 @@ func TestModifyManagedFields(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore", core.Annotation("season", "summer"))
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
@@ -686,8 +687,8 @@ func TestModifyManagedFieldsWithIgnoreMutationAnnotation(t *testing.T) {
 	namespace := fake.NamespaceObject("bookstore",
 		core.Annotation("season", "summer"),
 		core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	// Modify a managed field
@@ -730,8 +731,8 @@ func TestDeleteManagedFields(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	namespace := fake.NamespaceObject("bookstore", core.Annotation("season", "summer"))
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
@@ -788,8 +789,8 @@ func TestDeleteManagedFieldsWithIgnoreMutationAnnotation(t *testing.T) {
 	namespace := fake.NamespaceObject("bookstore",
 		core.Annotation("season", "summer"),
 		core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush("add a namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add a namespace")
 	nt.WaitForRepoSyncs()
 
 	// Delete a managed field

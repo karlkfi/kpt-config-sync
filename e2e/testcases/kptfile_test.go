@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -12,11 +13,11 @@ func TestIgnoreKptfiles(t *testing.T) {
 	nt := nomostest.New(t)
 
 	// Add multiple Kptfiles
-	nt.Root.AddFile("acme/cluster/Kptfile", []byte("random content"))
-	nt.Root.AddFile("acme/namespaces/foo/Kptfile", nil)
-	nt.Root.AddFile("acme/namespaces/foo/subdir/Kptfile", []byte("# some comment"))
-	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
-	nt.Root.CommitAndPush("Adding multiple Kptfiles")
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/cluster/Kptfile", []byte("random content"))
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/Kptfile", nil)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/subdir/Kptfile", []byte("# some comment"))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding multiple Kptfiles")
 	nt.WaitForRepoSyncs()
 	nt.RenewClient()
 

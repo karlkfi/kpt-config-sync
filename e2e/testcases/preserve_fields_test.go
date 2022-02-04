@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -23,7 +24,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 
 	// Declare the Service's Namespace
 	ns := "autogen-fields"
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
 		fake.NamespaceObject(ns))
 
 	// Declare the Service.
@@ -44,9 +45,9 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 			TargetPort: intstr.FromInt(targetPort1),
 		}},
 	}
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
 
-	nt.Root.CommitAndPush("declare Namespace and Service")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("declare Namespace and Service")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Service has the target port we set.
@@ -115,8 +116,8 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 
 	updatedService := service.DeepCopy()
 	updatedService.Spec.Ports[0].TargetPort = intstr.FromInt(targetPort2)
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
-	nt.Root.CommitAndPush("update declared Service")
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("update declared Service")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Service has the new target port we set.
@@ -153,7 +154,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 		Resources: []string{"namespaces"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Root.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
 
 	rbacViewerName := "rbac-viewer"
 	rbacViewer := fake.ClusterRoleObject(core.Name(rbacViewerName),
@@ -163,12 +164,12 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 		Resources: []string{"roles", "rolebindings", "clusterroles", "clusterrolebindings"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Root.Add("acme/cluster/rbac-viewer-cr.yaml", rbacViewer)
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/rbac-viewer-cr.yaml", rbacViewer)
 
 	aggregateRoleName := "aggregate"
 	// We have to declare the YAML explicitly because otherwise the declaration
 	// explicitly declares "rules: []" due to how Go handles empty/unset fields.
-	nt.Root.AddFile("acme/cluster/aggregate-viewer-cr.yaml", []byte(`
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/cluster/aggregate-viewer-cr.yaml", []byte(`
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -178,7 +179,7 @@ aggregationRule:
   - matchLabels:
       permissions: viewer`))
 
-	nt.Root.CommitAndPush("declare ClusterRoles")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("declare ClusterRoles")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the aggregate rule is actually aggregated.
@@ -193,7 +194,7 @@ aggregationRule:
 	}
 
 	// Update aggregateRole with a new label.
-	nt.Root.AddFile("acme/cluster/aggregate-viewer-cr.yaml", []byte(`
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/cluster/aggregate-viewer-cr.yaml", []byte(`
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -204,7 +205,7 @@ aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
       permissions: viewer`))
-	nt.Root.CommitAndPush("add label to aggregate ClusterRole")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add label to aggregate ClusterRole")
 	nt.WaitForRepoSyncs()
 
 	// Ensure we don't overwrite the aggregate rules.
@@ -241,8 +242,8 @@ func TestPreserveLastApplied(t *testing.T) {
 		Resources: []string{"namespaces"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Root.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
-	nt.Root.CommitAndPush("add namespace-viewer ClusterRole")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add namespace-viewer ClusterRole")
 	nt.WaitForRepoSyncs()
 
 	err := nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{})
@@ -254,11 +255,11 @@ func TestPreserveLastApplied(t *testing.T) {
 	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation}, annotationKeys...)
 
 	nsViewer.Annotations[corev1.LastAppliedConfigAnnotation] = `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{"configmanagement.gke.io/cluster-name":"e2e-test-cluster","configmanagement.gke.io/managed":"enabled","configmanagement.gke.io/source-path":"cluster/namespace-viewer-clusterrole.yaml"},"labels":{"app.kubernetes.io/managed-by":"configmanagement.gke.io","permissions":"viewer"},"name":"namespace-viewer"},"rules":[{"apiGroups":[""],"resources":["namespaces"],"verbs":["get","list"]}]}`
-	nt.Root.Add("ns-viewer-cr-replace.yaml", nsViewer)
+	nt.RootRepos[configsync.RootSyncName].Add("ns-viewer-cr-replace.yaml", nsViewer)
 	if nt.MultiRepo {
 		// Admission webhook denies change. We don't get a "LastApplied" annotation
 		// as we prevented the change outright.
-		_, err = nt.Kubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
+		_, err = nt.Kubectl("replace", "-f", filepath.Join(nt.RootRepos[configsync.RootSyncName].Root, "ns-viewer-cr-replace.yaml"))
 		if err == nil {
 			nt.T.Fatal("got kubectl replace err = nil, want admission webhook to deny")
 		}
@@ -281,7 +282,7 @@ func TestPreserveLastApplied(t *testing.T) {
 		// annotation (which we no longer set starting in 1.4.1). We are then
 		// verifying that ConfigSync copies the contents of "last-applied" to
 		// "last-declared" and deletes "last-applied".
-		nt.MustKubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
+		nt.MustKubectl("replace", "-f", filepath.Join(nt.RootRepos[configsync.RootSyncName].Root, "ns-viewer-cr-replace.yaml"))
 
 		_, err = nomostest.Retry(20*time.Second, func() error {
 			return nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{},
@@ -306,14 +307,14 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	nt := nomostest.New(t)
 
 	ns := "crud-labels"
-	nt.Root.Add("acme/namespaces/crud-labels/ns.yaml",
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/crud-labels/ns.yaml",
 		fake.NamespaceObject(ns))
 
 	cmName := "e2e-test-configmap"
 	cmPath := "acme/namespaces/crud-labels/configmap.yaml"
 	cm := fake.ConfigMapObject(core.Name(cmName))
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("Adding ConfigMap with no labels to repo")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding ConfigMap with no labels to repo")
 	nt.WaitForRepoSyncs()
 
 	var defaultLabels = []string{metadata.ManagedByKey, metadata.DeclaredVersionLabel}
@@ -327,8 +328,8 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	}
 
 	cm.Labels["baz"] = "qux"
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("Update label for ConfigMap in repo")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update label for ConfigMap in repo")
 	nt.WaitForRepoSyncs()
 
 	// Checking that label is updated after syncing an update.
@@ -339,8 +340,8 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	}
 
 	delete(cm.Labels, "baz")
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("Delete label for configmap in repo")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Delete label for configmap in repo")
 	nt.WaitForRepoSyncs()
 
 	// Check that the label is deleted after syncing.
@@ -364,14 +365,14 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt := nomostest.New(t)
 
 	ns := "crud-annotations"
-	nt.Root.Add("acme/namespaces/crud-annotations/ns.yaml",
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/crud-annotations/ns.yaml",
 		fake.NamespaceObject(ns))
 
 	cmName := "e2e-test-configmap"
 	cmPath := "acme/namespaces/crud-annotations/configmap.yaml"
 	cm := fake.ConfigMapObject(core.Name(cmName))
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("Adding ConfigMap with no annotations to repo")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding ConfigMap with no annotations to repo")
 	nt.WaitForRepoSyncs()
 
 	annotationKeys := metadata.GetNomosAnnotationKeys(nt.MultiRepo)
@@ -401,8 +402,8 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	}
 
 	cm.Annotations["baz"] = "qux"
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("Update annotation for ConfigMap in repo")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update annotation for ConfigMap in repo")
 	nt.WaitForRepoSyncs()
 
 	updatedKeys := append([]string{"baz"}, annotationKeys...)
@@ -432,8 +433,8 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	}
 
 	delete(cm.Annotations, "baz")
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("Delete annotation for configmap in repo")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Delete annotation for configmap in repo")
 	nt.WaitForRepoSyncs()
 
 	// Check that the annotation is deleted after syncing.

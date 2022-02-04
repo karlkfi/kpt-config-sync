@@ -6,12 +6,13 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -24,11 +25,11 @@ func TestKCCResources(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.KccTest)
 
 	// Namespace foo holds the KCC resources.
-	nt.Root.Add("acme/namespaces/foo/ns.yaml",
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/foo/ns.yaml",
 		fake.NamespaceObject("foo",
 			// Annotate the namespace to create GCP resources in the project "jingfang-fishfood".
 			core.Annotation("cnrm.cloud.google.com/project-id", "jingfang-fishfood")))
-	nt.Root.CommitAndPush("add Namespace for holding KCC resources")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add Namespace for holding KCC resources")
 	nt.WaitForRepoSyncs()
 
 	// Add KCC resources
@@ -96,13 +97,13 @@ spec:
   topicRef:
     name: test-cs
 `)
-	nt.Root.AddFile("acme/namespaces/foo/enable-pubsub.yaml", enablePubSub)
-	nt.Root.AddFile("acme/namespaces/foo/pubsub-topic.yaml", pubsubTopic)
-	nt.Root.AddFile("acme/namespaces/foo/pubsub-key.yaml", pubsubKey)
-	nt.Root.AddFile("acme/namespaces/foo/service-account-policy.yaml", policy)
-	nt.Root.AddFile("acme/namespaces/foo/service-account.yaml", serviceAccount)
-	nt.Root.AddFile("acme/namespaces/foo/subscription.yaml", subscription)
-	nt.Root.CommitAndPush("add KCC resources")
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/enable-pubsub.yaml", enablePubSub)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/pubsub-topic.yaml", pubsubTopic)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/pubsub-key.yaml", pubsubKey)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/service-account-policy.yaml", policy)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/service-account.yaml", serviceAccount)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/subscription.yaml", subscription)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add KCC resources")
 	nt.WaitForRepoSyncs()
 
 	// Verify that the GCP resources are created.
@@ -132,14 +133,14 @@ spec:
 	validateKCCResourceReady(nt, gvkPolicyMember, "policy-member-binding", "foo")
 
 	// Remove the kcc resources
-	nt.Root.Remove("acme/namespaces/foo/enable-pubsub.yaml")
-	nt.Root.Remove("acme/namespaces/foo/pubsub-topic.yaml")
-	nt.Root.Remove("acme/namespaces/foo/pubsub-key.yaml")
-	nt.Root.Remove("acme/namespaces/foo/service-account-policy.yaml")
-	nt.Root.Remove("acme/namespaces/foo/service-account.yaml")
-	nt.Root.Remove("acme/namespaces/foo/subscription.yaml")
-	nt.Root.Remove("acme/namespaces/foo/ns.yaml")
-	nt.Root.CommitAndPush("remove KCC resources")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/enable-pubsub.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/pubsub-topic.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/pubsub-key.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/service-account-policy.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/service-account.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/subscription.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/ns.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove KCC resources")
 	nt.WaitForRepoSyncs()
 
 	// Verify that the GCP resources are removed.
@@ -157,13 +158,13 @@ spec:
 // are removed successfully.
 func TestKCCResourcesOnCSR(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.KccTest)
-	rs := fake.RootSyncObjectV1Beta1()
+	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.T.Log("sync to the kcc resources from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc", "branch": "main", "repo": "https://source.developers.google.com/p/stolos-dev/r/configsync-ci-cc", "auth": "gcpserviceaccount","gcpServiceAccountEmail": "e2e-test-csr-reader@stolos-dev.iam.gserviceaccount.com", "secretRef": {"name": ""}}, "sourceFormat": "unstructured"}}`)
 
-	sha1Fn := func(nt *nomostest.NT) (string, error) {
+	sha1Fn := func(nt *nomostest.NT, nn types.NamespacedName) (string, error) {
 		rs = &v1beta1.RootSync{}
-		if err := nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
+		if err := nt.Get(nn.Name, nn.Namespace, rs); err != nil {
 			return "", err
 		}
 		return rs.Status.LastSyncedCommit, nil

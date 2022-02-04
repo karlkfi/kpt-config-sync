@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -21,10 +22,10 @@ import (
 func TestAdmission(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
-	nt.Root.Add("acme/namespaces/hello/ns.yaml",
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/hello/ns.yaml",
 		fake.NamespaceObject("hello",
 			core.Annotation("goodbye", "moon")))
-	nt.Root.CommitAndPush("add Namespace")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add Namespace")
 	nt.WaitForRepoSyncs()
 
 	// Ensure we properly forbid changing declared information.
@@ -139,8 +140,8 @@ metadata:
 
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
-	nt.Root.Add("acme/namespaces/hello/ns.yaml", fake.NamespaceObject("hello"))
-	nt.Root.CommitAndPush("add Namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/hello/ns.yaml", fake.NamespaceObject("hello"))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add Namespace")
 	nt.WaitForRepoSyncs()
 
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "webhook.yaml"), webhook, 0644); err != nil {
@@ -162,8 +163,8 @@ metadata:
 		nt.T.Fatalf("failed to remove the annotation in the admission webhook %v", err)
 	}
 
-	nt.Root.Add("acme/namespaces/test/ns.yaml", fake.NamespaceObject("test"))
-	nt.Root.CommitAndPush("add another Namespace")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/test/ns.yaml", fake.NamespaceObject("test"))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add another Namespace")
 	nt.WaitForRepoSyncs()
 
 	nomostest.WaitForWebhookReadiness(nt)

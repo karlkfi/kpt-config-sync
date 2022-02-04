@@ -22,7 +22,7 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 
 	// Declare the Namespace
 	ns := "switch-to-mono"
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
 		fake.NamespaceObject(ns))
 
 	// Declare the Service.
@@ -43,9 +43,9 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 			TargetPort: intstr.FromInt(targetPort1),
 		}},
 	}
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
 
-	nt.Root.CommitAndPush("declare Namespace and Service")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("declare Namespace and Service")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Service has the target port we set.
@@ -75,7 +75,7 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 	}
 
 	// Switch to mono-repo mode.
-	nomostest.SwitchMode(nt, nt.Root.Format)
+	nomostest.SwitchMode(nt, nt.RootRepos[configsync.RootSyncName].Format)
 	t.Cleanup(func() {
 		// Reset MultiRepo flag so that
 		// 1. the test resources can be cleaned up gracefully.
@@ -92,8 +92,8 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 
 	updatedService := service.DeepCopy()
 	updatedService.Spec.Ports[0].TargetPort = intstr.FromInt(targetPort2)
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
-	nt.Root.CommitAndPush("update declared Service")
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("update declared Service")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Service exists and has the target port we set.
@@ -108,7 +108,7 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 
 	// Declare the Namespace
 	ns := "switch-to-csmr"
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
 		fake.NamespaceObject(ns))
 
 	// Declare the Service.
@@ -129,9 +129,9 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 			TargetPort: intstr.FromInt(targetPort1),
 		}},
 	}
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
 
-	nt.Root.CommitAndPush("declare Namespace and Service")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("declare Namespace and Service")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Service has the target port we set.
@@ -161,7 +161,7 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	}
 
 	// Switch to multi-repo mode.
-	nomostest.SwitchMode(nt, nt.Root.Format)
+	nomostest.SwitchMode(nt, nt.RootRepos[configsync.RootSyncName].Format)
 	t.Cleanup(func() {
 		// Reset MultiRepo flag so that
 		// 1. the test resources can be cleaned up gracefully.
@@ -177,8 +177,8 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 
 	updatedService := service.DeepCopy()
 	updatedService.Spec.Ports[0].TargetPort = intstr.FromInt(targetPort2)
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
-	nt.Root.CommitAndPush("update declared Service")
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("update declared Service")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the Service exists and has the target port we set.

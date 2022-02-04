@@ -1,8 +1,10 @@
 package ntopts
 
-// NamespaceRepoOpts defines options for a NamespaceRepo
-type NamespaceRepoOpts struct {
-	// UpstreamURL provides the upstream repo to initialize the namespace repo with
+import "k8s.io/apimachinery/pkg/types"
+
+// RepoOpts defines options for a Repo
+type RepoOpts struct {
+	// UpstreamURL provides the upstream repo to initialize the repo with
 	UpstreamURL string
 }
 
@@ -15,7 +17,10 @@ type MultiRepo struct {
 	// We don't support referencing the Root repository in this map; while we do
 	// support this use case, it isn't special behavior that tests any unique code
 	// paths.
-	NamespaceRepos map[string]NamespaceRepoOpts
+	NamespaceRepos map[types.NamespacedName]RepoOpts
+
+	// RootRepos is a set representing the Root repos to create.
+	RootRepos map[string]RepoOpts
 
 	// Control indicates options for configuring Namespace Repos.
 	Control repoControl
@@ -37,17 +42,33 @@ type MultiRepo struct {
 
 // NamespaceRepo tells the test case that a Namespace Repo should be configured
 // that points at the provided Repository.
-func NamespaceRepo(namespace string) func(opt *New) {
+func NamespaceRepo(ns, name string) func(opt *New) {
 	return func(opt *New) {
-		opt.NamespaceRepos[namespace] = NamespaceRepoOpts{UpstreamURL: ""}
+		nn := types.NamespacedName{
+			Namespace: ns,
+			Name:      name,
+		}
+		opt.NamespaceRepos[nn] = RepoOpts{UpstreamURL: ""}
+	}
+}
+
+// RootRepo tells the test case that a Root Repo should be configured
+// that points at the provided Repository.
+func RootRepo(name string) func(opt *New) {
+	return func(opt *New) {
+		opt.RootRepos[name] = RepoOpts{UpstreamURL: ""}
 	}
 }
 
 // NamespaceRepoWithUpstream tells the test case that a Namespace Repo should be configured
 // that points at the provided Repository.
-func NamespaceRepoWithUpstream(namespace string, upstreamURL string) func(opt *New) {
+func NamespaceRepoWithUpstream(ns, name string, upstreamURL string) func(opt *New) {
 	return func(opt *New) {
-		opt.NamespaceRepos[namespace] = NamespaceRepoOpts{UpstreamURL: upstreamURL}
+		nn := types.NamespacedName{
+			Namespace: ns,
+			Name:      name,
+		}
+		opt.NamespaceRepos[nn] = RepoOpts{UpstreamURL: upstreamURL}
 	}
 }
 

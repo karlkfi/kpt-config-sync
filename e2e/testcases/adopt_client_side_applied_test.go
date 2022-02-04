@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -24,8 +25,8 @@ func TestAdoptClientSideAppliedResource(t *testing.T) {
 		Verbs:     []string{"get", "list"},
 	}}
 
-	nt.Root.Add("ns-viewer-client-side-applied.yaml", nsViewer)
-	nt.MustKubectl("apply", "-f", filepath.Join(nt.Root.Root, "ns-viewer-client-side-applied.yaml"))
+	nt.RootRepos[configsync.RootSyncName].Add("ns-viewer-client-side-applied.yaml", nsViewer)
+	nt.MustKubectl("apply", "-f", filepath.Join(nt.RootRepos[configsync.RootSyncName].Root, "ns-viewer-client-side-applied.yaml"))
 
 	// Validate the ClusterRole exist.
 	err := nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{})
@@ -39,8 +40,8 @@ func TestAdoptClientSideAppliedResource(t *testing.T) {
 		Resources: []string{"namespaces"},
 		Verbs:     []string{"get"},
 	}}
-	nt.Root.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
-	nt.Root.CommitAndPush("add namespace-viewer ClusterRole")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add namespace-viewer ClusterRole")
 	nt.WaitForRepoSyncs()
 
 	// Validate the ClusterRole exist and the Rules are the same as the one

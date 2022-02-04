@@ -28,7 +28,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 	nt := nomostest.New(
 		t,
 		ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(bsNamespace),
+		ntopts.NamespaceRepo(bsNamespace, configsync.RepoSyncName),
 		ntopts.WithCentralizedControl,
 	)
 
@@ -46,7 +46,8 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 		nt.T.Errorf("RepoSync did not finish reconciling: %v", err)
 	}
 
-	repo, exist := nt.NonRootRepos[bsNamespace]
+	nn := nomostest.RepoSyncNN(bsNamespace, configsync.RepoSyncName)
+	repo, exist := nt.NonRootRepos[nn]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
@@ -118,11 +119,12 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 	nt := nomostest.New(
 		t,
 		ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(bsNamespaceRepo),
+		ntopts.NamespaceRepo(bsNamespaceRepo, configsync.RepoSyncName),
 		ntopts.WithDelegatedControl,
 	)
 
-	repo, exist := nt.NonRootRepos[bsNamespaceRepo]
+	nn := nomostest.RepoSyncNN(bsNamespaceRepo, configsync.RepoSyncName)
+	repo, exist := nt.NonRootRepos[nn]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
@@ -166,7 +168,7 @@ func TestDeleteRepoSync_Delegated_AndRepoSyncV1Alpha1(t *testing.T) {
 	nt := nomostest.New(
 		t,
 		ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(bsNamespace),
+		ntopts.NamespaceRepo(bsNamespace, configsync.RepoSyncName),
 		ntopts.WithDelegatedControl,
 	)
 
@@ -185,7 +187,7 @@ func TestDeleteRepoSync_Delegated_AndRepoSyncV1Alpha1(t *testing.T) {
 	checkRepoSyncResourcesNotPresent(bsNamespace, secretNames, nt)
 
 	nt.T.Log("Test RepoSync v1alpha1 version in delegated control mode")
-	rsv1alpha1 := nomostest.RepoSyncObjectV1Alpha1(bsNamespace, rs.Spec.Repo)
+	rsv1alpha1 := nomostest.RepoSyncObjectV1Alpha1(bsNamespace, configsync.RepoSyncName, rs.Spec.Repo)
 	if err := nt.Create(rsv1alpha1); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -198,18 +200,20 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 	nt := nomostest.New(
 		t,
 		ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(bsNamespace),
+		ntopts.NamespaceRepo(bsNamespace, configsync.RepoSyncName),
 		ntopts.WithCentralizedControl,
 	)
 
 	secretNames := getNsReconcilerSecrets(nt, bsNamespace)
 
 	// Remove RepoSync resource from Root Repository.
-	nt.Root.Remove(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName))
-	nt.Root.CommitAndPush("Removing RepoSync from the Root Repository")
+	nt.RootRepos[configsync.RootSyncName].Remove(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Removing RepoSync from the Root Repository")
 	// Remove from NamespaceRepos so we don't try to check that it is syncing,
 	// as we've just deleted it.
-	delete(nt.NamespaceRepos, bsNamespace)
+	nn := nomostest.RepoSyncNN(bsNamespace, configsync.RepoSyncName)
+	nsRepo := nt.NonRootRepos[nn]
+	delete(nt.NonRootRepos, nn)
 	nt.WaitForRepoSyncs()
 
 	checkRepoSyncResourcesNotPresent(bsNamespace, secretNames, nt)
@@ -237,15 +241,11 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 	}
 
 	nt.T.Log("Test RepoSync v1alpha1 version in central control mode")
-	repo, exist := nt.NonRootRepos[bsNamespace]
-	if !exist {
-		nt.T.Fatal("nonexistent repo")
-	}
-	rs := nomostest.RepoSyncObjectV1Alpha1(bsNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
-	nt.Root.Add(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName), rs)
-	nt.Root.CommitAndPush("Add RepoSync v1alpha1")
+	rs := nomostest.RepoSyncObjectV1Alpha1(nn.Namespace, nn.Name, nt.GitProvider.SyncURL(nsRepo.RemoteRepoName))
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName), rs)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add RepoSync v1alpha1")
 	// Add the bookstore namespace repo back to NamespaceRepos to verify that it is synced.
-	nt.NamespaceRepos[bsNamespace] = bsNamespace
+	nt.NonRootRepos[nn] = nsRepo
 	nt.WaitForRepoSyncs()
 }
 
@@ -265,7 +265,7 @@ func getNsReconcilerSecrets(nt *nomostest.NT, ns string) []string {
 
 func checkRepoSyncResourcesNotPresent(namespace string, secretNames []string, nt *nomostest.NT) {
 	_, err := nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(configsync.RepoSyncName, namespace, fake.RepoSyncObjectV1Beta1())
+		return nt.ValidateNotFound(configsync.RepoSyncName, namespace, fake.RepoSyncObjectV1Beta1(namespace, configsync.RepoSyncName))
 	})
 	if err != nil {
 		nt.T.Errorf("RepoSync present after deletion: %v", err)
@@ -338,7 +338,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	nt := nomostest.New(
 		t,
 		ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(bsNamespace),
+		ntopts.NamespaceRepo(bsNamespace, configsync.RepoSyncName),
 		ntopts.WithCentralizedControl,
 	)
 

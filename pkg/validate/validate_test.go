@@ -853,7 +853,7 @@ func TestHierarchical(t *testing.T) {
 			name: "RepoSync with invalid fields fails",
 			objs: []ast.FileObject{
 				fake.Repo(),
-				fake.FileObject(fake.RepoSyncObjectV1Beta1(core.Name("invalid")), "namespaces/foo/rs.yamo"),
+				fake.FileObject(fake.RepoSyncObjectV1Beta1("foo", "invalid"), "namespaces/foo/rs.yamo"),
 			},
 			wantErrs: fake.Errors(validate.InvalidSyncCode),
 		},

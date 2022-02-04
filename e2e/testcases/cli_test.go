@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	nomostesting "github.com/google/nomos/e2e/nomostest/testing"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -401,8 +402,8 @@ func testSyncFromNomosHydrateOutput(t *testing.T, config string) {
 		nt.T.Fatal(err)
 	}
 
-	nt.Root.Copy(config, "acme")
-	nt.Root.CommitAndPush("Add cluster-dev configs")
+	nt.RootRepos[configsync.RootSyncName].Copy(config, "acme")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add cluster-dev configs")
 	nt.WaitForRepoSyncs()
 
 	if err := nt.Validate("bookstore1", "", &corev1.Namespace{}); err != nil {

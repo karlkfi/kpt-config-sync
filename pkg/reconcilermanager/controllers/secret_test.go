@@ -24,8 +24,8 @@ const (
 	updatedKeyData = "updated-test-key"
 )
 
-func repoSyncWithAuth(auth string, opts ...core.MetaMutator) *v1beta1.RepoSync {
-	result := fake.RepoSyncObjectV1Beta1(opts...)
+func repoSyncWithAuth(ns, name, auth string, opts ...core.MetaMutator) *v1beta1.RepoSync {
+	result := fake.RepoSyncObjectV1Beta1(ns, name, opts...)
 	result.Spec.Git = v1beta1.Git{
 		Auth:      auth,
 		SecretRef: v1beta1.SecretReference{Name: "ssh-key"},
@@ -70,7 +70,7 @@ func TestCreate(t *testing.T) {
 	}{
 		{
 			name:     "Secret created",
-			reposync: repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
+			reposync: repoSyncWithAuth(reposyncNs, reposyncName, sshAuth),
 			client:   fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, core.Namespace(reposyncNs))),
 			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth,
 				core.Namespace(v1.NSConfigManagementSystem),
@@ -79,7 +79,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name:     "Secret updated",
-			reposync: repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
+			reposync: repoSyncWithAuth(reposyncNs, reposyncName, sshAuth),
 			client: fakeClient(t, secret(t, namespaceKey, updatedKeyData, sshAuth, core.Namespace(reposyncNs)),
 				secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
 			),
@@ -90,13 +90,13 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name:      "Secret not found",
-			reposync:  repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
+			reposync:  repoSyncWithAuth(reposyncNs, reposyncName, sshAuth),
 			client:    fakeClient(t),
 			wantError: true,
 		},
 		{
 			name:      "Secret not updated, secret not present",
-			reposync:  repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
+			reposync:  repoSyncWithAuth(reposyncNs, reposyncName, sshAuth),
 			client:    fakeClient(t, secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem))),
 			wantError: true,
 		},

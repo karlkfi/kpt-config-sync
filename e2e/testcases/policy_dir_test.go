@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/status"
 )
@@ -11,10 +12,10 @@ import (
 func TestMissingRepoErrorWithHierarchicalFormat(t *testing.T) {
 	nt := nomostest.New(t)
 
-	nomostest.SetPolicyDir(nt, "")
+	nomostest.SetPolicyDir(nt, configsync.RootSyncName, "")
 
 	if nt.MultiRepo {
-		nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode, "")
+		nt.WaitForRootSyncSourceError(configsync.RootSyncName, system.MissingRepoErrorCode, "")
 	} else {
 		nt.WaitForRepoImportErrorCode(system.MissingRepoErrorCode)
 	}
@@ -32,13 +33,13 @@ func TestPolicyDirUnset(t *testing.T) {
 	// and generates a KNV 2006 error (as shown in http://b/210525686#comment3 and http://b/210525686#comment5).
 	//
 	// Therefore, we only copy `../../examples/acme/cluster/admin-clusterrole.yaml` here.
-	nt.Root.Copy("../../examples/acme/cluster/admin-clusterrole.yaml", "./cluster")
-	nt.Root.Copy("../../examples/acme/namespaces", ".")
-	nt.Root.Copy("../../examples/acme/system", ".")
-	nt.Root.CommitAndPush("Initialize the root directory")
+	nt.RootRepos[configsync.RootSyncName].Copy("../../examples/acme/cluster/admin-clusterrole.yaml", "./cluster")
+	nt.RootRepos[configsync.RootSyncName].Copy("../../examples/acme/namespaces", ".")
+	nt.RootRepos[configsync.RootSyncName].Copy("../../examples/acme/system", ".")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Initialize the root directory")
 	nt.WaitForRepoSyncs()
 
-	nomostest.SetPolicyDir(nt, "")
+	nomostest.SetPolicyDir(nt, configsync.RootSyncName, "")
 	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("."))
 }
 
@@ -46,17 +47,17 @@ func TestInvalidPolicyDir(t *testing.T) {
 	nt := nomostest.New(t)
 
 	nt.T.Log("Break the policydir in the repo")
-	nomostest.SetPolicyDir(nt, "some-nonexistent-policydir")
+	nomostest.SetPolicyDir(nt, configsync.RootSyncName, "some-nonexistent-policydir")
 
 	nt.T.Log("Expect an error to be present in status.source.errors")
 	if nt.MultiRepo {
-		nt.WaitForRootSyncSourceError(status.PathErrorCode, "")
+		nt.WaitForRootSyncSourceError(configsync.RootSyncName, status.PathErrorCode, "")
 	} else {
 		nt.WaitForRepoSourceError(status.SourceErrorCode)
 	}
 
 	nt.T.Log("Fix the policydir in the repo")
-	nomostest.SetPolicyDir(nt, "acme")
+	nomostest.SetPolicyDir(nt, configsync.RootSyncName, "acme")
 	nt.T.Log("Expect repo to recover from the error in source message")
 	nt.WaitForRepoSyncs()
 }

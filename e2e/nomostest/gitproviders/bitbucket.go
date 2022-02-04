@@ -55,13 +55,16 @@ func (b *BitbucketClient) Type() string {
 }
 
 // RemoteURL returns the Git URL for the Bitbucket repository.
-func (b *BitbucketClient) RemoteURL(_ int, repoName string) string {
-	return b.SyncURL(repoName)
+// name refers to the repo name in the format of <NAMESPACE>/<NAME> of RootSync|RepoSync.
+func (b *BitbucketClient) RemoteURL(_ int, name string) string {
+	return b.SyncURL(name)
 }
 
 // SyncURL returns a URL for Config Sync to sync from.
-func (b *BitbucketClient) SyncURL(repoName string) string {
-	return fmt.Sprintf("git@bitbucket.org:%s/%s", GitUser, repoName)
+// name refers to the repo name in the format of <NAMESPACE>/<NAME> of RootSync|RepoSync.
+// The Bitbucket Rest API doesn't allow slash in the repository name, so slash has to be replaced with dash in the name.
+func (b *BitbucketClient) SyncURL(name string) string {
+	return fmt.Sprintf("git@bitbucket.org:%s/%s", GitUser, strings.ReplaceAll(name, "/", "-"))
 }
 
 // CreateRepository calls the POST API to create a remote repository on Bitbucket.

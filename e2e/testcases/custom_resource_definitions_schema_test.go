@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,10 +29,10 @@ func TestChangeCustomResourceDefinitionSchema(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	nt.Root.AddFile("acme/cluster/crd.yaml", crdContent)
-	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
-	nt.Root.AddFile("acme/namespaces/foo/cr.yaml", crContent)
-	nt.Root.CommitAndPush("Adding a CRD and CR")
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/cluster/crd.yaml", crdContent)
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/cr.yaml", crContent)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding a CRD and CR")
 	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("my-cron-object", "foo", crForSchema())
@@ -57,9 +58,9 @@ func TestChangeCustomResourceDefinitionSchema(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	nt.Root.AddFile("acme/cluster/crd.yaml", crdContent)
-	nt.Root.AddFile("acme/namespaces/foo/cr.yaml", crContent)
-	nt.Root.CommitAndPush("Adding the CRD with new schema and a CR using the new schema")
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/cluster/crd.yaml", crdContent)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/cr.yaml", crContent)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding the CRD with new schema and a CR using the new schema")
 	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("my-new-cron-object", "foo", crForSchema())

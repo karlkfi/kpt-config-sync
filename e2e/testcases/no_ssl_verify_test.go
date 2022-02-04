@@ -17,7 +17,9 @@ import (
 )
 
 func TestNoSSLVerifyV1Alpha1(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
+	nt := nomostest.New(t, ntopts.SkipMonoRepo,
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
+		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
 
 	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
@@ -51,12 +53,13 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	repo, exist := nt.NonRootRepos[backendNamespace]
+	nn := nomostest.RepoSyncNN(backendNamespace, configsync.RepoSyncName)
+	repo, exist := nt.NonRootRepos[nn]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
-	rootSync := fake.RootSyncObjectV1Alpha1()
-	repoSyncBackend := nomostest.RepoSyncObjectV1Alpha1(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	rootSync := fake.RootSyncObjectV1Alpha1(configsync.RootSyncName)
+	repoSyncBackend := nomostest.RepoSyncObjectV1Alpha1(nn.Namespace, nn.Name, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 
 	// Set noSSLVerify to true for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": true}}}`)
@@ -84,8 +87,8 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 
 	// Set noSSLVerify to true for ns-reconciler-backend
 	repoSyncBackend.Spec.NoSSLVerify = true
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
-	nt.Root.CommitAndPush("Update backend RepoSync NoSSLVerify to true")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to true")
 	nt.WaitForRepoSyncs()
 
 	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
@@ -124,8 +127,8 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 
 	// Set noSSLVerify to false from repoSyncBackend
 	repoSyncBackend.Spec.NoSSLVerify = false
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
-	nt.Root.CommitAndPush("Update backend RepoSync NoSSLVerify to false")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to false")
 	nt.WaitForRepoSyncs()
 
 	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
@@ -157,7 +160,9 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 }
 
 func TestNoSSLVerifyV1Beta1(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
+	nt := nomostest.New(t, ntopts.SkipMonoRepo,
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
+		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
 
 	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
@@ -191,13 +196,14 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	repo, exist := nt.NonRootRepos[backendNamespace]
+	nn := nomostest.RepoSyncNN(backendNamespace, configsync.RepoSyncName)
+	repo, exist := nt.NonRootRepos[nn]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
 
-	rootSync := fake.RootSyncObjectV1Beta1()
-	repoSyncBackend := nomostest.RepoSyncObjectV1Beta1(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	rootSync := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
+	repoSyncBackend := nomostest.RepoSyncObjectV1Beta1(nn.Namespace, nn.Name, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 
 	// Set noSSLVerify to true for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": true}}}`)
@@ -225,8 +231,8 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 
 	// Set noSSLVerify to true for ns-reconciler-backend
 	repoSyncBackend.Spec.NoSSLVerify = true
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
-	nt.Root.CommitAndPush("Update backend RepoSync NoSSLVerify to true")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to true")
 	nt.WaitForRepoSyncs()
 
 	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
@@ -265,8 +271,8 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 
 	// Set noSSLVerify to false from repoSyncBackend
 	repoSyncBackend.Spec.NoSSLVerify = false
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
-	nt.Root.CommitAndPush("Update backend RepoSync NoSSLVerify to false")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to false")
 	nt.WaitForRepoSyncs()
 
 	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.

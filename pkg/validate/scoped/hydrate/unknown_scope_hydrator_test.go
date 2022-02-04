@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/metadata"
@@ -53,7 +54,7 @@ func TestUnknownScope(t *testing.T) {
 					fake.Role(core.Namespace("prod")),
 				},
 				Unknown: []ast.FileObject{
-					fake.FileObject(fake.RootSyncObjectV1Beta1(), "rootsync.yaml"),
+					fake.FileObject(fake.RootSyncObjectV1Beta1(configsync.RootSyncName), "rootsync.yaml"),
 				},
 			},
 			want: &objects.Scoped{
@@ -68,7 +69,7 @@ func TestUnknownScope(t *testing.T) {
 					),
 				},
 				Unknown: []ast.FileObject{
-					fake.FileObject(fake.RootSyncObjectV1Beta1(
+					fake.FileObject(fake.RootSyncObjectV1Beta1(configsync.RootSyncName,
 						core.Annotation(metadata.UnknownScopeAnnotationKey, metadata.UnknownScopeAnnotationValue),
 					), "rootsync.yaml"),
 				},

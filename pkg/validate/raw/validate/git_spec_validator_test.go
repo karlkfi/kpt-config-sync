@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -44,7 +45,7 @@ func missingRepo(rs *v1beta1.RepoSync) {
 }
 
 func repoSync(opts ...func(*v1beta1.RepoSync)) *v1beta1.RepoSync {
-	rs := fake.RepoSyncObjectV1Beta1()
+	rs := fake.RepoSyncObjectV1Beta1("test-ns", configsync.RepoSyncName)
 	rs.Spec.Git.Repo = "fake repo"
 	for _, opt := range opts {
 		opt(rs)

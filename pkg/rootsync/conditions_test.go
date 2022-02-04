@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -56,17 +57,17 @@ func TestIsReconciling(t *testing.T) {
 	}{
 		{
 			"Missing condition is false",
-			fake.RootSyncObjectV1Beta1(),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName),
 			false,
 		},
 		{
 			"False condition is false",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse))),
 			false,
 		},
 		{
 			"True condition is true",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
 			true,
 		},
 	}
@@ -88,17 +89,17 @@ func TestIsStalled(t *testing.T) {
 	}{
 		{
 			"Missing condition is false",
-			fake.RootSyncObjectV1Beta1(),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName),
 			false,
 		},
 		{
 			"False condition is false",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
 			false,
 		},
 		{
 			"True condition is true",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionTrue))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionTrue))),
 			true,
 		},
 	}
@@ -120,17 +121,17 @@ func TestReconcilingMessage(t *testing.T) {
 	}{
 		{
 			"Missing condition is empty",
-			fake.RootSyncObjectV1Beta1(),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName),
 			"",
 		},
 		{
 			"False condition is empty",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse))),
 			"",
 		},
 		{
 			"True condition is its message",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
 			fakeConditionMessage,
 		},
 	}
@@ -152,17 +153,17 @@ func TestStalledMessage(t *testing.T) {
 	}{
 		{
 			"Missing condition is empty",
-			fake.RootSyncObjectV1Beta1(),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName),
 			"",
 		},
 		{
 			"False condition is empty",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
 			"",
 		},
 		{
 			"True condition is its message",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionTrue))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionFalse), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionTrue))),
 			fakeConditionMessage,
 		},
 	}
@@ -188,7 +189,7 @@ func TestClearCondition(t *testing.T) {
 	}{
 		{
 			"Clear existing true condition",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionTrue))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionTrue))),
 			v1beta1.RootSyncStalled,
 			[]v1beta1.RootSyncCondition{
 				fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue),
@@ -197,7 +198,7 @@ func TestClearCondition(t *testing.T) {
 		},
 		{
 			"Ignore existing false condition",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
 			v1beta1.RootSyncStalled,
 			[]v1beta1.RootSyncCondition{
 				fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue),
@@ -206,7 +207,7 @@ func TestClearCondition(t *testing.T) {
 		},
 		{
 			"Handle empty conditions",
-			fake.RootSyncObjectV1Beta1(),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName),
 			v1beta1.RootSyncStalled,
 			nil,
 		},
@@ -234,7 +235,7 @@ func TestSetReconciling(t *testing.T) {
 	}{
 		{
 			"Set new reconciling condition",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue))),
 			"Test1",
 			"This is test 1",
 			[]v1beta1.RootSyncCondition{
@@ -243,7 +244,7 @@ func TestSetReconciling(t *testing.T) {
 		},
 		{
 			"Update existing reconciling condition",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
 			"Test2",
 			"This is test 2",
 			[]v1beta1.RootSyncCondition{
@@ -272,7 +273,7 @@ func TestSetStalled(t *testing.T) {
 	}{
 		{
 			"Set new stalled condition",
-			fake.RootSyncObjectV1Beta1(),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName),
 			"Error1",
 			errors.New("this is error 1"),
 			[]v1beta1.RootSyncCondition{
@@ -281,7 +282,7 @@ func TestSetStalled(t *testing.T) {
 		},
 		{
 			"Update existing stalled condition",
-			fake.RootSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
+			fake.RootSyncObjectV1Beta1(configsync.RootSyncName, withConditions(fakeCondition(v1beta1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RootSyncStalled, metav1.ConditionFalse))),
 			"Error2",
 			errors.New("this is error 2"),
 			[]v1beta1.RootSyncCondition{

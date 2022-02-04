@@ -17,14 +17,14 @@ func TestResourceGroupController(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.InstallResourceGroupController)
 
 	ns := "rg-test"
-	nt.Root.Add("acme/namespaces/rg-test/ns.yaml",
+	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/rg-test/ns.yaml",
 		fake.NamespaceObject(ns))
 
 	cmName := "e2e-test-configmap"
 	cmPath := "acme/namespaces/rg-test/configmap.yaml"
 	cm := fake.ConfigMapObject(core.Name(cmName), core.Namespace(ns))
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("Adding a ConfigMap to repo")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding a ConfigMap to repo")
 	nt.WaitForRepoSyncs()
 
 	// Checking that the ResourceGroup controller captures the status of the

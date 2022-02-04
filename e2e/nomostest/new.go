@@ -15,10 +15,12 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	testing2 "github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // fileMode is the file mode to use for all operations.
@@ -44,7 +46,8 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 			MultiRepo:    *e2e.MultiRepo,
 		},
 		MultiRepo: ntopts.MultiRepo{
-			NamespaceRepos: make(map[string]ntopts.NamespaceRepoOpts),
+			NamespaceRepos: make(map[types.NamespacedName]ntopts.RepoOpts),
+			RootRepos:      map[string]ntopts.RepoOpts{configsync.RootSyncName: {UpstreamURL: ""}},
 		},
 	}
 	for _, opt := range ntOptions {
@@ -147,8 +150,8 @@ func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		MultiRepo:               sharedNt.MultiRepo,
 		ReconcilerPollingPeriod: sharedNT.ReconcilerPollingPeriod,
 		HydrationPollingPeriod:  sharedNT.HydrationPollingPeriod,
-		NonRootRepos:            make(map[string]*Repository),
-		NamespaceRepos:          make(map[string]string),
+		RootRepos:               sharedNt.RootRepos,
+		NonRootRepos:            make(map[types.NamespacedName]*Repository),
 		gitPrivateKeyPath:       sharedNt.gitPrivateKeyPath,
 		gitRepoPort:             sharedNt.gitRepoPort,
 		scheme:                  sharedNt.scheme,
@@ -186,21 +189,24 @@ func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 
 func resetSyncedRepos(nt *NT, opts *ntopts.New) {
 	if nt.MultiRepo {
-		nsList := nt.NamespaceRepos
+		nnList := nt.NonRootRepos
 		// clear the namespace resources in the namespace repo to avoid admission validation failure.
 		resetNamespaceRepos(nt)
 		// reset the root-repo to the initial state so that the namespace repos can be deleted.
-		nt.NamespaceRepos = map[string]string{}
-		resetRootRepoSpec(nt, opts.UpstreamURL, opts.SourceFormat)
+		nt.NonRootRepos = map[types.NamespacedName]*Repository{}
+		resetRootRepos(nt, opts.UpstreamURL, opts.SourceFormat)
+		nt.RootRepos = map[string]*Repository{configsync.RootSyncName: nt.RootRepos[configsync.RootSyncName]}
+		// delete the root repos in case they're set up in the delegated mode.
+		deleteRootRepos(nt)
 		// delete the namespace repos in case they're set up in the delegated mode.
 		deleteNamespaceRepos(nt)
 		// delete the out-of-sync namespaces in case they're set up in the delegated mode.
-		for _, ns := range nsList {
-			revokeRepoSyncNamespace(nt, ns)
+		for nn := range nnList {
+			revokeRepoSyncNamespace(nt, nn.Namespace)
 		}
 	} else {
-		nt.NamespaceRepos = map[string]string{}
-		nt.Root = resetRepository(nt, rootRepo, opts.UpstreamURL, opts.SourceFormat)
+		nt.NonRootRepos = map[types.NamespacedName]*Repository{}
+		nt.RootRepos[configsync.RootSyncName] = resetRepository(nt, RootRepo, DefaultRootRepoNamespacedName, opts.UpstreamURL, opts.SourceFormat)
 		// It sets POLICY_DIR to always be `acme` because the initial mono-repo's sync directory is configured to be `acme`.
 		ResetMonoRepoSpec(nt, opts.SourceFormat, AcmeDir)
 		nt.WaitForRepoSyncs()
@@ -243,12 +249,12 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		MultiRepo:               opts.Nomos.MultiRepo,
 		ReconcilerPollingPeriod: 50 * time.Millisecond,
 		HydrationPollingPeriod:  50 * time.Millisecond,
-		NonRootRepos:            make(map[string]*Repository),
-		NamespaceRepos:          make(map[string]string),
+		RootRepos:               make(map[string]*Repository),
+		NonRootRepos:            make(map[types.NamespacedName]*Repository),
 		scheme:                  scheme,
 		ReconcilerMetrics:       make(testmetrics.ConfigSyncMetrics),
 		GitProvider:             gitproviders.NewGitProvider(t, *e2e.GitProvider),
-		RemoteRepositories:      make(map[string]*Repository),
+		RemoteRepositories:      make(map[types.NamespacedName]*Repository),
 	}
 
 	if *e2e.ImagePrefix == e2e.DefaultImagePrefix {
@@ -324,18 +330,23 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 
 func setupTestCase(nt *NT, opts *ntopts.New) {
 	// allRepos specifies the slice all repos for port forwarding.
-	allRepos := []string{rootRepo}
-	for repo := range opts.MultiRepo.NamespaceRepos {
+	var allRepos []types.NamespacedName
+	for repo := range opts.RootRepos {
+		allRepos = append(allRepos, RootSyncNN(repo))
+	}
+	for repo := range opts.NamespaceRepos {
 		allRepos = append(allRepos, repo)
 	}
 
 	if nt.GitProvider.Type() == e2e.Local {
 		nt.gitRepoPort = portForwardGitServer(nt, allRepos...)
 	}
-	nt.Root = resetRepository(nt, rootRepo, opts.UpstreamURL, opts.SourceFormat)
 
-	for nsr := range opts.MultiRepo.NamespaceRepos {
-		nt.NonRootRepos[nsr] = resetRepository(nt, nsr, opts.MultiRepo.NamespaceRepos[nsr].UpstreamURL, filesystem.SourceFormatUnstructured)
+	for name := range opts.RootRepos {
+		nt.RootRepos[name] = resetRepository(nt, RootRepo, RootSyncNN(name), opts.UpstreamURL, opts.SourceFormat)
+	}
+	for nsr := range opts.NamespaceRepos {
+		nt.NonRootRepos[nsr] = resetRepository(nt, NamespaceRepo, nsr, opts.NamespaceRepos[nsr].UpstreamURL, filesystem.SourceFormatUnstructured)
 	}
 
 	// First wait for CRDs to be established.

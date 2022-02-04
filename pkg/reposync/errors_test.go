@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -54,7 +55,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources is nil, rs is not nil",
-			rs:           fake.RepoSyncObjectV1Beta1(),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName),
 			errorSources: nil,
 			want:         nil,
 		},
@@ -66,13 +67,13 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources = {}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{},
 			want:         nil,
 		},
 		{
 			name:         "errorSources = {RenderingError}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{v1beta1.RenderingError},
 			want: []v1beta1.ConfigSyncError{
 				{Code: "1061", ErrorMessage: "rendering-error-message"},
@@ -80,7 +81,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources = {SourceError}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{v1beta1.SourceError},
 			want: []v1beta1.ConfigSyncError{
 				{Code: "1021", ErrorMessage: "1021-error-message"},
@@ -89,7 +90,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources = {SyncError}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{v1beta1.SyncError},
 			want: []v1beta1.ConfigSyncError{
 				{Code: "2009", ErrorMessage: "apiserver error"},
@@ -98,7 +99,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources = {RenderingError, SourceError}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{v1beta1.RenderingError, v1beta1.SourceError},
 			want: []v1beta1.ConfigSyncError{
 				{Code: "1061", ErrorMessage: "rendering-error-message"},
@@ -108,7 +109,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources = {RenderingError, SyncError}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{v1beta1.RenderingError, v1beta1.SyncError},
 			want: []v1beta1.ConfigSyncError{
 				{Code: "1061", ErrorMessage: "rendering-error-message"},
@@ -118,7 +119,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources = {SourceError, SyncError}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError},
 			want: []v1beta1.ConfigSyncError{
 				{Code: "1021", ErrorMessage: "1021-error-message"},
@@ -129,7 +130,7 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			name:         "errorSources = {RenderingError, SourceError, SyncError}",
-			rs:           fake.RepoSyncObjectV1Beta1(withSyncStatus(fakeSyncStatus())),
+			rs:           fake.RepoSyncObjectV1Beta1(testNs, configsync.RepoSyncName, withSyncStatus(fakeSyncStatus())),
 			errorSources: []v1beta1.ErrorSource{v1beta1.RenderingError, v1beta1.SourceError, v1beta1.SyncError},
 			want: []v1beta1.ConfigSyncError{
 				{Code: "1061", ErrorMessage: "rendering-error-message"},

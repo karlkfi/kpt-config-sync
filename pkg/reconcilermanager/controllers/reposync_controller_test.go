@@ -152,10 +152,7 @@ func reposyncNoSSLVerify() func(*v1beta1.RepoSync) {
 }
 
 func repoSync(ns, name string, opts ...func(*v1beta1.RepoSync)) *v1beta1.RepoSync {
-	rs := fake.RepoSyncObjectV1Beta1(
-		core.Name(name),
-		core.Namespace(ns),
-	)
+	rs := fake.RepoSyncObjectV1Beta1(ns, name)
 	rs.Spec.Repo = reposyncRepo
 	rs.Spec.Dir = reposyncDir
 	for _, opt := range opts {

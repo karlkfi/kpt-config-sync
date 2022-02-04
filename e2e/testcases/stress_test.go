@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
@@ -20,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -54,22 +56,22 @@ func TestStressCRD(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	nt.Root.AddFile("acme/crontab-crd.yaml", crdContent)
+	nt.RootRepos[configsync.RootSyncName].AddFile("acme/crontab-crd.yaml", crdContent)
 
 	labelKey := "StressTestName"
 	labelValue := "TestStressCRD"
 	for i := 1; i <= 1000; i++ {
-		nt.Root.Add(fmt.Sprintf("acme/ns-%d.yaml", i), fake.NamespaceObject(fmt.Sprintf("foo%d", i)))
-		nt.Root.Add(fmt.Sprintf("acme/cm-%d.yaml", i), fake.ConfigMapObject(
+		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/ns-%d.yaml", i), fake.NamespaceObject(fmt.Sprintf("foo%d", i)))
+		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/cm-%d.yaml", i), fake.ConfigMapObject(
 			core.Name("cm1"), core.Namespace(fmt.Sprintf("foo%d", i)), core.Label(labelKey, labelValue)))
 
 		cr, err := crontabCR(fmt.Sprintf("foo%d", i), "cr1")
 		if err != nil {
 			nt.T.Fatal(err)
 		}
-		nt.Root.Add(fmt.Sprintf("acme/crontab-cr-%d.yaml", i), cr)
+		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/crontab-cr-%d.yaml", i), cr)
 	}
-	nt.Root.CommitAndPush("Add configs (one CRD and 1000 Namespaces (every namespace has one ConfigMap and one CR)")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add configs (one CRD and 1000 Namespaces (every namespace has one ConfigMap and one CR)")
 	nt.WaitForRepoSyncs(nomostest.WithTimeout(10 * time.Minute))
 
 	nt.T.Logf("Verify that the CronTab CRD is installed on the cluster")
@@ -105,20 +107,20 @@ func TestStressLargeNamespace(t *testing.T) {
 	nomostest.StopWebhook(nt)
 
 	nt.T.Log("Override the memory limit of the reconciler container of root-reconciler to 800MiB")
-	rootSync := fake.RootSyncObjectV1Beta1()
+	rootSync := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"resources": [{"containerName": "reconciler", "memoryLimit": "800Mi"}]}}}`)
 	nt.WaitForRepoSyncs()
 
 	ns := "my-ns-1"
-	nt.Root.Add("acme/ns.yaml", fake.NamespaceObject(ns))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", fake.NamespaceObject(ns))
 
 	labelKey := "StressTestName"
 	labelValue := "TestStressLargeNamespace"
 	for i := 1; i <= 5000; i++ {
-		nt.Root.Add(fmt.Sprintf("acme/cm-%d.yaml", i), fake.ConfigMapObject(
+		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/cm-%d.yaml", i), fake.ConfigMapObject(
 			core.Name(fmt.Sprintf("cm-%d", i)), core.Namespace(ns), core.Label(labelKey, labelValue)))
 	}
-	nt.Root.CommitAndPush("Add configs (5000 ConfigMaps and 1 Namespace")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add configs (5000 ConfigMaps and 1 Namespace")
 	nt.WaitForRepoSyncs(nomostest.WithTimeout(10 * time.Minute))
 
 	nt.T.Log("Verify there are 5000 ConfigMaps in the namespace")
@@ -142,8 +144,8 @@ func TestStressFrequentGitCommits(t *testing.T) {
 
 	ns := "bookstore"
 	namespace := fake.NamespaceObject(ns)
-	nt.Root.Add("acme/ns.yaml", namespace)
-	nt.Root.CommitAndPush(fmt.Sprintf("add a namespace: %s", ns))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/ns.yaml", namespace)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush(fmt.Sprintf("add a namespace: %s", ns))
 	nt.WaitForRepoSyncs()
 
 	nt.T.Logf("Add 100 commits (every commit adds a new ConfigMap object into the %s namespace)", ns)
@@ -151,8 +153,8 @@ func TestStressFrequentGitCommits(t *testing.T) {
 	labelValue := "TestStressFrequentGitCommits"
 	for i := 0; i < 100; i++ {
 		cmName := fmt.Sprintf("cm-%v", i)
-		nt.Root.Add(fmt.Sprintf("acme/%s.yaml", cmName), fake.ConfigMapObject(core.Name(cmName), core.Namespace(ns), core.Label(labelKey, labelValue)))
-		nt.Root.CommitAndPush(fmt.Sprintf("add %s", cmName))
+		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/%s.yaml", cmName), fake.ConfigMapObject(core.Name(cmName), core.Namespace(ns), core.Label(labelKey, labelValue)))
+		nt.RootRepos[configsync.RootSyncName].CommitAndPush(fmt.Sprintf("add %s", cmName))
 	}
 	nt.WaitForRepoSyncs(nomostest.WithTimeout(10 * time.Minute))
 
@@ -189,7 +191,7 @@ func TestStressLargeRequest(t *testing.T) {
 
 	nt.T.Logf("Verify that the source errors are truncated")
 	_, err = nomostest.Retry(5*time.Minute, func() error {
-		return nt.Validate("root-sync", configmanagement.ControllerNamespace, fake.RootSyncObjectV1Beta1(), truncateSourceErrors())
+		return nt.Validate("root-sync", configmanagement.ControllerNamespace, fake.RootSyncObjectV1Beta1(configsync.RootSyncName), truncateSourceErrors())
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -208,9 +210,9 @@ func TestStressLargeRequest(t *testing.T) {
 	}
 
 	nt.T.Logf("Wait for the sync to complete")
-	sha1Fn := func(nt *nomostest.NT) (string, error) {
+	sha1Fn := func(nt *nomostest.NT, nn types.NamespacedName) (string, error) {
 		rs := &v1alpha1.RootSync{}
-		if err = nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
+		if err = nt.Get(nn.Name, nn.Namespace, rs); err != nil {
 			return "", err
 		}
 		return rs.Status.Source.Commit, nil

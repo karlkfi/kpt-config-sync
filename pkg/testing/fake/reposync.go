@@ -1,7 +1,6 @@
 package fake
 
 import (
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
@@ -10,10 +9,11 @@ import (
 )
 
 // RepoSyncObjectV1Alpha1 initializes a RepoSync with version v1alpha1.
-func RepoSyncObjectV1Alpha1(opts ...core.MetaMutator) *v1alpha1.RepoSync {
+func RepoSyncObjectV1Alpha1(ns, name string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
 	result := &v1alpha1.RepoSync{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: configsync.RepoSyncName,
+			Namespace: ns,
+			Name:      name,
 		},
 		TypeMeta: ToTypeMeta(kinds.RepoSyncV1Alpha1()),
 	}
@@ -23,10 +23,11 @@ func RepoSyncObjectV1Alpha1(opts ...core.MetaMutator) *v1alpha1.RepoSync {
 }
 
 // RepoSyncObjectV1Beta1 initializes a RepoSync with version v1beta1.
-func RepoSyncObjectV1Beta1(opts ...core.MetaMutator) *v1beta1.RepoSync {
+func RepoSyncObjectV1Beta1(ns, name string, opts ...core.MetaMutator) *v1beta1.RepoSync {
 	result := &v1beta1.RepoSync{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: configsync.RepoSyncName,
+			Namespace: ns,
+			Name:      name,
 		},
 		TypeMeta: ToTypeMeta(kinds.RepoSyncV1Beta1()),
 	}

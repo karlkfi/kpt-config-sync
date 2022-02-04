@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
@@ -278,7 +279,7 @@ func Generate() AllExamples {
 	result.add(applier.ManagementConflictError(fake.Role()))
 
 	// 1061
-	result.add(validate.MissingGitRepo(fake.RepoSyncObjectV1Beta1()))
+	result.add(validate.MissingGitRepo(fake.RepoSyncObjectV1Beta1("bookstore", configsync.RepoSyncName)))
 
 	// 1062 is Deprecated.
 	result.markDeprecated("1062")

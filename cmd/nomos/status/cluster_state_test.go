@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/cmd/nomos/util"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -1342,7 +1343,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repoSync := fake.RepoSyncObjectV1Beta1(core.Namespace("bookstore"))
+			repoSync := fake.RepoSyncObjectV1Beta1("bookstore", configsync.RepoSyncName)
 			repoSync.Spec.Git = tc.gitSpec
 			repoSync.Status.Conditions = tc.conditions
 			repoSync.Status.Source = tc.sourceStatus
@@ -2363,7 +2364,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			rootSync := fake.RootSyncObjectV1Beta1()
+			rootSync := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 			rootSync.Spec.Git = tc.gitSpec
 			rootSync.Status.Conditions = tc.conditions
 			rootSync.Status.Source = tc.sourceStatus

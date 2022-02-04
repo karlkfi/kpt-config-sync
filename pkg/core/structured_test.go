@@ -21,12 +21,12 @@ func TestRemarshalToStructured(t *testing.T) {
 		{
 			name: "v1alpha1 RepoSync",
 			u:    fake.UnstructuredObject(kinds.RepoSyncV1Alpha1(), core.Name(configsync.RepoSyncName), core.Namespace("test"), core.Annotations(nil), core.Labels(nil)),
-			obj:  fake.RepoSyncObjectV1Alpha1(core.Namespace("test")),
+			obj:  fake.RepoSyncObjectV1Alpha1("test", configsync.RepoSyncName),
 		},
 		{
 			name: "v1beta1 RepoSync",
 			u:    fake.UnstructuredObject(kinds.RepoSyncV1Beta1(), core.Name(configsync.RepoSyncName), core.Namespace("test"), core.Annotations(nil), core.Labels(nil)),
-			obj:  fake.RepoSyncObjectV1Beta1(core.Namespace("test")),
+			obj:  fake.RepoSyncObjectV1Beta1("test", configsync.RepoSyncName),
 		},
 	}
 	for _, tc := range testcases {

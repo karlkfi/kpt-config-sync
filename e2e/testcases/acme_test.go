@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/testing/fake"
 
 	"github.com/google/nomos/e2e/nomostest"
@@ -24,7 +25,6 @@ const (
 	port    = "metrics/proxy"
 )
 
-var nsToFolder = map[string]string{"analytics": "eng", "backend": "eng", "frontend": "eng", "new-prj": "rnd", "newer-prj": "rnd", "safety": ""}
 var configSyncManagementAnnotations = map[string]string{"configmanagement.gke.io/managed": "enabled", "hnc.x-k8s.io/managed-by": "configmanagement.gke.io"}
 
 func configSyncManagementLabels(namespace, folder string) map[string]string {
@@ -38,8 +38,15 @@ func configSyncManagementLabels(namespace, folder string) map[string]string {
 func TestAcmeCorpRepo(t *testing.T) {
 	nt := nomostest.New(t)
 
-	nt.Root.Copy("../../examples/acme", ".")
-	nt.Root.CommitAndPush("Initialize the acme directory")
+	nsToFolder := map[string]string{
+		"analytics": "eng",
+		"backend":   "eng",
+		"frontend":  "eng",
+		"new-prj":   "rnd",
+		"newer-prj": "rnd",
+		nt.RootRepos[configsync.RootSyncName].SafetyNSName: ""}
+	nt.RootRepos[configsync.RootSyncName].Copy("../../examples/acme", ".")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Initialize the acme directory")
 	nt.WaitForRepoSyncs()
 
 	checkResourceCount(nt, kinds.Namespace(), "", len(nsToFolder), nil, configSyncManagementAnnotations)
@@ -163,9 +170,9 @@ func TestAcmeCorpRepo(t *testing.T) {
 	checkLegacyMetricsPages(nt)
 
 	// gracefully delete cluster-scoped resources to pass the safety check (KNV2006).
-	nt.Root.Remove("acme/cluster")
-	nt.Root.Add("acme/cluster/test-clusterrole.yaml", fake.ClusterRoleObject())
-	nt.Root.CommitAndPush("Reset the acme directory")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/cluster")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/test-clusterrole.yaml", fake.ClusterRoleObject())
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Reset the acme directory")
 	nt.WaitForRepoSyncs()
 }
 

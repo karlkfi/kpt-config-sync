@@ -10,10 +10,10 @@ import (
 )
 
 // RootSyncObjectV1Alpha1 initializes a RootSync.
-func RootSyncObjectV1Alpha1(opts ...core.MetaMutator) *v1alpha1.RootSync {
+func RootSyncObjectV1Alpha1(name string, opts ...core.MetaMutator) *v1alpha1.RootSync {
 	result := &v1alpha1.RootSync{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      configsync.RootSyncName,
+			Name:      name,
 			Namespace: configsync.ControllerNamespace,
 		},
 		TypeMeta: ToTypeMeta(kinds.RootSyncV1Alpha1()),
@@ -24,10 +24,10 @@ func RootSyncObjectV1Alpha1(opts ...core.MetaMutator) *v1alpha1.RootSync {
 }
 
 // RootSyncObjectV1Beta1 initializes a RootSync with version v1beta1.
-func RootSyncObjectV1Beta1(opts ...core.MetaMutator) *v1beta1.RootSync {
+func RootSyncObjectV1Beta1(name string, opts ...core.MetaMutator) *v1beta1.RootSync {
 	result := &v1beta1.RootSync{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      configsync.RootSyncName,
+			Name:      name,
 			Namespace: configsync.ControllerNamespace,
 		},
 		TypeMeta: ToTypeMeta(kinds.RootSyncV1Beta1()),

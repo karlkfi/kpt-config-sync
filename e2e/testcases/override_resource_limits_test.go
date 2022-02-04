@@ -67,7 +67,9 @@ func defaultResourceRequestsLimits(nt *nomostest.NT) (reconcilerRequests, reconc
 }
 
 func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.SkipAutopilotCluster, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
+	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.SkipAutopilotCluster,
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
+		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
 
 	// Get the default CPU/memory requests and limits of the reconciler container and the git-sync container
@@ -110,19 +112,21 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	backendRepo, exist := nt.NonRootRepos[backendNamespace]
+	backendNN := nomostest.RepoSyncNN(backendNamespace, configsync.RepoSyncName)
+	backendRepo, exist := nt.NonRootRepos[backendNN]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
 
-	frontendRepo, exist := nt.NonRootRepos[frontendNamespace]
+	frontendNN := nomostest.RepoSyncNN(frontendNamespace, configsync.RepoSyncName)
+	frontendRepo, exist := nt.NonRootRepos[frontendNN]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
 
-	rootSync := fake.RootSyncObjectV1Alpha1()
-	repoSyncBackend := nomostest.RepoSyncObjectV1Alpha1(backendNamespace, nt.GitProvider.SyncURL(backendRepo.RemoteRepoName))
-	repoSyncFrontend := nomostest.RepoSyncObjectV1Alpha1(frontendNamespace, nt.GitProvider.SyncURL(frontendRepo.RemoteRepoName))
+	rootSync := fake.RootSyncObjectV1Alpha1(configsync.RootSyncName)
+	repoSyncBackend := nomostest.RepoSyncObjectV1Alpha1(backendNN.Namespace, backendNN.Name, nt.GitProvider.SyncURL(backendRepo.RemoteRepoName))
+	repoSyncFrontend := nomostest.RepoSyncObjectV1Alpha1(frontendNN.Namespace, frontendNN.Name, nt.GitProvider.SyncURL(frontendRepo.RemoteRepoName))
 
 	// Override the CPU/memory requests and limits of the reconciler container of root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"resources": [{"containerName": "reconciler", "cpuRequest": "500m", "cpuLimit": "800m", "memoryRequest": "400Mi", "memoryLimit": "411Mi"}]}}}`)
@@ -172,7 +176,7 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 			},
 		},
 	}
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
 
 	// Override the CPU/memory requests and limits of the reconciler container of ns-reconciler-frontend
 	repoSyncFrontend.Spec.Override = v1alpha1.OverrideSpec{
@@ -193,8 +197,8 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 			},
 		},
 	}
-	nt.Root.Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
-	nt.Root.CommitAndPush("Update backend and frontend RepoSync resource limits")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend and frontend RepoSync resource limits")
 	nt.WaitForRepoSyncs()
 
 	// Verify the resource requests and limits of root-reconciler are not affected by the resource changes of ns-reconciler-backend and ns-reconciler-fronend
@@ -307,8 +311,8 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncBackend
 	repoSyncBackend.Spec.Override = v1alpha1.OverrideSpec{}
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
-	nt.Root.CommitAndPush("Clear `spec.override` from repoSyncBackend")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncBackend")
 	nt.WaitForRepoSyncs()
 
 	// Verify ns-reconciler-backend uses the default resource requests and limits
@@ -358,8 +362,8 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncFrontend
 	repoSyncFrontend.Spec.Override = v1alpha1.OverrideSpec{}
-	nt.Root.Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
-	nt.Root.CommitAndPush("Clear `spec.override` from repoSyncFrontend")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncFrontend")
 	nt.WaitForRepoSyncs()
 
 	// Verify ns-reconciler-frontend uses the default resource requests and limits
@@ -381,7 +385,9 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 }
 
 func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.SkipAutopilotCluster, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
+	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.SkipAutopilotCluster,
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
+		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
 
 	// Get the default CPU/memory requests and limits of the reconciler container and the git-sync container
@@ -424,19 +430,21 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	backendRepo, exist := nt.NonRootRepos[backendNamespace]
+	backendNN := nomostest.RepoSyncNN(backendNamespace, configsync.RepoSyncName)
+	backendRepo, exist := nt.NonRootRepos[backendNN]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
 
-	frontendRepo, exist := nt.NonRootRepos[frontendNamespace]
+	frontendNN := nomostest.RepoSyncNN(frontendNamespace, configsync.RepoSyncName)
+	frontendRepo, exist := nt.NonRootRepos[frontendNN]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
 
-	rootSync := fake.RootSyncObjectV1Beta1()
-	repoSyncBackend := nomostest.RepoSyncObjectV1Beta1(backendNamespace, nt.GitProvider.SyncURL(backendRepo.RemoteRepoName))
-	repoSyncFrontend := nomostest.RepoSyncObjectV1Beta1(frontendNamespace, nt.GitProvider.SyncURL(frontendRepo.RemoteRepoName))
+	rootSync := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
+	repoSyncBackend := nomostest.RepoSyncObjectV1Beta1(backendNN.Namespace, backendNN.Name, nt.GitProvider.SyncURL(backendRepo.RemoteRepoName))
+	repoSyncFrontend := nomostest.RepoSyncObjectV1Beta1(frontendNN.Namespace, frontendNN.Name, nt.GitProvider.SyncURL(frontendRepo.RemoteRepoName))
 
 	// Override the CPU/memory requests and limits of the reconciler container of root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"resources": [{"containerName": "reconciler", "cpuRequest": "500m", "cpuLimit": "800m", "memoryRequest": "400Mi", "memoryLimit": "411Mi"}]}}}`)
@@ -486,7 +494,7 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
 
 	// Override the CPU/memory requests and limits of the reconciler container of ns-reconciler-frontend
 	repoSyncFrontend.Spec.Override = v1beta1.OverrideSpec{
@@ -507,8 +515,8 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	nt.Root.Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
-	nt.Root.CommitAndPush("Update backend and frontend RepoSync resource limits")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend and frontend RepoSync resource limits")
 	nt.WaitForRepoSyncs()
 
 	// Verify the resource requests and limits of root-reconciler are not affected by the resource changes of ns-reconciler-backend and ns-reconciler-fronend
@@ -621,8 +629,8 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncBackend
 	repoSyncBackend.Spec.Override = v1beta1.OverrideSpec{}
-	nt.Root.Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
-	nt.Root.CommitAndPush("Clear `spec.override` from repoSyncBackend")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncBackend")
 	nt.WaitForRepoSyncs()
 
 	// Verify ns-reconciler-backend uses the default resource requests and limits
@@ -672,8 +680,8 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncFrontend
 	repoSyncFrontend.Spec.Override = v1beta1.OverrideSpec{}
-	nt.Root.Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
-	nt.Root.CommitAndPush("Clear `spec.override` from repoSyncFrontend")
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncFrontend")
 	nt.WaitForRepoSyncs()
 
 	// Verify ns-reconciler-frontend uses the default resource requests and limits

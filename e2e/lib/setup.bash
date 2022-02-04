@@ -5,6 +5,7 @@ set -euo pipefail
 DIR=$(dirname "${BASH_SOURCE[0]}")
 NOMOS_DIR=$(readlink -f "${DIR}/../..")
 FWD_SSH_PORT=${FWD_SSH_PORT:-2222}
+SAFETY_CHECK_NAMESPACE="safety-config-management-system-root-sync"
 
 # shellcheck source=e2e/lib/debug.bash
 source "$DIR/debug.bash"
@@ -32,7 +33,7 @@ setup::git::initialize() {
 
   git init
   git checkout -b main
-  git remote add origin "ssh://git@localhost:${FWD_SSH_PORT}/git-server/repos/sot.git"
+  git remote add origin "ssh://git@localhost:${FWD_SSH_PORT}/git-server/repos/config-management-system/root-sync"
   git fetch
   git config user.name "Testing Nome"
   git config user.email testing_nome@example.com
@@ -123,7 +124,7 @@ setup::git::remove_all() {
 
   mkdir -p "${TEST_REPO}/${DIR_NAME}/cluster"
   cp "${NOMOS_DIR}/examples/${DIR_NAME}/cluster/admin-clusterrole.yaml" "${TEST_REPO}/${DIR_NAME}/cluster/admin-clusterrole.yaml"
-  namespace::declare safety -l "testdata=true"
+  namespace::declare "${SAFETY_CHECK_NAMESPACE}" -l "testdata=true"
 
   cd "${TEST_REPO}"
   git add -A
@@ -132,7 +133,7 @@ setup::git::remove_all() {
   git push -u origin main:main -f
 
   wait::for -t 60 -- nomos::repo_synced
-  wait::for -t 60 -- kubectl get ns safety
+  wait::for -t 60 -- kubectl get ns "${SAFETY_CHECK_NAMESPACE}"
   wait::for -t 60 -- kubectl get clusterrole acme-admin
 
   setup::git::remove_all_dangerously "${DIR_NAME}"
@@ -154,7 +155,7 @@ setup::git::remove_all_dangerously() {
   wait::for -t 60 -- nomos::repo_synced
   if ! env::csmr; then
     # Unclear if these are needed given nomos::repo_synced
-    wait::for -f -t 60 -- kubectl get namespaceconfig safety
+    wait::for -f -t 60 -- kubectl get namespaceconfig "${SAFETY_CHECK_NAMESPACE}"
     wait::for -f -t 60 -- kubectl get clusterrole acme-admin
   fi
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -21,7 +22,6 @@ import (
 const testGitNamespace = "config-management-system-test"
 const testGitServer = "test-git-server"
 const testGitServerImage = "gcr.io/stolos-dev/git-server:v1.0.0"
-const rootRepo = "sot.git"
 
 func testGitServerSelector() map[string]string {
 	// Note that maps are copied by reference into objects.
@@ -205,7 +205,7 @@ func gitDeployment() *appsv1.Deployment {
 						Ports: []corev1.ContainerPort{{ContainerPort: 22}},
 						VolumeMounts: []corev1.VolumeMount{
 							{Name: "keys", MountPath: "/git-server/keys"},
-							{Name: "repos", MountPath: "/git-server/repos/sot.git"},
+							{Name: "repos", MountPath: "/git-server/repos/config-management-system/root-sync"},
 						},
 					},
 				},
@@ -218,7 +218,7 @@ func gitDeployment() *appsv1.Deployment {
 
 // portForwardGitServer forwards the git-server deployment to a port.
 // Returns the localhost port which forwards to the git-server Pod.
-func portForwardGitServer(nt *NT, repos ...string) int {
+func portForwardGitServer(nt *NT, repos ...types.NamespacedName) int {
 	nt.T.Helper()
 
 	// This logic is not robust to the git-server pod being killed/restarted,
@@ -242,7 +242,7 @@ func portForwardGitServer(nt *NT, repos ...string) int {
 
 	for _, repo := range repos {
 		nt.MustKubectl("exec", "-n", testGitNamespace, podName, "--",
-			"git", "init", "--bare", "--shared", fmt.Sprintf("/git-server/repos/%s", repo))
+			"git", "init", "--bare", "--shared", fmt.Sprintf("/git-server/repos/%s/%s", repo.Namespace, repo.Name))
 		// We set receive.denyNonFastforwards to allow force pushes for legacy test support (bats).  In the future we may
 		// need this support for testing GKE clusters since we will likely be re-using the cluster in that case.
 		// Alternatively, we could also run "rm -rf /git-server/repos/*" to clear out the state of the git server and

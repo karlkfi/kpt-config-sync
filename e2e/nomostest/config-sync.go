@@ -36,6 +36,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -290,7 +291,7 @@ func installationManifests(nt *NT, tmpManifestsDir string, nomos ntopts.Nomos) [
 		nt.T.Fatal(err)
 	}
 
-	// Copy ConfigMaps
+	// Update 'GIT_REPO_URL' in mono-repo ConfigMaps.
 	// 'GIT_REPO_URL' in the `git-sync` configmap for monorepo-mode needs to be reset dynamically.
 	bytes, err := ioutil.ReadFile(monoConfigMaps)
 	if err != nil {
@@ -299,15 +300,15 @@ func installationManifests(nt *NT, tmpManifestsDir string, nomos ntopts.Nomos) [
 
 	var syncURL string
 	if nt.GitProvider.Type() == e2e.Local {
-		syncURL = nt.GitProvider.SyncURL(rootRepo)
+		syncURL = nt.GitProvider.SyncURL(DefaultRootRepoNamespacedName.String())
 	} else {
-		if nt.Root == nil {
+		if _, found := nt.RootRepos[configsync.RootSyncName]; !found {
 			// Setting GIT_REPO_URL in the configmap requires a remote repo to be present, so we need to create one if not exists.
 			// We can't call resetRepository() because it resets the existing repo to an initial state.
 			// There are cases that we want to install config sync but keep using the current repo (e.g. switch_mode_test.go).
-			nt.Root = NewRepository(nt, rootRepo, nomos.UpstreamURL, nomos.SourceFormat)
+			nt.RootRepos[configsync.RootSyncName] = NewRepository(nt, RootRepo, DefaultRootRepoNamespacedName, nomos.UpstreamURL, nomos.SourceFormat)
 		}
-		syncURL = nt.GitProvider.SyncURL(nt.Root.RemoteRepoName)
+		syncURL = nt.GitProvider.SyncURL(nt.RootRepos[configsync.RootSyncName].RemoteRepoName)
 	}
 	replaced := strings.ReplaceAll(string(bytes), "GIT_REPO_URL", syncURL)
 	if err := ioutil.WriteFile(filepath.Join(tmpManifestsDir, monoConfigMapsName), []byte(replaced), fileMode); err != nil {
@@ -439,19 +440,21 @@ func validateMonoRepoDeployments(nt *NT) error {
 }
 
 func validateMultiRepoDeployments(nt *NT) error {
-	// Create a RootSync to initialize the root reconciler.
-	rs := fake.RootSyncObjectV1Beta1()
-	rs.Spec.SourceFormat = string(nt.Root.Format)
-	rs.Spec.Git = v1beta1.Git{
-		Repo:      nt.GitProvider.SyncURL(nt.Root.RemoteRepoName),
-		Branch:    MainBranch,
-		Dir:       AcmeDir,
-		Auth:      "ssh",
-		SecretRef: v1beta1.SecretReference{Name: controllers.GitCredentialVolume},
-	}
-	if err := nt.Create(rs); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			nt.T.Fatal(err)
+	for name := range nt.RootRepos {
+		// Create a RootSync to initialize the root reconciler.
+		rs := fake.RootSyncObjectV1Beta1(name)
+		rs.Spec.SourceFormat = string(nt.RootRepos[name].Format)
+		rs.Spec.Git = v1beta1.Git{
+			Repo:      nt.GitProvider.SyncURL(nt.RootRepos[name].RemoteRepoName),
+			Branch:    MainBranch,
+			Dir:       AcmeDir,
+			Auth:      "ssh",
+			SecretRef: v1beta1.SecretReference{Name: controllers.GitCredentialVolume},
+		}
+		if err := nt.Create(rs); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				nt.T.Fatal(err)
+			}
 		}
 	}
 
@@ -485,13 +488,13 @@ func validateMultiRepoDeployments(nt *NT) error {
 	return nil
 }
 
-func setupRepoSync(nt *NT, ns string) {
-	repo, exist := nt.NonRootRepos[ns]
+func setupRepoSync(nt *NT, nn types.NamespacedName) {
+	repo, exist := nt.NonRootRepos[nn]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
 	// create RepoSync to initialize the Namespace reconciler.
-	rs := RepoSyncObjectV1Beta1(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	rs := RepoSyncObjectV1Beta1(nn.Namespace, nn.Name, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 	if err := nt.Create(rs); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -531,12 +534,12 @@ func repoSyncClusterRole() *rbacv1.ClusterRole {
 
 // repoSyncRoleBinding returns rolebinding that grants service account
 // permission to manage resources in the namespace.
-func repoSyncRoleBinding(ns string) *rbacv1.RoleBinding {
-	rb := fake.RoleBindingObject(core.Name("syncs"), core.Namespace(ns))
+func repoSyncRoleBinding(nn types.NamespacedName) *rbacv1.RoleBinding {
+	rb := fake.RoleBindingObject(core.Name("syncs"), core.Namespace(nn.Namespace))
 	sb := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      fmt.Sprintf("ns-reconciler-%s", ns),
+			Name:      reconciler.NsReconcilerName(nn.Namespace, nn.Name),
 			Namespace: configmanagement.ControllerNamespace,
 		},
 	}
@@ -552,12 +555,12 @@ func repoSyncRoleBinding(ns string) *rbacv1.RoleBinding {
 
 // repoSyncClusterRoleBinding returns clusterrolebinding that grants service account
 // permission to manage resources in the namespace.
-func repoSyncClusterRoleBinding(ns string) *rbacv1.ClusterRoleBinding {
-	rb := fake.ClusterRoleBindingObject(core.Name("syncs-" + ns))
+func repoSyncClusterRoleBinding(nn types.NamespacedName) *rbacv1.ClusterRoleBinding {
+	rb := fake.ClusterRoleBindingObject(core.Name("syncs-" + nn.Namespace))
 	sb := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      fmt.Sprintf("ns-reconciler-%s", ns),
+			Name:      reconciler.NsReconcilerName(nn.Namespace, nn.Name),
 			Namespace: configmanagement.ControllerNamespace,
 		},
 	}
@@ -571,48 +574,23 @@ func repoSyncClusterRoleBinding(ns string) *rbacv1.ClusterRoleBinding {
 	return rb
 }
 
-func setupRepoSyncRoleBinding(nt *NT, ns string) error {
-	if err := nt.Create(repoSyncRoleBinding(ns)); err != nil {
+func setupRepoSyncRoleBinding(nt *NT, nn types.NamespacedName) error {
+	if err := nt.Create(repoSyncRoleBinding(nn)); err != nil {
 		nt.T.Fatal(err)
 	}
 
 	// Validate rolebinding 'syncs' is present.
-	return nt.Validate("syncs", ns, &rbacv1.RoleBinding{})
+	return nt.Validate("syncs", nn.Namespace, &rbacv1.RoleBinding{})
 }
 
-func revokeRepoSyncRoleBinding(nt *NT, ns string) {
-	if err := nt.Delete(repoSyncRoleBinding(ns)); err != nil {
+func revokeRepoSyncClusterRoleBinding(nt *NT, nn types.NamespacedName) {
+	if err := nt.Delete(repoSyncClusterRoleBinding(nn)); err != nil {
 		if apierrors.IsNotFound(err) {
 			return
 		}
 		nt.T.Fatal(err)
 	}
-	WaitToTerminate(nt, kinds.RoleBinding(), "syncs", ns)
-}
-
-func revokeRepoSyncClusterRoleBinding(nt *NT, ns string) {
-	if err := nt.Delete(repoSyncClusterRoleBinding(ns)); err != nil {
-		if apierrors.IsNotFound(err) {
-			return
-		}
-		nt.T.Fatal(err)
-	}
-	WaitToTerminate(nt, kinds.ClusterRoleBinding(), "syncs-"+ns, "")
-}
-
-func revokeRepoSyncSecret(nt *NT, ns string) {
-	secret := &corev1.Secret{}
-	if err := nt.Get(namespaceSecret, ns, secret); err != nil {
-		if !apierrors.IsNotFound(err) {
-			nt.T.Fatal(err)
-		}
-	} else if err := nt.Delete(secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			return
-		}
-		nt.T.Fatal(err)
-	}
-	WaitToTerminate(nt, kinds.Secret(), namespaceSecret, ns)
+	WaitToTerminate(nt, kinds.ClusterRoleBinding(), "syncs-"+nn.Namespace, "")
 }
 
 func revokeRepoSyncNamespace(nt *NT, ns string) {
@@ -708,9 +686,7 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 		nt.T.Fatal(err)
 	}
 
-	for ns := range opts.MultiRepo.NamespaceRepos {
-		nt.NamespaceRepos[ns] = ns
-
+	for nn := range opts.NamespaceRepos {
 		// Add a ClusterRoleBinding so that the pods can be created
 		// when the cluster has PodSecurityPolicy enabled.
 		// Background: If a RoleBinding (not a ClusterRoleBinding) is used,
@@ -718,25 +694,25 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
 		// available on GKE.
 		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
-			if err := nt.Create(repoSyncClusterRoleBinding(ns)); err != nil {
+			if err := nt.Create(repoSyncClusterRoleBinding(nn)); err != nil {
 				nt.T.Fatal(err)
 			}
 		}
 
 		// create namespace for namespace reconciler.
-		err := nt.Create(fake.NamespaceObject(ns))
+		err := nt.Create(fake.NamespaceObject(nn.Namespace))
 		if err != nil {
 			nt.T.Fatal(err)
 		}
 
 		// create secret for the namespace reconciler.
-		CreateNamespaceSecret(nt, ns)
+		CreateNamespaceSecret(nt, nn.Namespace)
 
-		if err := setupRepoSyncRoleBinding(nt, ns); err != nil {
+		if err := setupRepoSyncRoleBinding(nt, nn); err != nil {
 			nt.T.Fatal(err)
 		}
 
-		setupRepoSync(nt, ns)
+		setupRepoSync(nt, nn)
 	}
 
 	// Validate multi-repo metrics in root reconciler.
@@ -754,14 +730,14 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 		nt.T.Errorf("validating metrics: %v", err)
 	}
 
-	for ns := range opts.MultiRepo.NamespaceRepos {
-		if err := waitForRepoReconciler(nt, ns); err != nil {
+	for nn := range opts.NamespaceRepos {
+		if err := waitForRepoReconciler(nt, nn.Namespace); err != nil {
 			nt.T.Fatal(err)
 		}
 
 		// Validate multi-repo metrics in namespace reconciler.
 		err := nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
-			return nt.ValidateMultiRepoMetrics(reconciler.NsReconcilerName(ns, configsync.RepoSyncName), 0)
+			return nt.ValidateMultiRepoMetrics(reconciler.NsReconcilerName(nn.Namespace, nn.Name), 0)
 		})
 		if err != nil {
 			nt.T.Errorf("validating metrics: %v", err)
@@ -775,8 +751,8 @@ func StructuredNSPath(namespace, resourceName string) string {
 }
 
 // RepoSyncObjectV1Alpha1 returns the default RepoSync object in the given namespace.
-func RepoSyncObjectV1Alpha1(ns, repoURL string) *v1alpha1.RepoSync {
-	rs := fake.RepoSyncObjectV1Alpha1(core.Namespace(ns))
+func RepoSyncObjectV1Alpha1(ns, name, repoURL string) *v1alpha1.RepoSync {
+	rs := fake.RepoSyncObjectV1Alpha1(ns, name)
 	rs.Spec.Git = v1alpha1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
@@ -791,8 +767,8 @@ func RepoSyncObjectV1Alpha1(ns, repoURL string) *v1alpha1.RepoSync {
 
 // RepoSyncObjectV1Beta1 returns the default RepoSync object
 // with version v1beta1 in the given namespace.
-func RepoSyncObjectV1Beta1(ns, repoURL string) *v1beta1.RepoSync {
-	rs := fake.RepoSyncObjectV1Beta1(core.Namespace(ns))
+func RepoSyncObjectV1Beta1(ns, name, repoURL string) *v1beta1.RepoSync {
+	rs := fake.RepoSyncObjectV1Beta1(ns, name)
 	rs.Spec.Git = v1beta1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
@@ -807,12 +783,13 @@ func RepoSyncObjectV1Beta1(ns, repoURL string) *v1beta1.RepoSync {
 
 func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 	nsCount := 0
-	for ns := range opts.MultiRepo.NamespaceRepos {
+	cluster := os.Getenv("GCP_CLUSTER")
+	for nn := range opts.NamespaceRepos {
+		ns := nn.Namespace
 		nsCount++
-		nt.Root.Add(StructuredNSPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
-		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
-		nt.Root.Add(StructuredNSPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
-		cluster := os.Getenv("GCP_CLUSTER")
+		nt.RootRepos[configsync.RootSyncName].Add(StructuredNSPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
+		nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/cr.yaml", repoSyncClusterRole())
+		nt.RootRepos[configsync.RootSyncName].Add(StructuredNSPath(ns, "rb.yaml"), repoSyncRoleBinding(nn))
 		if strings.Contains(cluster, "psp") {
 			// Add a ClusterRoleBinding so that the pods can be created
 			// when the cluster has PodSecurityPolicy enabled.
@@ -820,34 +797,38 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 			// it will only grant usage for pods being run in the same namespace as the binding.
 			// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
 			// available on GKE.
-			crb := repoSyncClusterRoleBinding(ns)
-			nt.Root.Add(fmt.Sprintf("acme/cluster/crb-%s.yaml", ns), crb)
+			crb := repoSyncClusterRoleBinding(nn)
+			nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/cluster/crb-%s.yaml", ns), crb)
 		}
 
-		repo, exist := nt.NonRootRepos[ns]
+		repo, exist := nt.NonRootRepos[nn]
 		if !exist {
 			nt.T.Fatal("nonexistent repo")
 		}
-		rs := RepoSyncObjectV1Beta1(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
-		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
+		rs := RepoSyncObjectV1Beta1(ns, nn.Name, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+		nt.RootRepos[configsync.RootSyncName].Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
-		nt.Root.CommitAndPush("Adding namespace, clusterrole, rolebinding, clusterrolebinding and RepoSync")
-		// This waits for the Namespace to be created.
-		nt.WaitForRepoSyncs()
+		nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding namespace, clusterrole, rolebinding, clusterrolebinding and RepoSync")
+	}
+	// This waits for the Namespace to be created.
+	nt.WaitForRepoSyncs(RootSyncOnly())
 
-		// Now that the Namespace exists, create the secret inside it, and ensure
-		// its RepoSync reports everything is synced.
-		CreateNamespaceSecret(nt, ns)
-		nt.NamespaceRepos[ns] = ns
-		nt.WaitForRepoSyncs()
-
-		err := nt.Validate(rs.Name, ns, &v1beta1.RepoSync{})
+	// Now that the Namespace exists, create the secret inside it, and ensure
+	// its RepoSync reports everything is synced.
+	for nn := range opts.NamespaceRepos {
+		CreateNamespaceSecret(nt, nn.Namespace)
+	}
+	nt.WaitForRepoSyncs()
+	for nn := range opts.NamespaceRepos {
+		err := nt.Validate(nn.Name, nn.Namespace, &v1beta1.RepoSync{})
 		if err != nil {
 			nt.T.Fatal(err)
 		}
+	}
 
-		// Validate multi-repo metrics.
-		err = nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
+	// Validate multi-repo metrics.
+	if len(opts.NamespaceRepos) > 0 {
+		err := nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
 			var err error
 			if strings.Contains(cluster, "psp") {
 				err = nt.ValidateMultiRepoMetrics(DefaultRootReconcilerName,
@@ -960,39 +941,41 @@ func ResetMonoRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat, policyDir s
 }
 
 // resetRepository re-initializes an existing remote repository or creates a new remote repository.
-func resetRepository(nt *NT, name string, upstream string, sourceFormat filesystem.SourceFormat) *Repository {
-	if repo, found := nt.RemoteRepositories[name]; found {
+func resetRepository(nt *NT, repoType RepoType, nn types.NamespacedName, upstream string, sourceFormat filesystem.SourceFormat) *Repository {
+	if repo, found := nt.RemoteRepositories[nn]; found {
 		repo.ReInit(nt, sourceFormat)
 		return repo
 	}
-	repo := NewRepository(nt, name, upstream, sourceFormat)
+	repo := NewRepository(nt, repoType, nn, upstream, sourceFormat)
 	return repo
 }
 
-// resetRootRepoSpec sets root-sync's SOURCE_FORMAT and POLICY_DIR. It might cause the root-reconciler to restart.
+// resetRootRepos sets root-sync's SOURCE_FORMAT and POLICY_DIR. It might cause the root-reconciler to restart.
 // It sets POLICY_DIR to always be `acme` because the initial root-repo's sync directory is configured to be `acme`.
-func resetRootRepoSpec(nt *NT, upstream string, sourceFormat filesystem.SourceFormat) {
-	rs := fake.RootSyncObjectV1Beta1()
-	if err := nt.Get(rs.Name, rs.Namespace, rs); err != nil && !apierrors.IsNotFound(err) {
-		nt.T.Fatal(err)
-	} else {
-		nt.Root = resetRepository(nt, rootRepo, upstream, sourceFormat)
-		if err == nil {
-			nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, AcmeDir))
+func resetRootRepos(nt *NT, upstream string, sourceFormat filesystem.SourceFormat) {
+	for name := range nt.RootRepos {
+		rs := fake.RootSyncObjectV1Beta1(name)
+		if err := nt.Get(rs.Name, rs.Namespace, rs); err != nil && !apierrors.IsNotFound(err) {
+			nt.T.Fatal(err)
 		} else {
-			rs.Spec.SourceFormat = string(sourceFormat)
-			rs.Spec.Git = v1beta1.Git{
-				Repo:      nt.GitProvider.SyncURL(nt.Root.RemoteRepoName),
-				Branch:    MainBranch,
-				Dir:       AcmeDir,
-				Auth:      "ssh",
-				SecretRef: v1beta1.SecretReference{Name: controllers.GitCredentialVolume},
+			nt.RootRepos[name] = resetRepository(nt, RootRepo, RootSyncNN(name), upstream, sourceFormat)
+			if err == nil {
+				nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, AcmeDir))
+			} else {
+				rs.Spec.SourceFormat = string(sourceFormat)
+				rs.Spec.Git = v1beta1.Git{
+					Repo:      nt.GitProvider.SyncURL(nt.RootRepos[name].RemoteRepoName),
+					Branch:    MainBranch,
+					Dir:       AcmeDir,
+					Auth:      "ssh",
+					SecretRef: v1beta1.SecretReference{Name: controllers.GitCredentialVolume},
+				}
+				if err = nt.Create(rs); err != nil {
+					nt.T.Fatal(err)
+				}
 			}
-			if err = nt.Create(rs); err != nil {
-				nt.T.Fatal(err)
-			}
+			nt.WaitForRepoSyncs()
 		}
-		nt.WaitForRepoSyncs()
 	}
 }
 
@@ -1005,32 +988,47 @@ func resetNamespaceRepos(nt *NT) {
 	for _, nr := range namespaceRepos.Items {
 		// reset the namespace repo only when it is in 'nt.NonRootRepos' (created by test).
 		// This prevents from resetting an existing namespace repo from a remote git provider.
-		if r, found := nt.NonRootRepos[nr.Namespace]; found {
-			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, r.UpstreamRepoURL, filesystem.SourceFormatUnstructured)
-			nt.WaitForSync(kinds.RepoSyncV1Beta1(), configsync.RepoSyncName, nr.Namespace,
-				nt.DefaultWaitTimeout, DefaultRepoSha1Fn(nr.Namespace), RepoSyncHasStatusSyncCommit, nil)
+		nn := RepoSyncNN(nr.Namespace, nr.Name)
+		if r, found := nt.NonRootRepos[nn]; found {
+			nt.NonRootRepos[nn] = resetRepository(nt, NamespaceRepo, nn, r.UpstreamRepoURL, filesystem.SourceFormatUnstructured)
+			nt.WaitForSync(kinds.RepoSyncV1Beta1(), nr.Name, nr.Namespace,
+				nt.DefaultWaitTimeout, DefaultRepoSha1Fn(), RepoSyncHasStatusSyncCommit, nil)
+		}
+	}
+}
+
+// deleteRootRepos deletes the root-sync and the safety check namespace that is created in the delegated mode.
+func deleteRootRepos(nt *NT) {
+	rootSyncs := &v1beta1.RootSyncList{}
+	if err := nt.List(rootSyncs); err != nil {
+		nt.T.Fatal(err)
+	}
+	for _, rs := range rootSyncs.Items {
+		// Keep the default RootSync object
+		if rs.Name != configsync.RootSyncName {
+			if err := nt.Delete(&rs); err != nil {
+				nt.T.Fatal(err)
+			}
+			WaitToTerminate(nt, kinds.Deployment(), DefaultRootReconcilerName, rs.Namespace)
+			WaitToTerminate(nt, kinds.RootSyncV1Beta1(), rs.Name, rs.Namespace)
 		}
 	}
 }
 
 // deleteNamespaceRepos deletes the repo-sync and the namespace that is created in the delegated mode.
 func deleteNamespaceRepos(nt *NT) {
-	namespaceRepos := &v1beta1.RepoSyncList{}
-	if err := nt.List(namespaceRepos); err != nil {
+	repoSyncs := &v1beta1.RepoSyncList{}
+	if err := nt.List(repoSyncs); err != nil {
 		nt.T.Fatal(err)
 	}
 
-	for _, nr := range namespaceRepos.Items {
-		if err := nt.Delete(&nr); err != nil {
-			nt.T.Fatal(err)
-		}
-		WaitToTerminate(nt, kinds.Deployment(), nr.Name, configmanagement.ControllerNamespace)
-		WaitToTerminate(nt, kinds.RepoSyncV1Beta1(), nr.Name, nr.Namespace)
-		revokeRepoSyncRoleBinding(nt, nr.Namespace)
-		revokeRepoSyncSecret(nt, nr.Namespace)
-		revokeRepoSyncNamespace(nt, nr.Namespace)
+	for _, rs := range repoSyncs.Items {
+		// revokeRepoSyncNamespace will delete the namespace of RepoSync, which
+		// auto-deletes the resources, including RepoSync, Deployment, RoleBinding, Secret, and etc.
+		revokeRepoSyncNamespace(nt, rs.Namespace)
+		nn := RepoSyncNN(rs.Namespace, rs.Name)
 		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
-			revokeRepoSyncClusterRoleBinding(nt, nr.Namespace)
+			revokeRepoSyncClusterRoleBinding(nt, nn)
 		}
 	}
 
@@ -1042,10 +1040,10 @@ func deleteNamespaceRepos(nt *NT) {
 }
 
 // SetPolicyDir updates the root-sync object with the provided policyDir.
-func SetPolicyDir(nt *NT, policyDir string) {
+func SetPolicyDir(nt *NT, name, policyDir string) {
 	nt.T.Logf("Set policyDir to %q", policyDir)
 	if nt.MultiRepo {
-		rs := fake.RootSyncObjectV1Beta1()
+		rs := fake.RootSyncObjectV1Beta1(name)
 		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, policyDir))
 	} else {
 		ResetMonoRepoSpec(nt, filesystem.SourceFormatHierarchy, policyDir)

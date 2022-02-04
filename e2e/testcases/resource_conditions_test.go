@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/policycontroller/constraint"
@@ -29,7 +30,7 @@ func TestResourceConditionAnnotations(t *testing.T) {
 	}
 
 	ns := "rc-annotations"
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
+	nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
 		fake.NamespaceObject(ns))
 
 	crName := "e2e-test-clusterrole"
@@ -39,13 +40,13 @@ func TestResourceConditionAnnotations(t *testing.T) {
 		Resources: []string{"deployments"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Root.Add("acme/cluster/cr.yaml", cr)
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/cr.yaml", cr)
 
 	cmName := "e2e-test-configmap"
 	cm := fake.ConfigMapObject(core.Name(cmName))
 	cmPath := fmt.Sprintf("acme/namespaces/%s/configmap.yaml", ns)
-	nt.Root.Add(cmPath, cm)
-	nt.Root.CommitAndPush("add ConfigMap and ClusterRole with no annotations")
+	nt.RootRepos[configsync.RootSyncName].Add(cmPath, cm)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add ConfigMap and ClusterRole with no annotations")
 	// The bats test checks the NamespaceConfig/ClusterConfig, but checking the Repo
 	// is sufficient.
 	nt.WaitForRepoSyncs()
@@ -242,8 +243,8 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 			},
 		},
 	}
-	nt.Root.Add("acme/cluster/constraint-template.yaml", ct)
-	nt.Root.CommitAndPush("add gatekeeper ConstraintTemplate")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/constraint-template.yaml", ct)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add gatekeeper ConstraintTemplate")
 	nt.WaitForRepoSyncs()
 
 	// In the real world, this annotation would be removed once PolicyController
@@ -300,8 +301,8 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 			"repos": []interface{}{"only-this-repo"},
 		},
 	}
-	nt.Root.Add("acme/cluster/constraint.yaml", constraint)
-	nt.Root.CommitAndPush("Add Gatekeeper Constraint")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/constraint.yaml", constraint)
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add Gatekeeper Constraint")
 	nt.WaitForRepoSyncs()
 
 	// In the real world, this annotation would be removed once PolicyController

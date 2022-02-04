@@ -24,7 +24,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
@@ -75,19 +74,19 @@ type NT struct {
 	// DefaultWaitTimeout is the default wait duration.
 	DefaultWaitTimeout time.Duration
 
-	// Root is the root repository the cluster is syncing to.
-	Root *Repository
-
-	// MultiRepo indicates that the test case is for multi-repo Config Sync.
-	MultiRepo bool
+	// RootRepos is the root repositories the cluster is syncing to.
+	// The key is the RootSync name and the value points to the corresponding Repository object.
+	// Each test case was set up with a default RootSync (`root-sync`) installed.
+	// After the test, all other RootSync or RepoSync objects are deleted, but the default one persists.
+	RootRepos map[string]*Repository
 
 	// NonRootRepos is the Namespace repositories the cluster is syncing to.
 	// Only used in multi-repo tests.
-	NonRootRepos map[string]*Repository
+	// The key is the namespace and name of the RepoSync object, the value points to the corresponding Repository object.
+	NonRootRepos map[types.NamespacedName]*Repository
 
-	// NamespaceRepos is a map from Namespace names to the name of the Repository
-	// containing configs for that Namespace.
-	NamespaceRepos map[string]string
+	// MultiRepo indicates that the test case is for multi-repo Config Sync.
+	MultiRepo bool
 
 	// ReconcilerPollingPeriod defines how often the reconciler should poll the
 	// filesystem for updates to the source or rendered configs.
@@ -124,7 +123,7 @@ type NT struct {
 	// RemoteRepositories maintains a map between the repo local name and the remote repository.
 	// It includes both root repo and namespace repos and can be shared among test cases.
 	// It is used to reuse existing repositories instead of creating new ones.
-	RemoteRepositories map[string]*Repository
+	RemoteRepositories map[types.NamespacedName]*Repository
 }
 
 const (
@@ -133,6 +132,25 @@ const (
 
 // DefaultRootReconcilerName is the root-reconciler name of the default RootSync object: "root-sync".
 var DefaultRootReconcilerName = reconciler.RootReconcilerName(configsync.RootSyncName)
+
+// RootSyncNN returns the NamespacedName of the RootSync object.
+func RootSyncNN(name string) types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: configsync.ControllerNamespace,
+		Name:      name,
+	}
+}
+
+// RepoSyncNN returns the NamespacedName of the RepoSync object.
+func RepoSyncNN(ns, name string) types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: ns,
+		Name:      name,
+	}
+}
+
+// DefaultRootRepoNamespacedName is the NamespacedName of the default RootSync object.
+var DefaultRootRepoNamespacedName = RootSyncNN(configsync.RootSyncName)
 
 var sharedNT *NT
 
@@ -416,14 +434,16 @@ func (nt *NT) ValidateMultiRepoMetrics(reconciler string, numResources int, gvkM
 // any of the reconcilers.
 func (nt *NT) ValidateErrorMetricsNotFound() error {
 	if nt.MultiRepo {
-		err := nt.ReconcilerMetrics.ValidateErrorMetrics(DefaultRootReconcilerName)
-		if err != nil {
+		if err := nt.ReconcilerMetrics.ValidateErrorMetrics(DefaultRootReconcilerName); err != nil {
 			return err
 		}
-
-		for ns := range nt.NamespaceRepos {
-			err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.NsReconcilerName(ns, configsync.RepoSyncName))
-			if err != nil {
+		for name := range nt.RootRepos {
+			if err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.RootReconcilerName(name)); err != nil {
+				return err
+			}
+		}
+		for nn := range nt.NonRootRepos {
+			if err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.NsReconcilerName(nn.Namespace, nn.Name)); err != nil {
 				return err
 			}
 		}
@@ -498,16 +518,16 @@ func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
 }
 
 // DefaultRootSha1Fn is the default function to retrieve the commit hash of the root repo.
-func DefaultRootSha1Fn(nt *NT) (string, error) {
-	return nt.Root.Hash(), nil
+func DefaultRootSha1Fn(nt *NT, nn types.NamespacedName) (string, error) {
+	return nt.RootRepos[nn.Name].Hash(), nil
 }
 
 // DefaultRepoSha1Fn is the default function to retrieve the commit hash of the namespace repo.
-func DefaultRepoSha1Fn(repoName string) Sha1Func {
-	return func(nt *NT) (string, error) {
+func DefaultRepoSha1Fn() Sha1Func {
+	return func(nt *NT, nn types.NamespacedName) (string, error) {
 		// Get the repository this RepoSync is syncing to, and ensure it is synced
 		// to HEAD.
-		repo, exists := nt.NonRootRepos[repoName]
+		repo, exists := nt.NonRootRepos[nn]
 		if !exists {
 			return "", fmt.Errorf("checked if nonexistent repo is synced")
 		}
@@ -534,16 +554,18 @@ func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 	syncTimeout := waitForRepoSyncsOptions.timeout
 
 	if nt.MultiRepo {
-		nt.WaitForSync(kinds.RootSyncV1Beta1(), "root-sync",
-			configmanagement.ControllerNamespace, syncTimeout,
-			waitForRepoSyncsOptions.rootSha1Fn, RootSyncHasStatusSyncCommit,
-			&SyncDirPredicatePair{waitForRepoSyncsOptions.syncDirectory, RootSyncHasStatusSyncDirectory})
+		for name := range nt.RootRepos {
+			nt.WaitForSync(kinds.RootSyncV1Beta1(), name,
+				configmanagement.ControllerNamespace, syncTimeout,
+				waitForRepoSyncsOptions.rootSha1Fn, RootSyncHasStatusSyncCommit,
+				&SyncDirPredicatePair{waitForRepoSyncsOptions.syncDirectory, RootSyncHasStatusSyncDirectory})
+		}
 
 		syncNamespaceRepos := waitForRepoSyncsOptions.syncNamespaceRepos
 		if syncNamespaceRepos {
-			for ns, repo := range nt.NamespaceRepos {
-				nt.WaitForSync(kinds.RepoSyncV1Beta1(), configsync.RepoSyncName, ns,
-					syncTimeout, DefaultRepoSha1Fn(repo), RepoSyncHasStatusSyncCommit, nil)
+			for nn := range nt.NonRootRepos {
+				nt.WaitForSync(kinds.RepoSyncV1Beta1(), nn.Name, nn.Namespace,
+					syncTimeout, DefaultRepoSha1Fn(), RepoSyncHasStatusSyncCommit, nil)
 			}
 		}
 	} else {
@@ -624,7 +646,14 @@ func (nt *NT) WaitForSync(gvk schema.GroupVersionKind, name, namespace string, t
 			return errors.Wrapf(ErrWrongType, "trying to wait for List type to sync: %T", o)
 		}
 
-		sha1, err := sha1Func(nt)
+		var nn types.NamespacedName
+		if namespace == "" {
+			// If namespace is empty, that is the monorepo mode. So using the default root-sync.
+			nn = DefaultRootRepoNamespacedName
+		} else {
+			nn = RepoSyncNN(namespace, name)
+		}
+		sha1, err := sha1Func(nt, nn)
 		if err != nil {
 			return errors.Wrapf(err, "failed to retrieve sha1")
 		}
@@ -746,8 +775,8 @@ func (nt *NT) testLogs(previousPodLog bool) {
 		nt.PodLogs(configmanagement.ControllerNamespace, configuration.ShortName, configuration.ShortName, previousPodLog)
 		nt.PodLogs(configmanagement.ControllerNamespace, DefaultRootReconcilerName, reconcilermanager.Reconciler, previousPodLog)
 		//nt.PodLogs(configmanagement.ControllerNamespace, DefaultRootReconcilerName, reconcilermanager.GitSync, previousPodLog)
-		for ns := range nt.NamespaceRepos {
-			nt.PodLogs(configmanagement.ControllerNamespace, reconciler.NsReconcilerName(ns, configsync.RepoSyncName),
+		for nn := range nt.NonRootRepos {
+			nt.PodLogs(configmanagement.ControllerNamespace, reconciler.NsReconcilerName(nn.Namespace, nn.Name),
 				reconcilermanager.Reconciler, previousPodLog)
 			//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.NsReconcilerName(ns), reconcilermanager.GitSync, previousPodLog)
 		}
@@ -930,10 +959,10 @@ func validateError(errs []v1beta1.ConfigSyncError, code string, message string) 
 }
 
 // WaitForRootSyncSourceError waits until the given error (code and message) is present on the RootSync resource
-func (nt *NT) WaitForRootSyncSourceError(code string, message string, opts ...WaitOption) {
+func (nt *NT) WaitForRootSyncSourceError(rsName, code string, message string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObjectV1Beta1()
+			rs := fake.RootSyncObjectV1Beta1(rsName)
 			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
 				return err
 			}
@@ -945,10 +974,10 @@ func (nt *NT) WaitForRootSyncSourceError(code string, message string, opts ...Wa
 }
 
 // WaitForRootSyncRenderingError waits until the given error (code and message) is present on the RootSync resource
-func (nt *NT) WaitForRootSyncRenderingError(code string, message string, opts ...WaitOption) {
+func (nt *NT) WaitForRootSyncRenderingError(rsName, code string, message string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObjectV1Beta1()
+			rs := fake.RootSyncObjectV1Beta1(rsName)
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {
 				return err
@@ -961,10 +990,10 @@ func (nt *NT) WaitForRootSyncRenderingError(code string, message string, opts ..
 }
 
 // WaitForRootSyncSyncError waits until the given error (code and message) is present on the RootSync resource
-func (nt *NT) WaitForRootSyncSyncError(code string, message string, opts ...WaitOption) {
+func (nt *NT) WaitForRootSyncSyncError(rsName, code string, message string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObjectV1Beta1()
+			rs := fake.RootSyncObjectV1Beta1(rsName)
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {
 				return err
@@ -977,12 +1006,12 @@ func (nt *NT) WaitForRootSyncSyncError(code string, message string, opts ...Wait
 }
 
 // WaitForRepoSyncSourceError waits until the given error (code and message) is present on the RepoSync resource
-func (nt *NT) WaitForRepoSyncSourceError(namespace, code, message string, opts ...WaitOption) {
+func (nt *NT) WaitForRepoSyncSourceError(namespace, rsName, code, message string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			nt.T.Helper()
 
-			rs := fake.RepoSyncObjectV1Beta1(core.Namespace(namespace))
+			rs := fake.RepoSyncObjectV1Beta1(namespace, rsName)
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {
 				return err
@@ -1071,10 +1100,10 @@ func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
 }
 
 // WaitForStalledError waits until the given Stalled error is present on the RootSync resource.
-func (nt *NT) WaitForStalledError(reason, message string) {
+func (nt *NT) WaitForStalledError(rsName, reason, message string) {
 	Wait(nt.T, "RootSync stalled error", nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObjectV1Beta1()
+			rs := fake.RootSyncObjectV1Beta1(rsName)
 			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
 				return err
 			}
@@ -1166,14 +1195,14 @@ type MetricsSyncOption func(csm *testmetrics.ConfigSyncMetrics) error
 // SyncMetricsToLatestCommit syncs metrics to the latest commit
 func SyncMetricsToLatestCommit(nt *NT) MetricsSyncOption {
 	return func(metrics *testmetrics.ConfigSyncMetrics) error {
-		err := metrics.ValidateMetricsCommitApplied(nt.Root.Hash())
-		if err != nil {
-			return err
+		for nn := range nt.RootRepos {
+			if err := metrics.ValidateMetricsCommitApplied(nt.RootRepos[nn].Hash()); err != nil {
+				return err
+			}
 		}
 
-		for ns := range nt.NamespaceRepos {
-			err = metrics.ValidateMetricsCommitApplied(nt.NonRootRepos[ns].Hash())
-			if err != nil {
+		for ns := range nt.NonRootRepos {
+			if err := metrics.ValidateMetricsCommitApplied(nt.NonRootRepos[ns].Hash()); err != nil {
 				return err
 			}
 		}
@@ -1223,7 +1252,7 @@ func WithTimeout(timeout time.Duration) WaitForRepoSyncsOption {
 }
 
 // Sha1Func is the function type that retrieves the commit sha1.
-type Sha1Func func(nt *NT) (string, error)
+type Sha1Func func(nt *NT, nn types.NamespacedName) (string, error)
 
 // WithRootSha1Func provides the function to get commit sha1 to WaitForRepoSyncs.
 func WithRootSha1Func(fn Sha1Func) WaitForRepoSyncsOption {
