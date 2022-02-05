@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/nomos/e2e/nomostest"
@@ -10,7 +11,10 @@ import (
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/cli-utils/pkg/object/dependson"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // This file includes e2e tests for sync ordering (design doc: go/cs-sync-ordering).
@@ -289,4 +293,150 @@ func TestSyncOrdering(t *testing.T) {
 	if err := nt.Validate(cm0Name, namespaceName, &corev1.ConfigMap{}, nomostest.NoConfigSyncMetadata()); err != nil {
 		nt.T.Fatal(err)
 	}
+
+	// Add two pods in the namespace: pod1 and pod2, pod2 depends on pod1.
+	nt.T.Log("add the namespace, pod1 and pod2, pod2 depends on pod1")
+	pod1Name := "pod1"
+	pod2Name := "pod2"
+	container := corev1.Container{
+		Name:  "goproxy",
+		Image: "k8s.gcr.io/goproxy:0.1",
+		Ports: []corev1.ContainerPort{
+			{
+				ContainerPort: 8080,
+			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromInt(8080),
+				},
+			},
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+		},
+	}
+	nt.Root.Add("acme/pod1.yaml", fake.PodObject(pod1Name, []corev1.Container{container}, core.Namespace(namespaceName)))
+	nt.Root.Add("acme/pod2.yaml", fake.PodObject(pod2Name, []corev1.Container{container},
+		core.Namespace(namespaceName),
+		core.Annotation(dependson.Annotation, "/namespaces/bookstore/Pod/pod1")))
+	nt.Root.CommitAndPush("Add pod1 and pod2 (pod2 depends on pod1)")
+	nt.WaitForRepoSyncs()
+
+	pod1 := &corev1.Pod{}
+	pod2 := &corev1.Pod{}
+	_, err := nomostest.Retry(nt.DefaultWaitTimeout, func() error {
+		err := nt.Validate(pod1Name, namespaceName,
+			pod1, isPodReady)
+		if err != nil {
+			return err
+		}
+		return nt.Validate(pod2Name, namespaceName,
+			pod2, isPodReady)
+	})
+
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Logf("Verify that pod2 is created after pod1 is ready")
+	readyTime := getPodReadyTimestamp(pod1)
+	if pod2.CreationTimestamp.Before(readyTime) {
+		nt.T.Fatalf("an object (%s) should be created after its dependency (%s) is ready", core.GKNN(pod2), core.GKNN(pod1))
+	}
+
+	nt.T.Logf("Remove Pod1 and Pod2")
+	nt.Root.Remove("acme/pod1.yaml")
+	nt.Root.Remove("acme/pod2.yaml")
+	nt.Root.CommitAndPush("Remove pod1 and pod2")
+	nt.WaitForRepoSyncs()
+
+	_, err = nomostest.Retry(20, func() error {
+		pod1 = &corev1.Pod{}
+		pod2 = &corev1.Pod{}
+		err := nt.ValidateNotFound(pod1Name, namespaceName, pod1)
+		if err != nil {
+			return err
+		}
+		return nt.ValidateNotFound(pod2Name, namespaceName, pod2)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Log("add pod1 and pod2, pod1's image is not valid, pod2 depends on pod1")
+	invalidImageContainer := container
+	invalidImageContainer.Image = "does-not-exist"
+	nt.Root.Add("acme/pod1.yaml", fake.PodObject(pod1Name, []corev1.Container{invalidImageContainer}, core.Namespace(namespaceName)))
+	nt.Root.Add("acme/pod2.yaml", fake.PodObject(pod2Name, []corev1.Container{container},
+		core.Namespace(namespaceName),
+		core.Annotation(dependson.Annotation, "/namespaces/bookstore/Pod/pod1")))
+	nt.Root.CommitAndPush("Add pod1 and pod2 (pod2 depends on pod1 and pod1 won't be reconciled)")
+	// TODO(b/216842598): After update to cli-utils 0.28.0, we should change
+	// it to nt.WaitForRootSyncSyncError().
+	nt.WaitForRepoSyncs()
+
+	_, err = nomostest.Retry(nt.DefaultWaitTimeout, func() error {
+		pod1 = &corev1.Pod{}
+		pod2 = &corev1.Pod{}
+		err := nt.Validate(pod1Name, namespaceName,
+			pod1, isPodNotReady)
+		if err != nil {
+			return err
+		}
+		return nt.Validate(pod2Name, namespaceName,
+			pod2, isPodReady)
+	})
+
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	// TODO(b/216842598): After update to cli-utils 0.28.0, the expected behavior
+	// should be changed to that pod2 apply is skipped.
+	nt.T.Logf("Verify tha pod2 is created after pod1 is created")
+	if pod2.CreationTimestamp.Before(&pod1.CreationTimestamp) {
+		nt.T.Fatalf("an object (%s) should be created after its dependency (%s)", core.GKNN(pod2), core.GKNN(pod1))
+	}
+
+	nt.T.Logf("Remove Pod1 and Pod2")
+	nt.Root.Remove("acme/pod1.yaml")
+	nt.Root.Remove("acme/pod2.yaml")
+	nt.Root.CommitAndPush("Remove pod1 and pod2")
+	nt.WaitForRepoSyncs()
+}
+
+func isPodReady(o client.Object) error {
+	pod := o.(*corev1.Pod)
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == "Ready" {
+			if condition.Status == "True" {
+				return nil
+			}
+			return fmt.Errorf("%s is not ready", core.GKNN(pod))
+		}
+	}
+	return fmt.Errorf("Ready condition not found in %s", core.GKNN(pod))
+}
+
+func isPodNotReady(o client.Object) error {
+	pod := o.(*corev1.Pod)
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == "Ready" {
+			if condition.Status == "False" {
+				return nil
+			}
+			return fmt.Errorf("%s is ready", core.GKNN(pod))
+		}
+	}
+	return nil
+}
+
+func getPodReadyTimestamp(pod *corev1.Pod) *metav1.Time {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == "Ready" {
+			return &condition.LastTransitionTime
+		}
+	}
+	return nil
 }
