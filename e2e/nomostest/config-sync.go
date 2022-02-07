@@ -973,13 +973,25 @@ func resetRepository(nt *NT, name string, upstream string, sourceFormat filesyst
 // It sets POLICY_DIR to always be `acme` because the initial root-repo's sync directory is configured to be `acme`.
 func resetRootRepoSpec(nt *NT, upstream string, sourceFormat filesystem.SourceFormat) {
 	rs := fake.RootSyncObjectV1Beta1()
-	if err := nt.Get(rs.Name, rs.Namespace, rs); err != nil {
-		if !apierrors.IsNotFound(err) {
-			nt.T.Fatal(err)
-		}
+	if err := nt.Get(rs.Name, rs.Namespace, rs); err != nil && !apierrors.IsNotFound(err) {
+		nt.T.Fatal(err)
 	} else {
 		nt.Root = resetRepository(nt, rootRepo, upstream, sourceFormat)
-		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, AcmeDir))
+		if err == nil {
+			nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, AcmeDir))
+		} else {
+			rs.Spec.SourceFormat = string(sourceFormat)
+			rs.Spec.Git = v1beta1.Git{
+				Repo:      nt.GitProvider.SyncURL(nt.Root.RemoteRepoName),
+				Branch:    MainBranch,
+				Dir:       AcmeDir,
+				Auth:      "ssh",
+				SecretRef: v1beta1.SecretReference{Name: controllers.GitCredentialVolume},
+			}
+			if err = nt.Create(rs); err != nil {
+				nt.T.Fatal(err)
+			}
+		}
 		nt.WaitForRepoSyncs()
 	}
 }
