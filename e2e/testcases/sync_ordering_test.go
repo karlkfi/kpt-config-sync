@@ -317,11 +317,11 @@ func TestSyncOrdering(t *testing.T) {
 			PeriodSeconds:       10,
 		},
 	}
-	nt.Root.Add("acme/pod1.yaml", fake.PodObject(pod1Name, []corev1.Container{container}, core.Namespace(namespaceName)))
-	nt.Root.Add("acme/pod2.yaml", fake.PodObject(pod2Name, []corev1.Container{container},
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod1.yaml", fake.PodObject(pod1Name, []corev1.Container{container}, core.Namespace(namespaceName)))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod2.yaml", fake.PodObject(pod2Name, []corev1.Container{container},
 		core.Namespace(namespaceName),
 		core.Annotation(dependson.Annotation, "/namespaces/bookstore/Pod/pod1")))
-	nt.Root.CommitAndPush("Add pod1 and pod2 (pod2 depends on pod1)")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add pod1 and pod2 (pod2 depends on pod1)")
 	nt.WaitForRepoSyncs()
 
 	pod1 := &corev1.Pod{}
@@ -347,9 +347,9 @@ func TestSyncOrdering(t *testing.T) {
 	}
 
 	nt.T.Logf("Remove Pod1 and Pod2")
-	nt.Root.Remove("acme/pod1.yaml")
-	nt.Root.Remove("acme/pod2.yaml")
-	nt.Root.CommitAndPush("Remove pod1 and pod2")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod1.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod2.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove pod1 and pod2")
 	nt.WaitForRepoSyncs()
 
 	_, err = nomostest.Retry(20, func() error {
@@ -368,11 +368,11 @@ func TestSyncOrdering(t *testing.T) {
 	nt.T.Log("add pod1 and pod2, pod1's image is not valid, pod2 depends on pod1")
 	invalidImageContainer := container
 	invalidImageContainer.Image = "does-not-exist"
-	nt.Root.Add("acme/pod1.yaml", fake.PodObject(pod1Name, []corev1.Container{invalidImageContainer}, core.Namespace(namespaceName)))
-	nt.Root.Add("acme/pod2.yaml", fake.PodObject(pod2Name, []corev1.Container{container},
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod1.yaml", fake.PodObject(pod1Name, []corev1.Container{invalidImageContainer}, core.Namespace(namespaceName)))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod2.yaml", fake.PodObject(pod2Name, []corev1.Container{container},
 		core.Namespace(namespaceName),
 		core.Annotation(dependson.Annotation, "/namespaces/bookstore/Pod/pod1")))
-	nt.Root.CommitAndPush("Add pod1 and pod2 (pod2 depends on pod1 and pod1 won't be reconciled)")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add pod1 and pod2 (pod2 depends on pod1 and pod1 won't be reconciled)")
 	// TODO(b/216842598): After update to cli-utils 0.28.0, we should change
 	// it to nt.WaitForRootSyncSyncError().
 	nt.WaitForRepoSyncs()
@@ -401,9 +401,9 @@ func TestSyncOrdering(t *testing.T) {
 	}
 
 	nt.T.Logf("Remove Pod1 and Pod2")
-	nt.Root.Remove("acme/pod1.yaml")
-	nt.Root.Remove("acme/pod2.yaml")
-	nt.Root.CommitAndPush("Remove pod1 and pod2")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod1.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod2.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove pod1 and pod2")
 	nt.WaitForRepoSyncs()
 }
 
