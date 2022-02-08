@@ -77,10 +77,10 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 	// Switch to mono-repo mode.
 	nomostest.SwitchMode(nt, nt.RootRepos[configsync.RootSyncName].Format)
 	t.Cleanup(func() {
-		// Reset MultiRepo flag so that
+		// Switch back to the multi-repo mode so that
 		// 1. the test resources can be cleaned up gracefully.
 		// 2. the following testcases can run with the same mode.
-		nt.MultiRepo = !nt.MultiRepo
+		nomostest.SwitchMode(nt, nt.RootRepos[configsync.RootSyncName].Format)
 	})
 
 	nt.WaitForRepoSyncs()
@@ -163,10 +163,10 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	// Switch to multi-repo mode.
 	nomostest.SwitchMode(nt, nt.RootRepos[configsync.RootSyncName].Format)
 	t.Cleanup(func() {
-		// Reset MultiRepo flag so that
+		// Switch back to the mono-repo mode so that
 		// 1. the test resources can be cleaned up gracefully.
 		// 2. the following testcases can run with the same mode.
-		nt.MultiRepo = !nt.MultiRepo
+		nomostest.SwitchMode(nt, nt.RootRepos[configsync.RootSyncName].Format)
 	})
 
 	nt.WaitForRepoSyncs()
