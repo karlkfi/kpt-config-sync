@@ -1,7 +1,5 @@
 # Nomos CLI Development
 
-[go/cs-nomos-cli](http://go/cs-nomos-cli)
-
 We distribute a binary called `nomos` for allowing users to get information
 about their nomos repository and the status of Anthos Configuration Management
 on their clusters.
@@ -49,8 +47,8 @@ with a capital letter and end with a period.
 
 1. **Design Doc.** Authors of new commands and significant changes to
 existing commands write a design docs detailing the functionality of the new
-sub-command linked from [go/nomos-cli](http://go/nomos-cli). Relevant
-team mebmers must approve these docs before implementation.
+sub-command. Relevant team members must approve these docs before
+implementation.
 
 2. **DRY (Don't repeat yourself).** Authors extract parallel code in commands to
 libraries.

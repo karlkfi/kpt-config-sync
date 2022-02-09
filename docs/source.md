@@ -9,7 +9,7 @@ We follow the following guides:
 
 ### Changing Config Sync APIs
 
-The following `make` rules should be run whenever we change the [Config Sync APIs](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/pkg/api/):
+The following `make` rules should be run whenever we change the [Config Sync APIs](../pkg/api):
 
 ```
 make generate
@@ -17,10 +17,10 @@ make configsync-crds
 make clientgen
 ```
 
-### Update the [LICENSE](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/LICENSE) file
+### Update the [LICENSE](../LICENSE) file
 
-To update the [LICENSE](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/LICENSE) file after changing
-the [vendor](https://team.git.corp.google.com/gke-kubernetes-enterprise-control/prototype/+/refs/heads/master/vendor/) directory, you need to run:
+To update the [LICENSE](../LICENSE) file after changing
+the [vendor](../vendor) directory, you need to run:
 
 ```
 make license

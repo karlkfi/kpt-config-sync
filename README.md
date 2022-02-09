@@ -1,6 +1,5 @@
 # CSP Configuration Management Developer Guide
 
-[go/cs-nomos](http://go/cs-nomos)
 
 *   [Initial Setup](docs/setup.md)
 *   [Making changes](docs/source.md)
@@ -10,5 +9,4 @@
 *   [Releasing](docs/release.md)
 *   [CLI](cmd/nomos/README.md)
 
-Looking for [user docs](http://go/nomos-docs)?
 ``

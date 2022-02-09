@@ -236,7 +236,6 @@ func (m *multiError) Is(target error) bool {
 
 // FormatSingleLine format multi-errors into single-style
 // Each error is reformatted as single line and joined with new line
-// Sample formatted errors: https://paste.googleplex.com/6533732804591616
 func FormatSingleLine(e error) string {
 	if uniqueErrors := PurifyError(e); uniqueErrors != nil {
 		allErrors := []string{
@@ -255,7 +254,6 @@ func FormatSingleLine(e error) string {
 
 // FormatMultiLine formats multi-errors into multi-line style
 // Errors are joined with two new lines
-// Sample formatted errors: https://paste.googleplex.com/6533732804591616
 func FormatMultiLine(e error) string {
 	if uniqueErrors := PurifyError(e); uniqueErrors != nil {
 		allErrors := []string{
