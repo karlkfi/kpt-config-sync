@@ -58,9 +58,9 @@ mkdir -p "${TEST_REPO_DIR}"
 kubectl -n="${GIT_SERVER_NS}" port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > "${TEST_REPO_DIR}/port-forward.log" &
 # shellcheck disable=SC2191
 REMOTE_GIT=(kubectl exec -n="${GIT_SERVER_NS}" "${POD_ID}" -- git)
-"${REMOTE_GIT[@]}" init --bare --shared /git-server/repos/sot.git
+"${REMOTE_GIT[@]}" init --bare --shared /git-server/repos/config-management-system/root-sync
 "${REMOTE_GIT[@]}" \
-  -C /git-server/repos/sot.git config receive.denyNonFastforwards false
+  -C /git-server/repos/config-management-system/root-sync config receive.denyNonFastforwards false
 
 echo "Setting up local git repo"
 # git-sync wants the designated sync branch to exist, so we create a dummy
@@ -70,7 +70,7 @@ mkdir -p "${TEST_REPO_DIR}/repo"
 cd "${TEST_REPO_DIR}/repo" || exit 1
 git init
 git checkout -b main
-git remote add origin ssh://git@localhost:2222/git-server/repos/sot.git
+git remote add origin ssh://git@localhost:2222/git-server/repos/config-management-system/root-sync
 git config user.name "Testing Nome"
 git config user.email testing_nome@example.com
 mkdir acme

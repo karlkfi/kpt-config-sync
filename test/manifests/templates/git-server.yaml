@@ -49,6 +49,6 @@ spec:
             - name: keys
               mountPath: "/git-server/keys"
             - name: repos
-              mountPath: "/git-server/repos/sot.git"
+              mountPath: "/git-server/repos/config-management-system/root-sync"
 
 
