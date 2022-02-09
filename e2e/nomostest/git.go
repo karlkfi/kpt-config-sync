@@ -105,7 +105,7 @@ func NewRepository(nt *NT, repoType RepoType, nn types.NamespacedName, upstream 
 		nt.T.Fatal(err)
 	}
 	g.RemoteRepoName = repoName
-	g.RemoteURL = nt.GitProvider.RemoteURL(nt.gitRepoPort, namespacedName)
+	g.RemoteURL = nt.GitProvider.RemoteURL(nt.gitRepoPort, repoName)
 	g.UpstreamRepoURL = upstream
 
 	g.init(nt.gitPrivateKeyPath)

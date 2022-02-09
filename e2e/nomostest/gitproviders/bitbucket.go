@@ -23,6 +23,8 @@ const (
 
 	// secretManagerProject is the project id of the Secret Manager that stores the secrets.
 	secretManagerProject = "stolos-dev"
+
+	repoNameMaxLength = 62
 )
 
 // BitbucketClient is the client that calls the Bitbucket REST APIs.
@@ -75,7 +77,10 @@ func (b *BitbucketClient) CreateRepository(localName string) (string, error) {
 		return "", errors.Wrap(err, "failed to generate a new UUID")
 	}
 	// Make the remote repoName unique in order to run multiple tests in parallel.
-	repoName := localName + "-" + u.String()
+	repoName := strings.ReplaceAll(localName, "/", "-") + "-" + u.String()
+	if len(repoName) > repoNameMaxLength {
+		repoName = repoName[:repoNameMaxLength]
+	}
 
 	// Create a remote repository on demand with a random localName.
 	accessToken, err := b.refreshAccessToken()
@@ -91,6 +96,9 @@ func (b *BitbucketClient) CreateRepository(localName string) (string, error) {
 
 	if err != nil {
 		return "", errors.Wrap(err, string(out))
+	}
+	if strings.Contains(string(out), "\"type\": \"error\"") {
+		return "", errors.New(string(out))
 	}
 	return repoName, nil
 }
