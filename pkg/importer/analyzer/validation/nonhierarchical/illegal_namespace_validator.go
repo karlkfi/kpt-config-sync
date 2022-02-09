@@ -16,6 +16,7 @@ package nonhierarchical
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -28,7 +29,8 @@ var illegalNamespaceError = status.NewErrorBuilder(IllegalNamespaceErrorCode)
 // ObjectInIllegalNamespace reports that an object has been declared in an illegal Namespace.
 func ObjectInIllegalNamespace(resource client.Object) status.Error {
 	return illegalNamespaceError.
-		Sprintf("Configs must not be declared in the %q namespace", configmanagement.ControllerNamespace).
+		Sprintf("Only %s configs are allowed in the %q namespace",
+			kinds.RootSyncV1Beta1().Kind, configmanagement.ControllerNamespace).
 		BuildWithResources(resource)
 }
 

@@ -53,7 +53,8 @@ func validateObjectNamespace(obj ast.FileObject) status.Error {
 	if !isValidNamespace(ns) {
 		return nonhierarchical.InvalidNamespaceError(obj)
 	}
-	if configmanagement.IsControllerNamespace(ns) {
+	if configmanagement.IsControllerNamespace(ns) &&
+		obj.GetKind() != kinds.RootSyncV1Beta1().Kind {
 		return nonhierarchical.ObjectInIllegalNamespace(obj)
 	}
 	return nil

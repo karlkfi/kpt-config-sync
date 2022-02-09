@@ -16,6 +16,7 @@ package fake
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -199,6 +200,18 @@ func Cluster(opts ...core.MetaMutator) ast.FileObject {
 // ClusterAtPath returns a Cluster at the specified path.
 func ClusterAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ClusterObject(opts...), path)
+}
+
+// RootSyncV1Beta1 returns a K8S RootSync resource in a FileObject.
+func RootSyncV1Beta1(name string, opts ...core.MetaMutator) ast.FileObject {
+	rootSync := RootSyncObjectV1Beta1(name, opts...)
+	return FileObject(rootSync, fmt.Sprintf("cluster/%s.yaml", name))
+}
+
+// RepoSyncV1Beta1 returns a K8S RepoSync resource in a FileObject.
+func RepoSyncV1Beta1(ns, name string, opts ...core.MetaMutator) ast.FileObject {
+	repoSync := RepoSyncObjectV1Beta1(ns, name, opts...)
+	return FileObject(repoSync, fmt.Sprintf("namespaces/%s/%s.yaml", ns, name))
 }
 
 // CustomResourceDefinitionV1Beta1Object returns an initialized CustomResourceDefinition.
