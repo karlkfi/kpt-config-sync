@@ -34,16 +34,16 @@ type gitContext struct {
 	Rev    string `json:"rev"`
 }
 
-func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, gc gitContext, commitHash string) error {
+func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, syncName string, gc gitContext, commitHash string) error {
 	gcVal, err := json.Marshal(gc)
 	if err != nil {
 		return fmt.Errorf("marshaling gitContext: %w", err)
 	}
 	var inventoryID string
 	if scope == declared.RootReconciler {
-		inventoryID = applier.InventoryID(configmanagement.ControllerNamespace)
+		inventoryID = applier.InventoryID(syncName, configmanagement.ControllerNamespace)
 	} else {
-		inventoryID = applier.InventoryID(string(scope))
+		inventoryID = applier.InventoryID(syncName, string(scope))
 	}
 	for _, obj := range objs {
 		core.SetLabel(obj, metadata.ManagedByKey, metadata.ManagedByValue)

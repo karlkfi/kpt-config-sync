@@ -54,7 +54,7 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 				core.Annotation(metadata.ResourceManagerKey, "some-namespace"),
 				core.Annotation(metadata.SyncTokenAnnotationKey, "1234567"),
 				core.Annotation(metadata.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
-				core.Annotation(metadata.OwningInventoryKey, applier.InventoryID("some-namespace")),
+				core.Annotation(metadata.OwningInventoryKey, applier.InventoryID("rs", "some-namespace")),
 				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
 			)},
 		},
@@ -62,7 +62,7 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := addAnnotationsAndLabels(tc.actual, "some-namespace", tc.gc, tc.commitHash); err != nil {
+			if err := addAnnotationsAndLabels(tc.actual, "some-namespace", "rs", tc.gc, tc.commitHash); err != nil {
 				t.Fatalf("Failed to add annotations and labels: %v", err)
 			}
 			if diff := cmp.Diff(tc.expected, tc.actual, ast.CompareFileObject); diff != "" {

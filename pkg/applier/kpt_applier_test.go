@@ -166,7 +166,7 @@ func TestSync(t *testing.T) {
 		}
 
 		var errs status.MultiError
-		applier, err := NewNamespaceApplier(nil, "test-namespace")
+		applier, err := NewNamespaceApplier(nil, "test-namespace", "rs")
 		if err != nil {
 			errs = Error(err)
 		} else {

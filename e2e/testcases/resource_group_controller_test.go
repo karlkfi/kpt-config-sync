@@ -43,7 +43,7 @@ func TestResourceGroupController(t *testing.T) {
 
 	// Checking that the ResourceGroup controller captures the status of the
 	// managed resources.
-	id := applier.InventoryID(configsync.ControllerNamespace)
+	id := applier.InventoryID(configsync.RootSyncName, configsync.ControllerNamespace)
 	_, err := nomostest.Retry(60*time.Second, func() error {
 		rg := resourcegroup.Unstructured(configsync.RootSyncName, configsync.ControllerNamespace, id)
 		err := nt.Validate(configsync.RootSyncName, configsync.ControllerNamespace, rg,

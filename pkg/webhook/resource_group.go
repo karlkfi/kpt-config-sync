@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/applier"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,10 +72,6 @@ func fromConfigSync(req admission.Request) (bool, error) {
 		return false, err
 	}
 
-	hasInventoryLabel := labels[common.InventoryLabel] == applier.InventoryID(namespace)
-
-	if namespace == configsync.ControllerNamespace {
-		return name == configsync.RootSyncName && hasInventoryLabel, nil
-	}
-	return name == configsync.RepoSyncName && hasInventoryLabel, nil
+	hasInventoryLabel := labels[common.InventoryLabel] == applier.InventoryID(name, namespace)
+	return hasInventoryLabel, nil
 }

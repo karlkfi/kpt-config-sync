@@ -39,6 +39,12 @@ const (
 	// declared.
 	// This label is set by Config Sync on a managed resource.
 	DeclaredVersionLabel = configsync.ConfigSyncPrefix + "declared-version"
+
+	// SyncNamespaceLabel indicates the namespace of RootSync or RepoSync.
+	SyncNamespaceLabel = configsync.ConfigSyncPrefix + "sync-namespace"
+
+	// SyncNameLabel indicates the name of RootSync or RepoSync.
+	SyncNameLabel = configsync.ConfigSyncPrefix + "sync-name"
 )
 
 // DepthSuffix is a label suffix for hierarchical namespace depth.

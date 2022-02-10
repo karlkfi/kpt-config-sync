@@ -124,7 +124,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	}
 
 	// Duplicated with root.go.
-	e := addAnnotationsAndLabels(objs, p.scope, p.gitContext(), state.commit)
+	e := addAnnotationsAndLabels(objs, p.scope, p.syncName, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
 		return nil, err
