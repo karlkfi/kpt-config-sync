@@ -109,6 +109,17 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, err
 	}
 
+	repoCMMutations := r.repoConfigMapMutations(ctx, &rs, reconcilerName)
+	if err = r.validateResourcesName(repoCMMutations); err != nil {
+		log.Error(err, "Resource name failed validation")
+		reposync.SetStalled(&rs, "Resource name validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		return controllerruntime.Result{}, err
+	}
+
 	if err := r.validateNamespaceSecret(ctx, &rs); err != nil {
 		log.Error(err, "RepoSync failed Secret validation required for installation")
 		reposync.SetStalled(&rs, "Validation", err)
@@ -128,7 +139,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(ctx, &rs, reconcilerName))
+	configMapDataHash, err := r.upsertConfigMaps(ctx, repoCMMutations)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)

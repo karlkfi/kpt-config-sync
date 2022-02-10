@@ -62,6 +62,9 @@ const (
 	reposyncSSHKey = "ssh-key"
 	reposyncCookie = "cookie"
 
+	// very long string that exceeds namespace name restriction of 63 characters
+	reposyncInvalidName = "qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm"
+
 	secretName = "git-creds"
 
 	gcpSAEmail = "config-sync@cs-project.iam.gserviceaccount.com"
@@ -349,6 +352,23 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 		t.Errorf("Deployment validation failed. err: %v", err)
 	}
 	t.Log("Deployment successfully updated")
+}
+
+func TestCreateNamespaceReconcilerWithInvalidName(t *testing.T) {
+
+	rs := repoSync(reposyncNs, reposyncInvalidName, reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth),
+		reposyncSecretRef(reposyncSSHKey))
+	_, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(rs.Namespace)))
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	reconcilerName := reconciler.NsReconcilerName(rs.Name, rs.Namespace)
+
+	mutations := testReconciler.repoConfigMapMutations(ctx, rs, reconcilerName)
+	err := testReconciler.validateResourcesName(mutations)
+	if err == nil {
+		t.Fatalf("unexpected reconciliation error, want error, got nil")
+	}
 }
 
 func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {

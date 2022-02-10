@@ -111,6 +111,17 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, err
 	}
 
+	rootCMMutations := r.rootConfigMapMutations(ctx, &rs, reconcilerName)
+	if err = r.validateResourcesName(rootCMMutations); err != nil {
+		log.Error(err, "Resource name failed validation")
+		rootsync.SetStalled(&rs, "Resource name validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		return controllerruntime.Result{}, err
+	}
+
 	if err := r.validateRootSecret(ctx, &rs); err != nil {
 		log.Error(err, "RootSync failed Secret validation required for installation")
 		rootsync.SetStalled(&rs, "Secret", err)
@@ -123,7 +134,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	log.V(2).Info("secret found, proceeding with installation")
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, r.rootConfigMapMutations(ctx, &rs, reconcilerName), owRefs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, rootCMMutations, owRefs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		rootsync.SetStalled(&rs, "ConfigMap", err)

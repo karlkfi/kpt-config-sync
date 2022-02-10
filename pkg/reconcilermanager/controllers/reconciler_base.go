@@ -16,7 +16,9 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -34,6 +36,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -263,4 +266,17 @@ func mutateContainerResource(ctx context.Context, c *corev1.Container, override 
 			}
 		}
 	}
+}
+
+// validateResourcesName will validate potential resource name using IsDNS1123Label function
+// only configMap names are validated since generate the longest names compared to other resources
+func (r *reconcilerBase) validateResourcesName(mutations []configMapMutation) error {
+	for _, mutation := range mutations {
+		name := mutation.cmName
+		errs := validation.IsDNS1123Label(name)
+		if len(errs) > 0 {
+			return fmt.Errorf("The resource name %q is invalid: %s. To fix it, update the resource name", name, strings.Join(errs, ", "))
+		}
+	}
+	return nil
 }

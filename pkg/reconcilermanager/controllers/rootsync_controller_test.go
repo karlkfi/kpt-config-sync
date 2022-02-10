@@ -50,6 +50,9 @@ const (
 	rootsyncDir  = "baz-corp"
 	testCluster  = "abc-123"
 
+	// very long string that exceeds namespace name restriction of 63 characters
+	rootsyncInvalidName = "qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm"
+
 	// Hash of all configmap.data created by Root Reconciler.
 	rsAnnotation = "8ed3b22230fe92b4e4314adadc652147"
 
@@ -323,6 +326,23 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 		t.Errorf("Deployment validation failed. err: %v", err)
 	}
 	t.Log("Deployment successfully updated")
+}
+
+func TestCreateRootReconcilerWithInvalidName(t *testing.T) {
+
+	rs := rootSync(rootsyncInvalidName, rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH),
+		rootsyncSecretRef(rootsyncSSHKey))
+
+	_, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rs.Namespace)))
+
+	ctx := context.Background()
+	reconcilerName := reconciler.RootReconcilerName(rs.Name)
+
+	mutations := testReconciler.rootConfigMapMutations(ctx, rs, reconcilerName)
+	err := testReconciler.validateResourcesName(mutations)
+	if err == nil {
+		t.Fatalf("unexpected reconciliation error, want error, got nil")
+	}
 }
 
 func TestUpdateRootReconcilerWithOverride(t *testing.T) {
