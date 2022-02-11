@@ -98,7 +98,7 @@ func CoreScoper() Scoper {
 		{Group: "configsync.gke.io", Kind: "Environment"}:                               NamespaceScope,
 		{Group: "configsync.gke.io", Kind: "RepoSync"}:                                  NamespaceScope,
 		{Group: "configsync.gke.io", Kind: "ResourceGroup"}:                             NamespaceScope,
-		{Group: "configsync.gke.io", Kind: "RootSync"}:                                  ClusterScope,
+		{Group: "configsync.gke.io", Kind: "RootSync"}:                                  NamespaceScope,
 		{Group: "configmanagement.gke.io", Kind: "Sync"}:                                ClusterScope,
 		{Group: "clusterregistry.k8s.io", Kind: "Cluster"}:                              ClusterScope,
 		{Group: "kpt.dev", Kind: "Kptfile"}:                                             NamespaceScope,

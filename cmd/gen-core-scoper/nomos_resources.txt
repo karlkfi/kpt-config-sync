@@ -9,7 +9,7 @@ configmanagement.gke.io        false  Repo
 configsync.gke.io              true   Environment
 configsync.gke.io              true   RepoSync
 configsync.gke.io              true   ResourceGroup
-configsync.gke.io              false  RootSync
+configsync.gke.io              true   RootSync
 configmanagement.gke.io        false  Sync
 clusterregistry.k8s.io         false  Cluster
 kpt.dev                        true   Kptfile
