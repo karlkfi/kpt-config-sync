@@ -630,7 +630,7 @@ func TestNomosHydrateAndVetDryRepos(t *testing.T) {
 			name:           "hydrate error: a DRY repo without kustomization.yaml",
 			path:           "../testdata/hydration/dry-repo-without-kustomization",
 			sourceFormat:   string(filesystem.SourceFormatUnstructured),
-			expectedErrMsg: `KNV2001: couldn't get version/kind; json parse error: invalid character`,
+			expectedErrMsg: `Object 'Kind' is missing in`,
 		},
 		{
 			name:           "hydrate error: deprecated Group and Kind",
