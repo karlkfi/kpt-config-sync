@@ -83,8 +83,19 @@ func NewRootSyncReconciler(clusterName string, reconcilerPollingPeriod, hydratio
 func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntime.Request) (controllerruntime.Result, error) {
 	log := r.log.WithValues("rootsync", req.NamespacedName)
 	start := time.Now()
-
+	var err error
 	var rs v1beta1.RootSync
+
+	if err = r.validateNamespaceName(req.NamespacedName.Namespace); err != nil {
+		log.Error(err, "RootSync failed validation")
+		rootsync.SetStalled(&rs, "Validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		return controllerruntime.Result{}, err
+	}
+
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
@@ -100,7 +111,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	)
 
 	reconcilerName := reconciler.RootReconcilerName(rs.Name)
-	var err error
+
 	if err = validate.GitSpec(rs.Spec.Git, &rs); err != nil {
 		log.Error(err, "RootSync failed validation")
 		rootsync.SetStalled(&rs, "Validation", err)
@@ -257,6 +268,13 @@ func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1b
 			data:   reconcilerData(r.clusterName, rs.Name, reconcilerName, declared.RootReconciler, &rs.Spec.Git, r.reconcilerPollingPeriod.String()),
 		},
 	}
+}
+
+func (r *RootSyncReconciler) validateNamespaceName(namespaceName string) error {
+	if namespaceName != configsync.ControllerNamespace {
+		return fmt.Errorf("RootSync objects are only allowed in the %s namespace, not in %s", configsync.ControllerNamespace, namespaceName)
+	}
+	return nil
 }
 
 // validateRootSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
