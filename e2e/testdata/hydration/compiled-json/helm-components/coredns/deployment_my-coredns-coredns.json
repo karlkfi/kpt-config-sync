@@ -39,7 +39,7 @@
 				"template": {
 					"metadata": {
 						"annotations": {
-							"checksum/config": "d4d87385eb5abe1ddfc3936c2b593a230543e8938b04a53998eec6ce0e19c577",
+							"checksum/config": "5e7faf133d339dec2312146dda40d8370e7cb7278e81a4cc05d334638e20b074",
 							"scheduler.alpha.kubernetes.io/critical-pod": "",
 							"scheduler.alpha.kubernetes.io/tolerations": "[{\"key\":\"CriticalAddonsOnly\", \"operator\":\"Exists\"}]"
 						},
