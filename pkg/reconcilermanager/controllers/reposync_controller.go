@@ -74,8 +74,19 @@ func NewRepoSyncReconciler(clusterName string, reconcilerPollingPeriod, hydratio
 func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntime.Request) (controllerruntime.Result, error) {
 	log := r.log.WithValues("reposync", req.NamespacedName)
 	start := time.Now()
-
+	var err error
 	var rs v1beta1.RepoSync
+
+	if err = r.validateNamespaceName(req.NamespacedName.Namespace); err != nil {
+		log.Error(err, "RepoSync namespace name failed validation")
+		reposync.SetStalled(&rs, "Validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		return controllerruntime.Result{}, err
+	}
+
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
@@ -98,7 +109,6 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	r.namespaces[req.Namespace] = struct{}{}
 	reconcilerName := reconciler.NsReconcilerName(rs.Namespace, rs.Name)
 
-	var err error
 	if err = validate.GitSpec(rs.Spec.Git, &rs); err != nil {
 		log.Error(err, "RepoSync failed validation")
 		reposync.SetStalled(&rs, "Validation", err)
@@ -277,6 +287,13 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 		return err
 	}
 	return validateSecretData(repoSync.Spec.Auth, secret)
+}
+
+func (r *RepoSyncReconciler) validateNamespaceName(namespaceName string) error {
+	if namespaceName == configsync.ControllerNamespace {
+		return fmt.Errorf("RepoSync objects are not allowed in the %s namespace", configsync.ControllerNamespace)
+	}
+	return nil
 }
 
 func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, namespace string) error {
