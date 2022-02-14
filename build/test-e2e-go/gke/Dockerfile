@@ -28,7 +28,7 @@ ENV CGO_ENABLED=0
 # Set Kubernetes environment.
 ENV KUBERNETES_ENV=GKE
 
-RUN apk add bash curl docker gcc git jq make openssh-client python3
+RUN apk add bash curl docker gcc git jq make openssh-client python3 diffutils
 
 ARG HELM_VERSION=v3.6.3
 ARG KUSTOMIZE_VERSION=v4.3.0

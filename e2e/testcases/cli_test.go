@@ -39,6 +39,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+func recursiveDiff(file1, file2 string) ([]byte, error) {
+	out, err := exec.Command("diff",
+		"-B",         // Ignore empty lines (e.g. space after license)
+		"-I", "^#.*", // Ignore comments (e.g. licenses)
+		"-r", file1, file2).CombinedOutput()
+	return out, err
+}
+
 func TestNomosInitVet(t *testing.T) {
 	// Ensure that the following sequence of commands succeeds:
 	//
@@ -253,7 +261,7 @@ func testNomosHydrateWithClusterSelectors(t *testing.T, configPath string, sourc
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", compiledDir, expectedCompiledDir).CombinedOutput()
+	out, err = recursiveDiff(compiledDir, expectedCompiledDir)
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -276,7 +284,7 @@ func testNomosHydrateWithClusterSelectors(t *testing.T, configPath string, sourc
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", compiledWithAPIServerCheckDir, expectedCompiledDir).CombinedOutput()
+	out, err = recursiveDiff(compiledWithAPIServerCheckDir, expectedCompiledDir)
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -297,25 +305,25 @@ func testNomosHydrateWithClusterSelectors(t *testing.T, configPath string, sourc
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", compiledDirWithoutClustersFlag, expectedCompiledWithoutClustersFlagDir).CombinedOutput()
+	out, err = recursiveDiff(compiledDirWithoutClustersFlag, expectedCompiledWithoutClustersFlagDir)
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", fmt.Sprintf("%s/cluster-dev", compiledDirWithoutClustersFlag), fmt.Sprintf("%s/cluster-dev", compiledDir)).CombinedOutput()
+	out, err = recursiveDiff(fmt.Sprintf("%s/cluster-dev", compiledDirWithoutClustersFlag), fmt.Sprintf("%s/cluster-dev", compiledDir))
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", fmt.Sprintf("%s/cluster-staging", compiledDirWithoutClustersFlag), fmt.Sprintf("%s/cluster-staging", compiledDir)).CombinedOutput()
+	out, err = recursiveDiff(fmt.Sprintf("%s/cluster-staging", compiledDirWithoutClustersFlag), fmt.Sprintf("%s/cluster-staging", compiledDir))
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", fmt.Sprintf("%s/cluster-prod", compiledDirWithoutClustersFlag), fmt.Sprintf("%s/cluster-prod", compiledDir)).CombinedOutput()
+	out, err = recursiveDiff(fmt.Sprintf("%s/cluster-prod", compiledDirWithoutClustersFlag), fmt.Sprintf("%s/cluster-prod", compiledDir))
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -338,7 +346,7 @@ func testNomosHydrateWithClusterSelectors(t *testing.T, configPath string, sourc
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", compiledJSONDir, expectedCompiledJSONDir).CombinedOutput()
+	out, err = recursiveDiff(compiledJSONDir, expectedCompiledJSONDir)
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -360,7 +368,7 @@ func testNomosHydrateWithClusterSelectors(t *testing.T, configPath string, sourc
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", compiledJSONWithoutClustersFlagDir, expectedCompiledWithoutClustersFlagJSONDir).CombinedOutput()
+	out, err = recursiveDiff(compiledJSONWithoutClustersFlagDir, expectedCompiledWithoutClustersFlagJSONDir)
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -552,7 +560,7 @@ func TestNomosHydrateWithUnknownScopedObject(t *testing.T) {
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("diff", "-r", compiledDirWithoutAPIServerCheck, "../../examples/kubevirt-compiled").CombinedOutput()
+	out, err = recursiveDiff(compiledDirWithoutAPIServerCheck, "../../examples/kubevirt-compiled")
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -570,7 +578,7 @@ func TestNomosHydrateWithUnknownScopedObject(t *testing.T) {
 		}
 	}
 
-	out, err = exec.Command("diff", "-r", compiledDirWithAPIServerCheck, "../../examples/kubevirt-compiled").CombinedOutput()
+	out, err = recursiveDiff(compiledDirWithAPIServerCheck, "../../examples/kubevirt-compiled")
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -724,7 +732,7 @@ func TestNomosHydrateAndVetDryRepos(t *testing.T) {
 			}
 
 			if len(tc.expectedErrMsg) == 0 {
-				out, err = exec.Command("diff", "-r", outputPath, tc.expectedOutPath).CombinedOutput()
+				out, err = recursiveDiff(outputPath, tc.expectedOutPath)
 				if err != nil {
 					tw.Log(string(out))
 					tw.Errorf("%s: %v", tc.name, err)
@@ -763,7 +771,7 @@ func TestNomosHydrateAndVetDryRepos(t *testing.T) {
 				if strings.Contains(outputPath, "wet-repo") {
 					tc.expectedOutPath = "../testdata/hydration/compiled-json/wet-repo"
 				}
-				out, err = exec.Command("diff", "-r", outputPath, tc.expectedOutPath).CombinedOutput()
+				out, err = recursiveDiff(outputPath, tc.expectedOutPath)
 				if err != nil {
 					tw.Log(string(out))
 					tw.Errorf("%s: %v", tc.name, err)

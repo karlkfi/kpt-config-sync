@@ -29,7 +29,7 @@ ENV KUBERNETES_ENV=KIND
 RUN go get sigs.k8s.io/kind@v0.11.1
 
 RUN apk add --no-cache \
-  bash curl docker gcc git jq make openssh-client
+  bash curl docker gcc git jq make openssh-client diffutils
 
 # Install kubectl and make sure it's available in the PATH.
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
