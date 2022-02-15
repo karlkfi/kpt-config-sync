@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -140,9 +141,6 @@ func (c *Client) Get(_ context.Context, key client.ObjectKey, obj client.Object)
 func validateListOptions(opts client.ListOptions) error {
 	if opts.Continue != "" {
 		return errors.Errorf("fake.Client.List does not yet support the Continue option, but got: %+v", opts)
-	}
-	if opts.FieldSelector != nil {
-		return errors.Errorf("fake.Client.List does not yet support the FieldSelector option, but got: %+v", opts)
 	}
 	if opts.Limit != 0 {
 		return errors.Errorf("fake.Client.List does not yet support the Limit option, but got: %+v", opts)
@@ -471,6 +469,9 @@ func (c *Client) list(gk schema.GroupKind) []client.Object {
 }
 
 func (c *Client) listV1CRDs(list *apiextensionsv1.CustomResourceDefinitionList, options client.ListOptions) error {
+	if options.FieldSelector != nil {
+		return errors.Errorf("fake.Client.List for CustomResourceDefinitionList does not yet support the FieldSelector option, but got: %+v", options)
+	}
 	objs := c.list(kinds.CustomResourceDefinition())
 	for _, obj := range objs {
 		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
@@ -506,6 +507,9 @@ func (c *Client) listV1CRDs(list *apiextensionsv1.CustomResourceDefinitionList, 
 }
 
 func (c *Client) listSyncs(list *v1.SyncList, options client.ListOptions) error {
+	if options.FieldSelector != nil {
+		return errors.Errorf("fake.Client.List for SyncList does not yet support the FieldSelector option, but got: %+v", options)
+	}
 	objs := c.list(kinds.Sync().GroupKind())
 	for _, obj := range objs {
 		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
@@ -539,6 +543,31 @@ func (c *Client) listRootSyncs(list *configsyncv1beta1.RootSyncList, options cli
 				continue
 			}
 		}
+		if options.FieldSelector != nil {
+			fieldSelector := strings.Split(options.FieldSelector.String(), "=")
+			field := fieldSelector[0]
+			if len(fieldSelector) != 2 {
+				return errors.Errorf("fake.Client.List for RootSyncList only supports OneTermEqualSelector FieldSelector option, but got: %+v", options)
+			}
+			uo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+			if err != nil {
+				return err
+			}
+			var fs []string
+			for _, s := range strings.Split(field, ".") {
+				if len(s) > 0 {
+					fs = append(fs, s)
+				}
+			}
+			val, found, err := unstructured.NestedString(uo, fs...)
+			if err != nil || !found {
+				continue
+			}
+			actualFields := fields.Set{field: val}
+			if !options.FieldSelector.Matches(actualFields) {
+				continue
+			}
+		}
 		rs, ok := obj.(*configsyncv1beta1.RootSync)
 		if !ok {
 			return errors.Errorf("non-RootSync stored as RootSync: %v", obj)
@@ -560,6 +589,31 @@ func (c *Client) listRepoSyncs(list *configsyncv1beta1.RepoSyncList, options cli
 				continue
 			}
 		}
+		if options.FieldSelector != nil {
+			fieldSelector := strings.Split(options.FieldSelector.String(), "=")
+			field := fieldSelector[0]
+			if len(fieldSelector) != 2 {
+				return errors.Errorf("fake.Client.List for RepoSyncList only supports OneTermEqualSelector FieldSelector option, but got: %+v", options)
+			}
+			uo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+			if err != nil {
+				return err
+			}
+			var fs []string
+			for _, s := range strings.Split(field, ".") {
+				if len(s) > 0 {
+					fs = append(fs, s)
+				}
+			}
+			val, found, err := unstructured.NestedString(uo, fs...)
+			if err != nil || !found {
+				continue
+			}
+			actualFields := fields.Set{field: val}
+			if !options.FieldSelector.Matches(actualFields) {
+				continue
+			}
+		}
 		rs, ok := obj.(*configsyncv1beta1.RepoSync)
 		if !ok {
 			return errors.Errorf("non-RepoSync stored as RepoSync: %v", obj)
@@ -570,6 +624,9 @@ func (c *Client) listRepoSyncs(list *configsyncv1beta1.RepoSyncList, options cli
 }
 
 func (c *Client) listSecrets(list *corev1.SecretList, options client.ListOptions) error {
+	if options.FieldSelector != nil {
+		return errors.Errorf("fake.Client.List for SecretList does not yet support the FieldSelector option, but got: %+v", options)
+	}
 	objs := c.list(kinds.Secret().GroupKind())
 	for _, obj := range objs {
 		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
@@ -591,6 +648,9 @@ func (c *Client) listSecrets(list *corev1.SecretList, options client.ListOptions
 }
 
 func (c *Client) listUnstructured(list *unstructured.UnstructuredList, options client.ListOptions) error {
+	if options.FieldSelector != nil {
+		return errors.Errorf("fake.Client.List for UnstructuredList does not yet support the FieldSelector option, but got: %+v", options)
+	}
 	gvk := list.GetObjectKind().GroupVersionKind()
 	if gvk.Empty() {
 		return errors.Errorf("fake.Client.List(UnstructuredList) requires GVK")

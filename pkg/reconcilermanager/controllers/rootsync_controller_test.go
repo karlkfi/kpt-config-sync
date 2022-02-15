@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -38,8 +39,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -1559,6 +1562,92 @@ func TestMultipleRootSyncs(t *testing.T) {
 	// Verify the ClusterRoleBinding of the root-reconciler is deleted
 	if err := validateResourceDeleted(crb, fakeClient); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestMapSecretToRootSyncs(t *testing.T) {
+	testSecretName := "ssh-test"
+	rootSyncs := map[string][]*v1beta1.RootSync{
+		rootsyncSSHKey: {
+			rootSync("rs-1", rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey)),
+			rootSync("rs-2", rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey)),
+		},
+		testSecretName: {
+			rootSync("rs-3", rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(testSecretName)),
+		},
+	}
+	var expectedRequests = func(secretName string) []reconcile.Request {
+		requests := make([]reconcile.Request, len(rootSyncs[secretName]))
+		for i, rs := range rootSyncs[secretName] {
+			requests[i] = reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      rs.GetName(),
+					Namespace: rs.GetNamespace(),
+				},
+			}
+		}
+		return requests
+	}
+
+	testCases := []struct {
+		name   string
+		secret client.Object
+		want   []reconcile.Request
+	}{
+		{
+			name:   "A secret from the default namespace",
+			secret: fake.SecretObject("s1", core.Namespace("default")),
+			want:   nil,
+		},
+		{
+			name:   fmt.Sprintf("A secret from the %s namespace starting with %s", configsync.ControllerNamespace, reconciler.NsReconcilerPrefix+"-"),
+			secret: fake.SecretObject(fmt.Sprintf("%s-bookstore", reconciler.NsReconcilerPrefix), core.Namespace(configsync.ControllerNamespace)),
+			want:   nil,
+		},
+		{
+			name:   fmt.Sprintf("A secret 'any' from the %s namespace NOT starting with %s, no mapping RootSync", configsync.ControllerNamespace, reconciler.NsReconcilerPrefix+"-"),
+			secret: fake.SecretObject("any", core.Namespace(configsync.ControllerNamespace)),
+			want:   nil,
+		},
+		{
+			name:   fmt.Sprintf("A secret %q from the %s namespace NOT starting with %s", rootsyncSSHKey, configsync.ControllerNamespace, reconciler.NsReconcilerPrefix+"-"),
+			secret: fake.SecretObject(rootsyncSSHKey, core.Namespace(configsync.ControllerNamespace)),
+			want:   expectedRequests(rootsyncSSHKey),
+		},
+		{
+			name:   fmt.Sprintf("A secret %q from the %s namespace NOT starting with %s", testSecretName, configsync.ControllerNamespace, reconciler.NsReconcilerPrefix+"-"),
+			secret: fake.SecretObject(testSecretName, core.Namespace(configsync.ControllerNamespace)),
+			want:   expectedRequests(testSecretName),
+		},
+	}
+
+	var objs []client.Object
+	for _, rsList := range rootSyncs {
+		for _, rs := range rsList {
+			objs = append(objs, rs)
+		}
+	}
+	_, testReconciler := setupRootReconciler(t, objs...)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := testReconciler.mapSecretToRootSyncs(tc.secret)
+			if len(tc.want) != len(result) {
+				t.Fatalf("%s: expected %d requests, got %d", tc.name, len(tc.want), len(result))
+			}
+			for _, wantReq := range tc.want {
+				found := false
+				for _, gotReq := range result {
+					if diff := cmp.Diff(wantReq, gotReq); diff == "" {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatalf("%s: expected reques %s doesn't exist in the got requests: %v", tc.name, wantReq, result)
+				}
+			}
+		})
 	}
 }
 

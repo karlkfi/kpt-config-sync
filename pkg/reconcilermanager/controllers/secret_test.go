@@ -88,7 +88,6 @@ func TestCreate(t *testing.T) {
 			client:   fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, core.Namespace(reposyncNs))),
 			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth,
 				core.Namespace(v1.NSConfigManagementSystem),
-				core.Annotation(NSReconcilerNSAnnotationKey, reposyncNs),
 			),
 		},
 		{
@@ -99,7 +98,6 @@ func TestCreate(t *testing.T) {
 			),
 			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), updatedKeyData, sshAuth,
 				core.Namespace(v1.NSConfigManagementSystem),
-				core.Annotation(NSReconcilerNSAnnotationKey, reposyncNs),
 			),
 		},
 		{

@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -37,12 +38,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -236,15 +243,182 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 
 // SetupWithManager registers RepoSync controller with reconciler-manager.
 func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
+	// Index the `gitSecretRefName` field, so that we will be able to lookup RepoSync be a referenced `SecretRef` name.
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1beta1.RepoSync{}, gitSecretRefField, func(rawObj client.Object) []string {
+		rs := rawObj.(*v1beta1.RepoSync)
+		if rs.Spec.Git.SecretRef.Name == "" {
+			return nil
+		}
+		return []string{rs.Spec.Git.SecretRef.Name}
+	}); err != nil {
+		return err
+	}
+
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1beta1.RepoSync{}).
 		// Custom Watch to trigger Reconcile for objects created by RepoSync controller.
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRepoSync())).
-		Watches(&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
-		Watches(&source.Kind{Type: &corev1.ServiceAccount{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
-		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
+		Watches(&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapSecretToRepoSyncs),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Watches(&source.Kind{Type: &appsv1.Deployment{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Watches(&source.Kind{Type: &corev1.ServiceAccount{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
+}
+
+// mapSecretToRepoSyncs define a mapping from the Secret object to its attached
+// RepoSync objects via the `spec.git.secretRef.name` field .
+// The update to the Secret object will trigger a reconciliation of the RepoSync objects.
+func (r *RepoSyncReconciler) mapSecretToRepoSyncs(secret client.Object) []reconcile.Request {
+	// map the copied ns-reconciler Secret in the config-management-system to RepoSync request.
+	if secret.GetNamespace() == configsync.ControllerNamespace {
+		// Ignore secrets in the config-management-system namespace that don't start with ns-reconciler.
+		if !strings.HasPrefix(secret.GetName(), reconciler.NsReconcilerPrefix) {
+			return nil
+		}
+		allRepoSyncs := &v1beta1.RepoSyncList{}
+		if err := r.client.List(context.Background(), allRepoSyncs); err != nil {
+			klog.Error("failed to list all RepoSyncs for object (name: %s, namespace: %s): %v", secret.GetName(), secret.GetNamespace(), err)
+			return nil
+		}
+		for _, rs := range allRepoSyncs.Items {
+			// It is a one-to-one mapping between the copied ns-reconciler Secret and the RepoSync object,
+			// so requeue the mapped RepoSync object and then return.
+			reconcilerName := reconciler.NsReconcilerName(rs.GetNamespace(), rs.GetName())
+			isGitSecret := secret.GetName() == ReconcilerResourceName(reconcilerName, rs.Spec.SecretRef.Name)
+			if isGitSecret {
+				return requeueRepoSyncRequest(secret, &rs)
+			}
+			isSAToken := strings.HasPrefix(secret.GetName(), reconcilerName+"-token-")
+			if isSAToken {
+				objectKey := client.ObjectKey{
+					Name:      reconcilerName,
+					Namespace: configsync.ControllerNamespace,
+				}
+				serviceAccount := &corev1.ServiceAccount{}
+				if err := r.client.Get(context.Background(), objectKey, serviceAccount); err != nil {
+					klog.Error("failed to get ServiceAccount %q in the %q namespace: %v", secret.GetName(), secret.GetNamespace(), err)
+					return nil
+				}
+				for _, s := range serviceAccount.Secrets {
+					if s.Name == secret.GetName() {
+						return requeueRepoSyncRequest(secret, &rs)
+					}
+				}
+			}
+		}
+		return nil
+	}
+
+	// map the user-managed ns-reconciler Secret in the RepoSync's namespace to RepoSync request.
+	// The user-managed ns-reconciler Secret might be shared among multiple RepoSync objects in the same namespace,
+	// so requeue all the attached RepoSync objects.
+	attachedRepoSyncs := &v1beta1.RepoSyncList{}
+	listOps := &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(gitSecretRefField, secret.GetName()),
+		Namespace:     secret.GetNamespace(),
+	}
+	if err := r.client.List(context.Background(), attachedRepoSyncs, listOps); err != nil {
+		klog.Error("failed to list attached RepoSyncs for secret (name: %s, namespace: %s): %v", secret.GetName(), secret.GetNamespace(), err)
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(attachedRepoSyncs.Items))
+	attachedRSNames := make([]string, len(attachedRepoSyncs.Items))
+	for i, rs := range attachedRepoSyncs.Items {
+		attachedRSNames[i] = rs.GetName()
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      rs.GetName(),
+				Namespace: rs.GetNamespace(),
+			},
+		}
+	}
+	if len(requests) > 0 {
+		klog.Infof("Changes to Secret (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object %q in the same namespace.", secret.GetName(), secret.GetNamespace(), strings.Join(attachedRSNames, ", "))
+	}
+	return requests
+}
+
+// mapObjectToRepoSync define a mapping from an object in 'config-management-system'
+// namespace to a RepoSync to be reconciled.
+func (r *RepoSyncReconciler) mapObjectToRepoSync(obj client.Object) []reconcile.Request {
+	// Ignore changes from other namespaces because all the generated resources
+	// exist in the config-management-system namespace.
+	if obj.GetNamespace() != configsync.ControllerNamespace {
+		return nil
+	}
+
+	// Ignore changes from resources without the ns-reconciler prefix or configsync.gke.io:ns-reconciler
+	// because all the generated resources have the prefix.
+	nsRoleBindingName := RepoSyncPermissionsName()
+	if !strings.HasPrefix(obj.GetName(), reconciler.NsReconcilerPrefix) && obj.GetName() != nsRoleBindingName {
+		return nil
+	}
+
+	allRepoSyncs := &v1beta1.RepoSyncList{}
+	if err := r.client.List(context.Background(), allRepoSyncs); err != nil {
+		klog.Error("failed to list all RepoSyncs for object (name: %s, namespace: %s): %v", obj.GetName(), obj.GetNamespace(), err)
+		return nil
+	}
+
+	// Most of the resources are mapped to a single RepoSync object except RoleBinding.
+	// All RepoSync objects share the same RoleBinding object, so requeue all RepoSync objects the RoleBinding is changed.
+	// For other resources, requeue the mapping RepoSync object and then return.
+	var requests []reconcile.Request
+	var attachedRSNames []string
+	for _, rs := range allRepoSyncs.Items {
+		reconcilerName := reconciler.NsReconcilerName(rs.GetNamespace(), rs.GetName())
+		switch obj.(type) {
+		case *corev1.ConfigMap:
+			suffix := strings.TrimPrefix(obj.GetName(), reconcilerName+"-")
+			if suffix == reconcilermanager.GitSync ||
+				suffix == reconcilermanager.HydrationController ||
+				suffix == reconcilermanager.Reconciler {
+				return requeueRepoSyncRequest(obj, &rs)
+			}
+		case *rbacv1.RoleBinding:
+			if obj.GetName() == nsRoleBindingName {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      rs.GetName(),
+						Namespace: rs.GetNamespace(),
+					}})
+				attachedRSNames = append(attachedRSNames, rs.GetName())
+			}
+		default: // Deployment and ServiceAccount
+			if obj.GetName() == reconcilerName {
+				return requeueRepoSyncRequest(obj, &rs)
+			}
+		}
+	}
+	if len(requests) > 0 {
+		klog.Infof("Changes to %s (name: %s, namespace: %s) triggers a reconciliation for the RepoSync objects %q in the same namespace.",
+			obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), obj.GetNamespace(), strings.Join(attachedRSNames, ", "))
+	}
+	return requests
+}
+
+func requeueRepoSyncRequest(obj client.Object, rs *v1beta1.RepoSync) []reconcile.Request {
+	klog.Infof("Changes to %s (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object %q in the same namespace.",
+		obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), obj.GetNamespace(), rs.GetName())
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      rs.GetName(),
+				Namespace: rs.GetNamespace(),
+			},
+		},
+	}
 }
 
 func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1beta1.RepoSync, reconcilerName string) []configMapMutation {

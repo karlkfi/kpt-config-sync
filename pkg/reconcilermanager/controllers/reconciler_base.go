@@ -46,6 +46,11 @@ const (
 	// These are used as keys in calls to r.log.Info
 	executedOperation    = "operation"
 	operationSubjectName = "name"
+
+	// gitSecretRefField is the path of the field in the RootSync|RepoSync CRDs
+	// that we wish to use as the "object reference".
+	// It will be used in both the indexing and watching.
+	gitSecretRefField = ".spec.git.secretRef.name"
 )
 
 // reconcilerBase provides common data and methods for the RepoSync and RootSync reconcilers

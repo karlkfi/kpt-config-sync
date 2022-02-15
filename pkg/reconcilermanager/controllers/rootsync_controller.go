@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -38,12 +39,18 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -232,12 +239,67 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 
 // SetupWithManager registers RootSync controller with reconciler-manager.
 func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
+	// Index the `gitSecretRefName` field, so that we will be able to lookup RootSync be a referenced `SecretRef` name.
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1beta1.RootSync{}, gitSecretRefField, func(rawObj client.Object) []string {
+		rs := rawObj.(*v1beta1.RootSync)
+		if rs.Spec.Git.SecretRef.Name == "" {
+			return nil
+		}
+		return []string{rs.Spec.Git.SecretRef.Name}
+	}); err != nil {
+		return err
+	}
+
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1beta1.RootSync{}).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRootSync())).
-		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.ConfigMap{}).
+		Watches(&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapSecretToRootSyncs),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
+}
+
+// mapSecretToRootSyncs define a mapping from the Secret object to its attached
+// RootSync objects via the `spec.git.secretRef.name` field .
+// The update to the Secret object will trigger a reconciliation of the RootSync objects.
+func (r *RootSyncReconciler) mapSecretToRootSyncs(secret client.Object) []reconcile.Request {
+	// Ignore secret in other namespaces because the RootSync's git secret MUST
+	// exist in the config-management-system namespace.
+	if secret.GetNamespace() != configsync.ControllerNamespace {
+		return nil
+	}
+
+	// Ignore secret starts with ns-reconciler prefix because those are for RepoSync objects.
+	if strings.HasPrefix(secret.GetName(), reconciler.NsReconcilerPrefix+"-") {
+		return nil
+	}
+
+	attachedRootSyncs := &v1beta1.RootSyncList{}
+	listOps := &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(gitSecretRefField, secret.GetName()),
+		Namespace:     secret.GetNamespace(),
+	}
+	if err := r.client.List(context.Background(), attachedRootSyncs, listOps); err != nil {
+		klog.Error("failed to list attached RootSyncs for secret (name: %s, namespace: %s): %v", secret.GetName(), secret.GetNamespace(), err)
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(attachedRootSyncs.Items))
+	attachedRSNames := make([]string, len(attachedRootSyncs.Items))
+	for i, rs := range attachedRootSyncs.Items {
+		attachedRSNames[i] = rs.GetName()
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      rs.GetName(),
+				Namespace: rs.GetNamespace(),
+			},
+		}
+	}
+	if len(requests) > 0 {
+		klog.Infof("Changes to Secret (name: %s, namespace: %s) triggers a reconciliation for the RootSync objects: %s", secret.GetName(), secret.GetNamespace(), strings.Join(attachedRSNames, ", "))
+	}
+	return requests
 }
 
 func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1beta1.RootSync, reconcilerName string) []configMapMutation {
