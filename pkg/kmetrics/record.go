@@ -18,6 +18,7 @@ package kmetrics
 
 import (
 	"context"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 )

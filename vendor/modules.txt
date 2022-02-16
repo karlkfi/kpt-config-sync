@@ -208,13 +208,11 @@ github.com/spf13/pflag
 github.com/spyzhov/ajson
 github.com/spyzhov/ajson/internal
 # github.com/stretchr/testify v1.7.0
+## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
 github.com/xlab/treeprint
-# gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20220215010912-757d45b62e4c => ./private_repo/gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git
-## explicit
-gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics
 # go.opencensus.io v0.23.0
 ## explicit
 go.opencensus.io
@@ -887,6 +885,7 @@ sigs.k8s.io/kind/pkg/internal/cli
 sigs.k8s.io/kind/pkg/internal/env
 sigs.k8s.io/kind/pkg/log
 # sigs.k8s.io/kustomize/api v0.11.1
+## explicit
 sigs.k8s.io/kustomize/api/filters/annotations
 sigs.k8s.io/kustomize/api/filters/fieldspec
 sigs.k8s.io/kustomize/api/filters/filtersutil
@@ -978,4 +977,3 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 # github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.1
 # k8s.io/code-generator => k8s.io/code-generator v0.22.2
-# gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git => ./private_repo/gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git

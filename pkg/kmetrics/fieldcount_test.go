@@ -141,7 +141,7 @@ func TestKustomizeFieldUsage(t *testing.T) {
 			},
 		},
 		"k8s metadata": {
-			inputDir: "./testdata/K8sMetadata",
+			inputDir: "./testdata/k8smetadata",
 			expected: &KustomizeFieldMetrics{
 				FieldCount: map[string]int{
 					"Resources":    2,

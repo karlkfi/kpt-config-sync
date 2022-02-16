@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
+// KustomizeFieldMetrics stores kustomize metrics
 type KustomizeFieldMetrics struct {
 	// fieldCount is how many times a given field is used in an instance
 	// of kustomize build (including in bases and overlays)
@@ -65,6 +66,7 @@ type KustomizeFieldMetrics struct {
 	DeprecationMetrics map[string]int
 }
 
+// RenderHelmChart is the name of the KRM function that inflates a helm chart
 const RenderHelmChart = "render-helm-chart"
 
 // kustomizeFieldUsage reads the current kustomization file (and any

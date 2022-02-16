@@ -35,9 +35,6 @@ func TestRunKustomizeBuild(t *testing.T) {
 			expected: `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    config.kubernetes.io/origin: |
-      path: deployment.yaml
   name: my-deployment
 spec:
   template:
@@ -56,15 +53,15 @@ spec:
 			expectedErr: "base/deployment.yaml: no such file or directory",
 		},
 		"missing kustomization in base": {
-			inputDir: "./testdata/missingkustomizationinbase",
+			inputDir:    "./testdata/missingkustomizationinbase",
 			expectedErr: "unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory",
 		},
 		"invalid kustomization": {
-			inputDir: "./testdata/invalidkustomization",
+			inputDir:    "./testdata/invalidkustomization",
 			expectedErr: "Error: json: cannot unmarshal string into Go struct field Kustomization.resources of type []string",
 		},
 		"multiple kustomization files": {
-			inputDir: "./testdata/multiplekustomizationfiles",
+			inputDir:    "./testdata/multiplekustomizationfiles",
 			expectedErr: "Error: Found multiple kustomization files",
 		},
 		"with generator": {
@@ -74,20 +71,11 @@ data:
   foo: bar
 kind: ConfigMap
 metadata:
-  annotations:
-    config.kubernetes.io/origin: |
-      configuredIn: kustomization.yaml
-      configuredBy:
-        apiVersion: builtin
-        kind: ConfigMapGenerator
   name: my-config-798k5k7g9f
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    config.kubernetes.io/origin: |
-      path: service.yaml
   name: my-service
 spec:
   ports:
@@ -100,9 +88,6 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    config.kubernetes.io/origin: |
-      path: deployment.yaml
   labels:
     app: nginx
   name: nginx-deployment

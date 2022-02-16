@@ -32,12 +32,12 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/kmetrics"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
-	"gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics"
 	"k8s.io/klog/v2"
 )
 

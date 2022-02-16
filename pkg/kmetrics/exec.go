@@ -94,7 +94,7 @@ func RunKustomizeBuild(ctx context.Context, sendMetrics bool, inputDir string, f
 		if b != nil {
 			// we write back the original kustomization file contents (rather than simply doing `kustomize edit remove
 			// buildmetadata originAnnotations`), because `kustomize edit` can cause some undesired formatting change
-			os.WriteFile(kustPath, b, 0)
+			_ = os.WriteFile(kustPath, b, 0)
 		}
 	}()
 
@@ -129,7 +129,7 @@ func runKustomizeBuild(ctx context.Context, sendMetrics bool, inputDir string, c
 	kt, err := readKustomizeFile(inputDir)
 	if kt != nil && err == nil {
 		fieldMetrics, fieldErr := kustomizeFieldUsage(kt, inputDir)
-		if fieldErr == nil && fieldMetrics != nil && sendMetrics  {
+		if fieldErr == nil && fieldMetrics != nil && sendMetrics {
 			// Send field count metrics to OC collector
 			RecordKustomizeFieldCountData(ctx, fieldMetrics)
 		}

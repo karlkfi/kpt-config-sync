@@ -18,7 +18,7 @@ set -euo pipefail
 
 export CGO_ENABLED=0
 
-export PATH="${PATH}:./third_party/bats-core/libexec"
+export PATH="${PATH}:./third_party/bats-core/libexec:/go/bin"
 
 echo "Running go tests:"
 go test -i -installsuffix "static" "$@"

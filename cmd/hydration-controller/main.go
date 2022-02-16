@@ -23,10 +23,10 @@ import (
 
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/kmetrics"
 	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/util/log"
-	"gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics"
 	"k8s.io/klog/klogr"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"

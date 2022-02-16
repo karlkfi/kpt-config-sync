@@ -9,10 +9,6 @@ replace github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.1
 // k8s.io library versions below.
 replace k8s.io/code-generator => k8s.io/code-generator v0.22.2
 
-// The cluster is not configured to pull from gke-internal, so point
-// to the local copy
-replace gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git => ./private_repo/gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git
-
 require (
 	cloud.google.com/go v0.81.0
 	contrib.go.opencensus.io/exporter/ocagent v0.7.0
@@ -29,7 +25,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v1.2.1
-	gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20220215010912-757d45b62e4c
+	github.com/stretchr/testify v1.7.0
 	go.opencensus.io v0.23.0
 	go.uber.org/multierr v1.6.0
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
@@ -47,6 +43,7 @@ require (
 	sigs.k8s.io/cli-utils v0.27.0
 	sigs.k8s.io/controller-runtime v0.10.1
 	sigs.k8s.io/kind v0.11.1
+	sigs.k8s.io/kustomize/api v0.11.1
 	sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2
 	sigs.k8s.io/yaml v1.2.0

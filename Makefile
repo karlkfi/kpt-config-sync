@@ -35,6 +35,7 @@ GO_DIR := $(OUTPUT_DIR)/go
 
 # Directory containing installed go binaries.
 BIN_DIR := $(GO_DIR)/bin
+KUSTOMIZE_VERSION := v4.3.0
 
 # Directory used for staging Docker contexts.
 STAGING_DIR := $(OUTPUT_DIR)/staging
@@ -173,7 +174,7 @@ clean:
 	@echo "+++ Cleaning $(OUTPUT_DIR)"
 	@rm -rf $(OUTPUT_DIR)
 
-test-unit: pull-buildenv buildenv-dirs
+test-unit: pull-buildenv buildenv-dirs install-kustomize
 	@echo "+++ Running unit tests in a docker container"
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
 

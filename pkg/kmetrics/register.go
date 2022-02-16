@@ -8,15 +8,15 @@ import (
 )
 
 const (
-	km_resource_namespace_name = "kmetrics-system"
-	km_resource_pod_name       = "kmetrics-manager"
+	kmResourceNamespaceName = "kmetrics-system"
+	kmResourcePodName       = "kmetrics-manager"
 )
 
 // RegisterOCAgentExporter creates the OC Agent metrics exporter.
 func RegisterOCAgentExporter() (*ocagent.Exporter, error) {
 	err := os.Setenv(
 		"OC_RESOURCE_LABELS",
-		"k8s.namespace.name=\""+km_resource_namespace_name+"\",k8s.pod.name=\""+km_resource_pod_name+"\"")
+		"k8s.namespace.name=\""+kmResourceNamespaceName+"\",k8s.pod.name=\""+kmResourcePodName+"\"")
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,7 @@ import (
 )
 
 var (
+	// KustomizeFieldCountView is the number of times a field is used
 	KustomizeFieldCountView = &view.View{
 		Name:        KustomizeFieldCount.Name(),
 		Measure:     KustomizeFieldCount,
@@ -30,6 +31,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizeDeprecatingFieldsView is the usage of fields that may become deprecated
 	KustomizeDeprecatingFieldsView = &view.View{
 		Name:        KustomizeDeprecatingFields.Name(),
 		Measure:     KustomizeDeprecatingFields,
@@ -38,6 +40,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizeSimplificationView is the usage of simplification transformers
 	KustomizeSimplificationView = &view.View{
 		Name:        KustomizeSimplification.Name(),
 		Measure:     KustomizeSimplification,
@@ -46,6 +49,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizeK8sMetadataView is the usage of builtin transformers
 	KustomizeK8sMetadataView = &view.View{
 		Name:        KustomizeK8sMetadata.Name(),
 		Measure:     KustomizeK8sMetadata,
@@ -54,6 +58,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizeHelmMetricsView is the usage of helm in kustomize
 	KustomizeHelmMetricsView = &view.View{
 		Name:        KustomizeHelmMetrics.Name(),
 		Measure:     KustomizeHelmMetrics,
@@ -62,6 +67,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizeBaseCountView is the number of remote and local bases
 	KustomizeBaseCountView = &view.View{
 		Name:        KustomizeBaseCount.Name(),
 		Measure:     KustomizeBaseCount,
@@ -70,6 +76,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizePatchCountView is the number of patches
 	KustomizePatchCountView = &view.View{
 		Name:        KustomizePatchCount.Name(),
 		Measure:     KustomizePatchCount,
@@ -78,6 +85,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizeTopTierMetricsView is the usage of high level metrics
 	KustomizeTopTierMetricsView = &view.View{
 		Name:        KustomizeTopTierMetrics.Name(),
 		Measure:     KustomizeTopTierMetrics,
@@ -86,6 +94,7 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// KustomizeResourceCountView is the number of resources outputted by `kustomize build`
 	KustomizeResourceCountView = &view.View{
 		Name:        KustomizeResourceCount.Name(),
 		Measure:     KustomizeResourceCount,
@@ -93,6 +102,7 @@ var (
 		Aggregation: view.Sum(),
 	}
 
+	// KustomizeExecutionTimeView is the execution time of `kustomize build`
 	KustomizeExecutionTimeView = &view.View{
 		Name:        KustomizeExecutionTime.Name(),
 		Measure:     KustomizeExecutionTime,
