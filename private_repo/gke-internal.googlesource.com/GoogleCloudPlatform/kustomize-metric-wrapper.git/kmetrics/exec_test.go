@@ -35,6 +35,9 @@ func TestRunKustomizeBuild(t *testing.T) {
 			expected: `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: deployment.yaml
   name: my-deployment
 spec:
   template:
@@ -60,6 +63,10 @@ spec:
 			inputDir: "./testdata/invalidkustomization",
 			expectedErr: "Error: json: cannot unmarshal string into Go struct field Kustomization.resources of type []string",
 		},
+		"multiple kustomization files": {
+			inputDir: "./testdata/multiplekustomizationfiles",
+			expectedErr: "Error: Found multiple kustomization files",
+		},
 		"with generator": {
 			inputDir: "./testdata/withgenerator",
 			expected: `apiVersion: v1
@@ -67,11 +74,20 @@ data:
   foo: bar
 kind: ConfigMap
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      configuredIn: kustomization.yaml
+      configuredBy:
+        apiVersion: builtin
+        kind: ConfigMapGenerator
   name: my-config-798k5k7g9f
 ---
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: service.yaml
   name: my-service
 spec:
   ports:
@@ -84,6 +100,9 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: deployment.yaml
   labels:
     app: nginx
   name: nginx-deployment

@@ -29,7 +29,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v1.2.1
-	gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20211115233911-764f1f57167e
+	gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20220215010912-757d45b62e4c
 	go.opencensus.io v0.23.0
 	go.uber.org/multierr v1.6.0
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
@@ -47,7 +47,7 @@ require (
 	sigs.k8s.io/cli-utils v0.27.0
 	sigs.k8s.io/controller-runtime v0.10.1
 	sigs.k8s.io/kind v0.11.1
-	sigs.k8s.io/kustomize/kyaml v0.13.1-0.20211203194734-cd2c6a1ad117
+	sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2
 	sigs.k8s.io/yaml v1.2.0
 )

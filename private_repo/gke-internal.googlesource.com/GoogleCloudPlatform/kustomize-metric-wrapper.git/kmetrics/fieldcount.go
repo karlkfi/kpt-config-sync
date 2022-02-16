@@ -93,6 +93,17 @@ func readKustomizeFile(path string) (*types.Kustomization, error) {
 	return nil, nil
 }
 
+func readKustomizeFileBytes(path string) ([]byte, string) {
+	for _, f := range konfig.RecognizedKustomizationFileNames() {
+		kustPath := filepath.Join(path, f)
+		b, err := os.ReadFile(kustPath)
+		if err == nil {
+			return b, kustPath
+		}
+	}
+	return nil, ""
+}
+
 func kustomizeFieldUsageRecurse(k *types.Kustomization, path string) (*KustomizeFieldMetrics, error) {
 	fieldCount := make(map[string]int)
 	topTierCount := make(map[string]int)

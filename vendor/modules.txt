@@ -212,7 +212,7 @@ github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
 github.com/xlab/treeprint
-# gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20211115233911-764f1f57167e => ./private_repo/gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git
+# gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20220215010912-757d45b62e4c => ./private_repo/gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git
 ## explicit
 gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics
 # go.opencensus.io v0.23.0
@@ -886,8 +886,7 @@ sigs.k8s.io/kind/pkg/internal/apis/config/encoding
 sigs.k8s.io/kind/pkg/internal/cli
 sigs.k8s.io/kind/pkg/internal/env
 sigs.k8s.io/kind/pkg/log
-# sigs.k8s.io/kustomize/api v0.9.0
-sigs.k8s.io/kustomize/api/builtins
+# sigs.k8s.io/kustomize/api v0.11.1
 sigs.k8s.io/kustomize/api/filters/annotations
 sigs.k8s.io/kustomize/api/filters/fieldspec
 sigs.k8s.io/kustomize/api/filters/filtersutil
@@ -899,15 +898,17 @@ sigs.k8s.io/kustomize/api/filters/nameref
 sigs.k8s.io/kustomize/api/filters/namespace
 sigs.k8s.io/kustomize/api/filters/patchjson6902
 sigs.k8s.io/kustomize/api/filters/patchstrategicmerge
-sigs.k8s.io/kustomize/api/filters/prefixsuffix
+sigs.k8s.io/kustomize/api/filters/prefix
 sigs.k8s.io/kustomize/api/filters/refvar
 sigs.k8s.io/kustomize/api/filters/replacement
 sigs.k8s.io/kustomize/api/filters/replicacount
+sigs.k8s.io/kustomize/api/filters/suffix
 sigs.k8s.io/kustomize/api/filters/valueadd
 sigs.k8s.io/kustomize/api/hasher
 sigs.k8s.io/kustomize/api/ifc
 sigs.k8s.io/kustomize/api/image
 sigs.k8s.io/kustomize/api/internal/accumulator
+sigs.k8s.io/kustomize/api/internal/builtins
 sigs.k8s.io/kustomize/api/internal/generators
 sigs.k8s.io/kustomize/api/internal/git
 sigs.k8s.io/kustomize/api/internal/kusterr
@@ -930,7 +931,7 @@ sigs.k8s.io/kustomize/api/provider
 sigs.k8s.io/kustomize/api/resmap
 sigs.k8s.io/kustomize/api/resource
 sigs.k8s.io/kustomize/api/types
-# sigs.k8s.io/kustomize/kyaml v0.13.1-0.20211203194734-cd2c6a1ad117
+# sigs.k8s.io/kustomize/kyaml v0.13.3
 ## explicit
 sigs.k8s.io/kustomize/kyaml/comments
 sigs.k8s.io/kustomize/kyaml/errors
