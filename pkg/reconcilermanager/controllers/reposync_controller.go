@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -137,6 +138,18 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, err
 	}
 
+	secretName := ReconcilerResourceName(reconcilerName, rs.Spec.SecretRef.Name)
+	if errs := validation.IsDNS1123Label(secretName); err != nil {
+		err = errors.New(strings.Join(errs, " "))
+		log.Error(err, "Resource name failed validation")
+		reposync.SetStalled(&rs, "Resource name validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		return controllerruntime.Result{}, err
+	}
+
 	if err := r.validateNamespaceSecret(ctx, &rs); err != nil {
 		log.Error(err, "RepoSync failed Secret validation required for installation")
 		reposync.SetStalled(&rs, "Validation", err)
@@ -149,7 +162,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 
 	// Create secret in config-management-system namespace using the
 	// existing secret in the reposync.namespace.
-	if err := Put(ctx, &rs, r.client, reconcilerName); err != nil {
+	if err := Put(ctx, &rs, r.client, reconcilerName, secretName); err != nil {
 		log.Error(err, "RepoSync failed secret creation", "auth", rs.Spec.Auth)
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, nil
