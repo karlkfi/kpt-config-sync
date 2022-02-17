@@ -1,12 +1,15 @@
-# CSP Configuration Management Developer Guide
+# Config Sync
 
+Config Sync lets cluster operators and platform administrators deploy consistent configurations and policies.
 
-*   [Initial Setup](docs/setup.md)
-*   [Making changes](docs/source.md)
-*   [Building](docs/build_operator.md)
-*   [Testing](docs/test.md)
-*   [Monitoring](docs/monitor.md)
-*   [Releasing](docs/release.md)
-*   [CLI](cmd/nomos/README.md)
+## Start using Config Sync
 
-``
+Follow the [installation guide] to install OSS Config Sync. You can also use 
+
+## Start contributing to Config Sync
+
+We welcome contributions to Config Sync from the community. Take a look at our
+[contribution guide] to get started.
+
+[installation guide](docs/installation.md)
+[contribution guide](docs/contributing.md)
