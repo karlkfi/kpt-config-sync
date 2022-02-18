@@ -264,3 +264,8 @@ func (g *genericWrapper) ShutDown() {
 func (g *genericWrapper) ShuttingDown() bool {
 	return g.oq.ShuttingDown()
 }
+
+// ShutDownWithDrain implements workqueue.Interface.
+func (g *genericWrapper) ShutDownWithDrain() {
+	g.oq.ShutDown()
+}
