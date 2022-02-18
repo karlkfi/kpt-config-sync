@@ -241,7 +241,7 @@ function main() {
   fi
   GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i ${NOMOS_DIR}/id_rsa.nomos"; export GIT_SSH_COMMAND
 
-  # TODO(fmil): remove the root reason for this message.
+  # TODO: remove the root reason for this message.
   # shellcheck disable=SC2154
   echo "+++ Starting tests from ${gotopt2_testcases_dir}"
   local all_test_files=()
@@ -293,7 +293,7 @@ function main() {
   local retcode=0
   if (( ${#filtered_test_files[@]} != 0 )); then
     if "${has_artifacts}"; then
-      # TODO(filmil): Find a way to unify the 'if' and 'else' branches without
+      # TODO: Find a way to unify the 'if' and 'else' branches without
       # side effects on log output.
       echo "+++ Adding results also to: ${result_file}"
       if ! "${bats_cmd[@]}" "${filtered_test_files[@]}" | tee "${result_file}"; then
@@ -411,7 +411,7 @@ readonly preclean="${gotopt2_preclean:-false}"
 readonly clean="${gotopt2_clean:-false}"
 readonly setup="${gotopt2_setup:-false}"
 readonly timing="${gotopt2_timing:-false}"
-# TODO(filmil): remove the need to disable lint checks here and elsewhere.
+# TODO: remove the need to disable lint checks here and elsewhere.
 # shellcheck disable=SC2154
 readonly test_filter="${gotopt2_test_filter}"
 export E2E_TEST_FILTER="${test_filter}"

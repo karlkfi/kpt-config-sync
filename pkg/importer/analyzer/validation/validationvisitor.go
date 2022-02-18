@@ -43,7 +43,7 @@ const IllegalAbstractNamespaceObjectKindErrorCode = "1007"
 var illegalAbstractNamespaceObjectKindError = status.NewErrorBuilder(IllegalAbstractNamespaceObjectKindErrorCode)
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
-// TODO(willbeason): Consolidate Illegal{X}ObjectKindErrors
+// TODO: Consolidate Illegal{X}ObjectKindErrors
 func IllegalAbstractNamespaceObjectKindError(resource client.Object) status.Error {
 	return illegalAbstractNamespaceObjectKindError.Sprintf(
 		"Config %[3]q illegally declared in an %[1]s directory. "+

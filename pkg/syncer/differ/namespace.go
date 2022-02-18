@@ -30,7 +30,7 @@ type NamespaceDiff struct {
 }
 
 // Type returns the type of the NamespaceDiff.
-// TODO(willbeason): Merge NamespaceDiff with Diff since there's overlap.
+// TODO: Merge NamespaceDiff with Diff since there's overlap.
 func (d *NamespaceDiff) Type() Type {
 
 	if d.Declared != nil {

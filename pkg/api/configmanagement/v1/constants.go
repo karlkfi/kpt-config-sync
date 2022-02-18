@@ -128,7 +128,7 @@ const (
 	// EventReasonInvalidManagementAnnotation reports that syncing a specific Namespace
 	// failed due to it having an invalid management annotation.
 	//
-	// TODO(willbeason): Should the reason be "InvalidManagementAnnotation"?
+	// TODO: Should the reason be "InvalidManagementAnnotation"?
 	EventReasonInvalidManagementAnnotation = "InvalidManagementLabel"
 	// EventReasonNamespaceCreateFailed reports the syncer was unable to sync
 	// a Namespace and its resources due to being unable to create the Namespace.

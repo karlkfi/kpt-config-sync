@@ -35,7 +35,7 @@ spec:
       status: {}
     schema:
       # openAPIV3Schema is the schema for validating custom objects
-      # TODO(phillipao): Complete and test when 1.11 beta is out.
+      # TODO: Complete and test when 1.11 beta is out.
       openAPIV3Schema:
         type: object
         required:

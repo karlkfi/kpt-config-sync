@@ -50,7 +50,7 @@ EOF
 )
 eval "${gotopt2_output}"
 
-# TODO(filmil): remove the need to disable lint checks here.
+# TODO: remove the need to disable lint checks here.
 # shellcheck disable=SC2154
 readonly TEMP_OUTPUT_DIR="${gotopt2_TEMP_OUTPUT_DIR}"
 # shellcheck disable=SC2154

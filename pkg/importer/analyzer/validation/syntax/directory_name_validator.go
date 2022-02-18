@@ -27,7 +27,7 @@ var invalidDirectoryNameError = status.NewErrorBuilder(InvalidDirectoryNameError
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
 func ReservedDirectoryNameError(dir cmpath.Relative) status.Error {
-	// TODO(willbeason): Consider moving to Namespace validation instead.
+	// TODO: Consider moving to Namespace validation instead.
 	//  Strictly speaking, having a directory named "config-management-system" doesn't necessarily mean there are
 	//  any resources declared in that Namespace. That would make this error message clearer.
 	return invalidDirectoryNameError.

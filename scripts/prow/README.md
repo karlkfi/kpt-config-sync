@@ -3,8 +3,6 @@
 
 ## Follow instructions at prow onboarding
 
-Follow http://go/internal-prow-onboard
-
 Project `stolos-dev` has been set up, so there will be some places that you
 will find ACLs that potentially collide with these instructions and you will
 likely need to add permission for a new GCP SA.

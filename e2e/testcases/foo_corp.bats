@@ -22,7 +22,7 @@ test_teardown() {
 }
 
 @test "${FILE_NAME}: All foo-corp created" {
-  # TODO(frankf): POLICY_DIR is currently set to "acme" during installation.
+  # TODO: POLICY_DIR is currently set to "acme" during installation.
   # This should be resolved with new repo format.
   git::add "${NOMOS_DIR}/examples/foo-corp-example/foo-corp" acme
   git::commit

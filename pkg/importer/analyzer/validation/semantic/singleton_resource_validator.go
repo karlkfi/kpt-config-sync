@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// TODO(ekitson): Replace usage of this error with id.MultipleSingletonsError instead
+// TODO: Replace usage of this error with id.MultipleSingletonsError instead
 
 // MultipleSingletonsErrorCode is the error code for MultipleSingletonsError
 const MultipleSingletonsErrorCode = "1030"

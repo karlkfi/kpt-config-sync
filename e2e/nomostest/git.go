@@ -234,7 +234,7 @@ func (g *Repository) init(privateKey string) {
 func (g *Repository) Add(path string, obj client.Object) {
 	g.T.Helper()
 	AddTestLabel(obj)
-	// TODO(willbeason): Figure out how to cleanly inject runtime.Scheme here.
+	// TODO: Figure out how to cleanly inject runtime.Scheme here.
 
 	// We have to make a pass through json since yaml.Marshal does not respect
 	// json "omitempty" directives.

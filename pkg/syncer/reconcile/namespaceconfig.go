@@ -49,7 +49,7 @@ const reconcileTimeout = time.Minute * 5
 // non-removable namespaces (like "default") when the corresponding NamespaceConfig is deleted
 // from the repo. Instead of deleting the namespace and its resources, we apply a change that
 // removes all managed resources from the namespace, but does not attempt to delete the namespace.
-// TODO(filmil): See if there is an easy way to hide this nil object.
+// TODO: See if there is an easy way to hide this nil object.
 var reservedNamespaceConfig = &v1.NamespaceConfig{
 	TypeMeta: metav1.TypeMeta{
 		Kind:       kinds.NamespaceConfig().Kind,
@@ -358,7 +358,7 @@ func (r *namespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context
 		return newPN, nil
 	}
 	_, err := r.client.UpdateStatus(ctx, config, updateFn)
-	// TODO(fmil): Missing error monitoring like util.go/SetClusterConfigStatus.
+	// TODO: Missing error monitoring like util.go/SetClusterConfigStatus.
 	return err
 }
 
