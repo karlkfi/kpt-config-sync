@@ -23,7 +23,11 @@
 #    will fail if you have not uploaded your new image.
 #
 
-ARG GOLANG_CONTAINER=gcr.io/gae-runtimes/go116_app_builder:go116_20210829_1_16_7_RC00
+# TODO: Change the image to be from gcr.io
+# when the go1.17 image is released in it.
+# Note that we shouldn't use the -alpine image here
+# since it is not allowed due to busybox for licensing.
+ARG GOLANG_CONTAINER=golang:1.17.7-buster
 
 # Environment to build the helper binaries from.
 FROM ${GOLANG_CONTAINER} AS tools-base

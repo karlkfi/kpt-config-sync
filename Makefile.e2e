@@ -8,7 +8,7 @@ E2E_PARAMS := \
 # The directory for e2e test related files
 E2E_DIR := $(OUTPUT_DIR)/nomos
 
-E2E_VERSION := v1.0.0
+E2E_VERSION := v1.0.2
 E2E_TEST_IMAGE := gcr.io/$(GCP_PROJECT)/e2e-tests:$(E2E_VERSION)
 
 # Create a staging directory for e2e
