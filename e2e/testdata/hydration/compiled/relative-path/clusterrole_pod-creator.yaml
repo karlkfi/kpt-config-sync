@@ -2,6 +2,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: ../../base/pod-creator-clusterrole.yaml
   labels:
     environment: dev
   name: pod-creator

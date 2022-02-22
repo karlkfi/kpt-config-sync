@@ -45,7 +45,7 @@ const (
 	// HelmVersion is the minimum required version of Helm for hydration.
 	HelmVersion = "v3.6.3"
 	// KustomizeVersion is the minimum required version of Kustomize for hydration.
-	KustomizeVersion = "v4.3.0"
+	KustomizeVersion = "v4.5.2"
 	// Helm is the binary name of the installed Helm.
 	Helm = "helm"
 	// Kustomize is the binary name of the installed Kustomize.

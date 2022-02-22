@@ -2,6 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: base/networkpolicy.yaml
   labels:
     test-case: hydration
   name: deny-all

@@ -5,6 +5,9 @@
 			"apiVersion": "rbac.authorization.k8s.io/v1",
 			"kind": "Role",
 			"metadata": {
+				"annotations": {
+					"config.kubernetes.io/origin": "path: base/role.yaml\n"
+				},
 				"labels": {
 					"test-case": "hydration"
 				},

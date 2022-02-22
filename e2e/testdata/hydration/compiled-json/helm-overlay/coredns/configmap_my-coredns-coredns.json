@@ -9,6 +9,7 @@
 			"kind": "ConfigMap",
 			"metadata": {
 				"annotations": {
+					"config.kubernetes.io/origin": "configuredIn: base/kustomization.yaml\nconfiguredBy:\n  apiVersion: builtin\n  kind: HelmChartInflationGenerator\n",
 					"hydration-tool": "kustomize"
 				},
 				"labels": {

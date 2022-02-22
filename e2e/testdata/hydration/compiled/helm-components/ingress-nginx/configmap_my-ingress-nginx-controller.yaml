@@ -4,6 +4,12 @@ data:
   allow-snippet-annotations: "true"
 kind: ConfigMap
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      configuredIn: kustomization.yaml
+      configuredBy:
+        apiVersion: builtin
+        kind: HelmChartInflationGenerator
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: my-ingress-nginx

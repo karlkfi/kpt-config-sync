@@ -5,6 +5,9 @@
 			"apiVersion": "apps/v1",
 			"kind": "Deployment",
 			"metadata": {
+				"annotations": {
+					"config.kubernetes.io/origin": "configuredIn: kustomization.yaml\nconfiguredBy:\n  apiVersion: builtin\n  kind: HelmChartInflationGenerator\n"
+				},
 				"labels": {
 					"app.kubernetes.io/instance": "my-coredns",
 					"app.kubernetes.io/managed-by": "Helm",

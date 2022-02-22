@@ -48,7 +48,7 @@ COPY --from=bins /go/bin/render-helm-chart /usr/local/bin/render-helm-chart
 RUN apt-get update && apt-get install -y git wget
 
 ARG HELM_VERSION=v3.6.3
-ARG KUSTOMIZE_VERSION=v4.3.0
+ARG KUSTOMIZE_VERSION=v4.5.2
 
 # Install Helm
 RUN wget https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz -O /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz && \

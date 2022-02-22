@@ -2,6 +2,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: base/rolebinding.yaml
   labels:
     test-case: hydration
   name: tenant-admin-rolebinding

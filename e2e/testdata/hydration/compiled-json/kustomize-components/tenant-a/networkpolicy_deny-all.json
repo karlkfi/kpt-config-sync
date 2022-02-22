@@ -5,6 +5,9 @@
 			"apiVersion": "networking.k8s.io/v1",
 			"kind": "NetworkPolicy",
 			"metadata": {
+				"annotations": {
+					"config.kubernetes.io/origin": "path: base/networkpolicy.yaml\n"
+				},
 				"labels": {
 					"test-case": "hydration"
 				},

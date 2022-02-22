@@ -6,6 +6,7 @@
 			"kind": "Job",
 			"metadata": {
 				"annotations": {
+					"config.kubernetes.io/origin": "configuredIn: kustomization.yaml\nconfiguredBy:\n  apiVersion: builtin\n  kind: HelmChartInflationGenerator\n",
 					"helm.sh/hook": "pre-install,pre-upgrade",
 					"helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
 				},

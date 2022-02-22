@@ -5,6 +5,9 @@
 			"apiVersion": "rbac.authorization.k8s.io/v1",
 			"kind": "RoleBinding",
 			"metadata": {
+				"annotations": {
+					"config.kubernetes.io/origin": "path: ../../base/foo/pod-creator-rolebinding.yaml\n"
+				},
 				"labels": {
 					"environment": "dev"
 				},
