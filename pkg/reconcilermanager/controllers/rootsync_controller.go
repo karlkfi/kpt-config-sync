@@ -151,8 +151,13 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 	log.V(2).Info("secret found, proceeding with installation")
 
+	rootsyncLabelMap := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, rootCMMutations, owRefs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, rootCMMutations, rootsyncLabelMap, owRefs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		rootsync.SetStalled(&rs, "ConfigMap", err)
@@ -162,7 +167,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, reconcilerName, rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail, owRefs); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconcilerName, rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail, rootsyncLabelMap, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service Account")
 		rootsync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -182,7 +187,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	mut := r.mutationsFor(ctx, rs, configMapDataHash)
 
 	// Upsert Root reconciler deployment.
-	op, err := r.upsertDeployment(ctx, reconcilerName, v1.NSConfigManagementSystem, mut)
+	op, err := r.upsertDeployment(ctx, reconcilerName, v1.NSConfigManagementSystem, rootsyncLabelMap, mut)
 	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		rootsync.SetStalled(&rs, "Deployment", err)
@@ -415,6 +420,8 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RootSy
 
 		// Add unique reconciler label
 		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconcilerName)
+		core.SetLabel(&d.Spec.Template, metadata.SyncNameLabel, rs.Name)
+		core.SetLabel(&d.Spec.Template, metadata.SyncNamespaceLabel, rs.Namespace)
 
 		templateSpec := &d.Spec.Template.Spec
 

@@ -21,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -56,7 +57,7 @@ func Put(ctx context.Context, rs *v1beta1.RepoSync, c client.Client, reconcilerN
 		}
 		// Secret not present in config-management-system namespace. Create one using
 		// secret in reposync.namespace.
-		if err := create(ctx, namespaceSecret, reconcilerName, c); err != nil {
+		if err := create(ctx, namespaceSecret, reconcilerName, c, rs.Name, rs.Namespace); err != nil {
 			return errors.Wrapf(err,
 				"failed to create %s secret in %s namespace",
 				rs.Spec.SecretRef.Name, v1.NSConfigManagementSystem)
@@ -96,11 +97,17 @@ func get(ctx context.Context, name, namespace string, secret *corev1.Secret, c c
 
 // create secret get the existing secret in reposync.namespace and use secret.data and
 // secret.type to create a new secret in config-management-system namespace.
-func create(ctx context.Context, namespaceSecret *corev1.Secret, reconcilerName string, c client.Client) error {
+func create(ctx context.Context, namespaceSecret *corev1.Secret, reconcilerName string, c client.Client, syncName string, syncNamespace string) error {
 	newSecret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kinds.Secret().Kind,
 			APIVersion: kinds.Secret().Version,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				metadata.SyncNamespaceLabel: syncNamespace,
+				metadata.SyncNameLabel:      syncName,
+			},
 		},
 	}
 

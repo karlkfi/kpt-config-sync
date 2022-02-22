@@ -269,7 +269,11 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -386,7 +390,11 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -593,7 +601,11 @@ func TestCreateAndUpdateNamespaceReconcilerWithAutopilot(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -680,7 +692,11 @@ func TestUpdateNamespaceReconcilerWithOverrideWithAutopilot(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -769,7 +785,11 @@ func TestRepoSyncCreateWithNoSSLVerify(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -802,7 +822,11 @@ func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -848,7 +872,7 @@ func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedCMID, updatedCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 
 	updatedRepoDeployment := repoSyncDeployment(
@@ -877,7 +901,7 @@ func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
@@ -903,7 +927,11 @@ func TestRepoSyncCreateWithOverrideGitSyncDepth(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -936,7 +964,11 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
@@ -965,7 +997,7 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedCMID, updatedCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 
 	updatedRepoDeployment := repoSyncDeployment(
@@ -995,7 +1027,7 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 
 	updatedRepoDeployment = repoSyncDeployment(
@@ -1024,7 +1056,7 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
@@ -1045,7 +1077,7 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
@@ -1079,12 +1111,17 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 		t.Errorf("namespaces diff %s", diff)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs.Namespace), rs.Name, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 
 	wantServiceAccount := fake.ServiceAccountObject(
 		nsReconcilerName,
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.Annotation(GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+		core.Labels(label),
 	)
 
 	repoDeployment := repoSyncDeployment(
@@ -1128,7 +1165,7 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
-	updatedCMID, updatedCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
@@ -1157,7 +1194,7 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
-	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override)
+	updatedCMID, updatedCM = gitSyncConfigMap(ctx, nsReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
 	wantConfigMaps[updatedCMID] = updatedCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
@@ -1264,11 +1301,17 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Errorf("namespaces diff %s", diff)
 	}
 
-	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs1.Namespace), rs1.Name, nsReconcilerName, &rs1.Spec.Git, &rs1.Spec.Override)
+	label1 := map[string]string{
+		metadata.SyncNamespaceLabel: rs1.Namespace,
+		metadata.SyncNameLabel:      rs1.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.Scope(rs1.Namespace), rs1.Name, nsReconcilerName, &rs1.Spec.Git, &rs1.Spec.Override, label1)
 
 	serviceAccount1 := fake.ServiceAccountObject(
 		nsReconcilerName,
 		core.Namespace(v1.NSConfigManagementSystem),
+		core.Label(metadata.SyncNamespaceLabel, label1[metadata.SyncNamespaceLabel]),
+		core.Label(metadata.SyncNameLabel, label1[metadata.SyncNameLabel]),
 	)
 	wantServiceAccounts := map[core.ID]*corev1.ServiceAccount{core.IDOf(serviceAccount1): serviceAccount1}
 
@@ -1314,7 +1357,11 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	if diff := cmp.Diff(testReconciler.namespaces, wantNamespaces, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("namespaces diff %s", diff)
 	}
-	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs2.Namespace), rs2.Name, nsReconcilerName2, &rs2.Spec.Git, &rs2.Spec.Override))
+	label2 := map[string]string{
+		metadata.SyncNamespaceLabel: rs2.Namespace,
+		metadata.SyncNameLabel:      rs2.Name,
+	}
+	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs2.Namespace), rs2.Name, nsReconcilerName2, &rs2.Spec.Git, &rs2.Spec.Override, label2))
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
 	}
@@ -1333,6 +1380,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	serviceAccount2 := fake.ServiceAccountObject(
 		nsReconcilerName2,
 		core.Namespace(v1.NSConfigManagementSystem),
+		core.Labels(label2),
 	)
 	wantServiceAccounts[core.IDOf(serviceAccount2)] = serviceAccount2
 	if err := validateServiceAccounts(wantServiceAccounts, fakeClient); err != nil {
@@ -1363,7 +1411,11 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Errorf("namespaces diff %s", diff)
 	}
 
-	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs3.Namespace), rs3.Name, nsReconcilerName3, &rs3.Spec.Git, &rs3.Spec.Override))
+	label3 := map[string]string{
+		metadata.SyncNamespaceLabel: rs3.Namespace,
+		metadata.SyncNameLabel:      rs3.Name,
+	}
+	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs3.Namespace), rs3.Name, nsReconcilerName3, &rs3.Spec.Git, &rs3.Spec.Override, label3))
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
 	}
@@ -1383,6 +1435,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		nsReconcilerName3,
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.Annotation(GCPSAAnnotationKey, rs3.Spec.GCPServiceAccountEmail),
+		core.Labels(label3),
 	)
 	wantServiceAccounts[core.IDOf(serviceAccount3)] = serviceAccount3
 	if err := validateServiceAccounts(wantServiceAccounts, fakeClient); err != nil {
@@ -1415,7 +1468,11 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Errorf("namespaces diff %s", diff)
 	}
 
-	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs4.Namespace), rs4.Name, nsReconcilerName4, &rs4.Spec.Git, &rs4.Spec.Override))
+	label4 := map[string]string{
+		metadata.SyncNamespaceLabel: rs4.Namespace,
+		metadata.SyncNameLabel:      rs4.Name,
+	}
+	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs4.Namespace), rs4.Name, nsReconcilerName4, &rs4.Spec.Git, &rs4.Spec.Override, label4))
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
 	}
@@ -1435,6 +1492,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	serviceAccount4 := fake.ServiceAccountObject(
 		nsReconcilerName4,
 		core.Namespace(v1.NSConfigManagementSystem),
+		core.Labels(label4),
 	)
 	wantServiceAccounts[core.IDOf(serviceAccount4)] = serviceAccount4
 	if err := validateServiceAccounts(wantServiceAccounts, fakeClient); err != nil {
@@ -1467,7 +1525,11 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Errorf("namespaces diff %s", diff)
 	}
 
-	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs5.Namespace), rs5.Name, nsReconcilerName5, &rs5.Spec.Git, &rs5.Spec.Override))
+	label5 := map[string]string{
+		metadata.SyncNamespaceLabel: rs5.Namespace,
+		metadata.SyncNameLabel:      rs5.Name,
+	}
+	addConfigMaps(wantConfigMaps, buildWantConfigMaps(ctx, declared.Scope(rs5.Namespace), rs5.Name, nsReconcilerName5, &rs5.Spec.Git, &rs5.Spec.Override, label5))
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
 		t.Error(err)
 	}
@@ -1488,6 +1550,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	serviceAccount5 := fake.ServiceAccountObject(
 		nsReconcilerName5,
 		core.Namespace(v1.NSConfigManagementSystem),
+		core.Labels(label5),
 	)
 	wantServiceAccounts[core.IDOf(serviceAccount5)] = serviceAccount5
 	if err := validateServiceAccounts(wantServiceAccounts, fakeClient); err != nil {
@@ -1522,8 +1585,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	)
 	wantDeployments[core.IDOf(repoDeployment1)] = repoDeployment1
 
-	updatedGitSyncCMID, updatedGitSyncCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs1.Spec.Git, &rs1.Spec.Override)
-	updatedReconcilerCMID, updatedReconcilerCM := reconcilerConfigMap(declared.Scope(rs1.Namespace), rs1.Name, nsReconcilerName, &rs1.Spec.Git)
+	updatedGitSyncCMID, updatedGitSyncCM := gitSyncConfigMap(ctx, nsReconcilerName, &rs1.Spec.Git, &rs1.Spec.Override, label1)
+	updatedReconcilerCMID, updatedReconcilerCM := reconcilerConfigMap(declared.Scope(rs1.Namespace), rs1.Name, nsReconcilerName, &rs1.Spec.Git, label1)
 	wantConfigMaps[updatedGitSyncCMID] = updatedGitSyncCM
 	wantConfigMaps[updatedReconcilerCMID] = updatedReconcilerCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
@@ -1544,8 +1607,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedGitSyncCMID2, updatedGitSyncCM2 := gitSyncConfigMap(ctx, nsReconcilerName2, &rs2.Spec.Git, &rs2.Spec.Override)
-	updatedReconcilerCMID2, updatedReconcilerCM2 := reconcilerConfigMap(declared.Scope(rs2.Namespace), rs2.Name, nsReconcilerName2, &rs2.Spec.Git)
+	updatedGitSyncCMID2, updatedGitSyncCM2 := gitSyncConfigMap(ctx, nsReconcilerName2, &rs2.Spec.Git, &rs2.Spec.Override, label2)
+	updatedReconcilerCMID2, updatedReconcilerCM2 := reconcilerConfigMap(declared.Scope(rs2.Namespace), rs2.Name, nsReconcilerName2, &rs2.Spec.Git, label2)
 	wantConfigMaps[updatedGitSyncCMID2] = updatedGitSyncCM2
 	wantConfigMaps[updatedReconcilerCMID2] = updatedReconcilerCM2
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
@@ -1575,8 +1638,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	updatedGitSyncCMID3, updatedGitSyncCM3 := gitSyncConfigMap(ctx, nsReconcilerName3, &rs3.Spec.Git, &rs3.Spec.Override)
-	updatedReconcilerCMID3, updatedReconcilerCM3 := reconcilerConfigMap(declared.Scope(rs3.Namespace), rs3.Name, nsReconcilerName3, &rs3.Spec.Git)
+	updatedGitSyncCMID3, updatedGitSyncCM3 := gitSyncConfigMap(ctx, nsReconcilerName3, &rs3.Spec.Git, &rs3.Spec.Override, label3)
+	updatedReconcilerCMID3, updatedReconcilerCM3 := reconcilerConfigMap(declared.Scope(rs3.Namespace), rs3.Name, nsReconcilerName3, &rs3.Spec.Git, label3)
 	wantConfigMaps[updatedGitSyncCMID3] = updatedGitSyncCM3
 	wantConfigMaps[updatedReconcilerCMID3] = updatedReconcilerCM3
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
@@ -1992,11 +2055,11 @@ func addConfigMaps(m1, m2 map[core.ID]*corev1.ConfigMap) {
 	}
 }
 
-func buildWantConfigMaps(ctx context.Context, scope declared.Scope, syncName, reconcilerName string, git *v1beta1.Git, override *v1beta1.OverrideSpec) map[core.ID]*corev1.ConfigMap {
-	gitSyncCMID, gitSyncCM := gitSyncConfigMap(ctx, reconcilerName, git, override)
-	hydrationCMID, hydrationCM := hydrationConfigMap(scope, reconcilerName, git)
-	reconcilerCMID, reconcilerCM := reconcilerConfigMap(scope, syncName, reconcilerName, git)
-	sourceFormatCMID, sourceFormatCM := sourceFormatConfigMap(reconcilerName)
+func buildWantConfigMaps(ctx context.Context, scope declared.Scope, syncName, reconcilerName string, git *v1beta1.Git, override *v1beta1.OverrideSpec, label map[string]string) map[core.ID]*corev1.ConfigMap {
+	gitSyncCMID, gitSyncCM := gitSyncConfigMap(ctx, reconcilerName, git, override, label)
+	hydrationCMID, hydrationCM := hydrationConfigMap(scope, reconcilerName, git, label)
+	reconcilerCMID, reconcilerCM := reconcilerConfigMap(scope, syncName, reconcilerName, git, label)
+	sourceFormatCMID, sourceFormatCM := sourceFormatConfigMap(reconcilerName, label)
 	cms := map[core.ID]*corev1.ConfigMap{
 		gitSyncCMID:    gitSyncCM,
 		hydrationCMID:  hydrationCM,
@@ -2008,7 +2071,7 @@ func buildWantConfigMaps(ctx context.Context, scope declared.Scope, syncName, re
 	return cms
 }
 
-func gitSyncConfigMap(ctx context.Context, reconcilerName string, git *v1beta1.Git, override *v1beta1.OverrideSpec) (core.ID, *corev1.ConfigMap) {
+func gitSyncConfigMap(ctx context.Context, reconcilerName string, git *v1beta1.Git, override *v1beta1.OverrideSpec, label map[string]string) (core.ID, *corev1.ConfigMap) {
 	gitOptions := options{
 		ref:        git.Revision,
 		branch:     git.Branch,
@@ -2028,34 +2091,44 @@ func gitSyncConfigMap(ctx context.Context, reconcilerName string, git *v1beta1.G
 		configsync.ControllerNamespace,
 		ReconcilerResourceName(reconcilerName, reconcilermanager.GitSync),
 		gitSyncData(ctx, gitOptions),
+		core.Label(metadata.SyncNamespaceLabel, label[metadata.SyncNamespaceLabel]),
+		core.Label(metadata.SyncNameLabel, label[metadata.SyncNameLabel]),
 	)
 	addOwnerRefsForRootSync(reconcilerName, cm)
 	return core.IDOf(cm), cm
 }
 
-func hydrationConfigMap(scope declared.Scope, reconcilerName string, git *v1beta1.Git) (core.ID, *corev1.ConfigMap) {
+func hydrationConfigMap(scope declared.Scope, reconcilerName string, git *v1beta1.Git, label map[string]string) (core.ID, *corev1.ConfigMap) {
 	cm := configMapWithData(
 		configsync.ControllerNamespace,
 		ReconcilerResourceName(reconcilerName, reconcilermanager.HydrationController),
-		hydrationData(git, scope, reconcilerName, pollingPeriod))
+		hydrationData(git, scope, reconcilerName, pollingPeriod),
+		core.Label(metadata.SyncNamespaceLabel, label[metadata.SyncNamespaceLabel]),
+		core.Label(metadata.SyncNameLabel, label[metadata.SyncNameLabel]),
+	)
 	addOwnerRefsForRootSync(reconcilerName, cm)
 	return core.IDOf(cm), cm
 }
 
-func reconcilerConfigMap(scope declared.Scope, syncName, reconcilerName string, git *v1beta1.Git) (core.ID, *corev1.ConfigMap) {
+func reconcilerConfigMap(scope declared.Scope, syncName, reconcilerName string, git *v1beta1.Git, label map[string]string) (core.ID, *corev1.ConfigMap) {
 	cm := configMapWithData(
 		configsync.ControllerNamespace,
 		ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler),
-		reconcilerData(testCluster, syncName, reconcilerName, scope, git, pollingPeriod))
+		reconcilerData(testCluster, syncName, reconcilerName, scope, git, pollingPeriod),
+		core.Label(metadata.SyncNamespaceLabel, label[metadata.SyncNamespaceLabel]),
+		core.Label(metadata.SyncNameLabel, label[metadata.SyncNameLabel]),
+	)
 	addOwnerRefsForRootSync(reconcilerName, cm)
 	return core.IDOf(cm), cm
 }
 
-func sourceFormatConfigMap(reconcilerName string) (core.ID, *corev1.ConfigMap) {
+func sourceFormatConfigMap(reconcilerName string, label map[string]string) (core.ID, *corev1.ConfigMap) {
 	cm := configMapWithData(
 		configsync.ControllerNamespace,
 		ReconcilerResourceName(reconcilerName, reconcilermanager.SourceFormat),
-		sourceFormatData(""))
+		sourceFormatData(""),
+		core.Label(metadata.SyncNamespaceLabel, label[metadata.SyncNamespaceLabel]),
+		core.Label(metadata.SyncNameLabel, label[metadata.SyncNameLabel]))
 	addOwnerRefsForRootSync(reconcilerName, cm)
 	return core.IDOf(cm), cm
 }

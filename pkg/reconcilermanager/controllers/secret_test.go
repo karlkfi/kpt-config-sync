@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -51,6 +52,10 @@ func secret(t *testing.T, name, data, auth string, opts ...core.MetaMutator) *co
 	t.Helper()
 	result := fake.SecretObject(name, opts...)
 	result.Data = secretData(t, data, auth)
+	result.SetLabels(map[string]string{
+		metadata.SyncNamespaceLabel: reposyncNs,
+		metadata.SyncNameLabel:      reposyncName,
+	})
 	return result
 }
 

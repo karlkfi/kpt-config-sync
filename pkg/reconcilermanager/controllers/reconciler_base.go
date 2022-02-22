@@ -70,7 +70,7 @@ type configMapMutation struct {
 	data   map[string]string
 }
 
-func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []configMapMutation, refs ...metav1.OwnerReference) ([]byte, error) {
+func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []configMapMutation, labelMap map[string]string, refs ...metav1.OwnerReference) ([]byte, error) {
 	configMapData := make(map[string]map[string]string)
 
 	for _, mutation := range mutations {
@@ -91,9 +91,7 @@ func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []confi
 			if len(refs) > 0 {
 				childCM.OwnerReferences = refs
 			}
-			if childCM.Labels == nil {
-				childCM.Labels = make(map[string]string)
-			}
+			r.addLabels(&childCM, labelMap)
 			childCM.Labels["app"] = reconcilermanager.Reconciler
 			childCM.Data = mutation.data
 			return nil
@@ -114,10 +112,11 @@ func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []confi
 	return hash(configMapData)
 }
 
-func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name, auth, email string, refs ...metav1.OwnerReference) error {
+func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name, auth, email string, labelMap map[string]string, refs ...metav1.OwnerReference) error {
 	var childSA corev1.ServiceAccount
 	childSA.Name = name
 	childSA.Namespace = v1.NSConfigManagementSystem
+	r.addLabels(&childSA, labelMap)
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
 		// Update ownerRefs for RootSync ServiceAccount.
@@ -145,7 +144,7 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name, auth, e
 
 type mutateFn func(client.Object) error
 
-func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, mutateObject mutateFn) (controllerutil.OperationResult, error) {
+func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, labelMap map[string]string, mutateObject mutateFn) (controllerutil.OperationResult, error) {
 	reconcilerDeployment := &appsv1.Deployment{}
 	if err := parseDeployment(reconcilerDeployment); err != nil {
 		return controllerutil.OperationResultNone, errors.Wrap(err, "failed to parse reconciler Deployment manifest from ConfigMap")
@@ -153,6 +152,7 @@ func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace s
 
 	reconcilerDeployment.Name = name
 	reconcilerDeployment.Namespace = namespace
+	r.addLabels(reconcilerDeployment, labelMap)
 	if err := mutateObject(reconcilerDeployment); err != nil {
 		return controllerutil.OperationResultNone, err
 	}
@@ -284,4 +284,19 @@ func (r *reconcilerBase) validateResourcesName(mutations []configMapMutation) er
 		}
 	}
 	return nil
+}
+
+// addLabels will copy the content of labelMaps to the current resource labels
+func (r *reconcilerBase) addLabels(resource client.Object, labelMap map[string]string) {
+	currentLabels := resource.GetLabels()
+	if currentLabels == nil {
+		currentLabels = make(map[string]string)
+	}
+
+	for key, value := range labelMap {
+		currentLabels[key] = value
+	}
+
+	resource.SetLabels(currentLabels)
+
 }

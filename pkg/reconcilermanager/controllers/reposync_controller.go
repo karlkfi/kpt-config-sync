@@ -160,6 +160,11 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, nil
 	}
 
+	reposyncLabelMap := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+
 	// Create secret in config-management-system namespace using the
 	// existing secret in the reposync.namespace.
 	if err := Put(ctx, &rs, r.client, reconcilerName, secretName); err != nil {
@@ -169,7 +174,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, repoCMMutations)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, repoCMMutations, reposyncLabelMap)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
@@ -179,7 +184,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, reconcilerName, rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconcilerName, rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail, reposyncLabelMap); err != nil {
 		log.Error(err, "Failed to create/update ServiceAccount")
 		reposync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -199,7 +204,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	mut := r.mutationsFor(ctx, rs, configMapDataHash)
 
 	// Upsert Namespace reconciler deployment.
-	op, err := r.upsertDeployment(ctx, reconcilerName, v1.NSConfigManagementSystem, mut)
+	op, err := r.upsertDeployment(ctx, reconcilerName, v1.NSConfigManagementSystem, reposyncLabelMap, mut)
 	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		reposync.SetStalled(&rs, "Deployment", err)
@@ -532,6 +537,8 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 		core.SetAnnotation(&d.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 		// Add unique reconciler label
 		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconcilerName)
+		core.SetLabel(&d.Spec.Template, metadata.SyncNameLabel, rs.Name)
+		core.SetLabel(&d.Spec.Template, metadata.SyncNamespaceLabel, rs.Namespace)
 		templateSpec := &d.Spec.Template.Spec
 		// Update ServiceAccountName. eg. ns-reconciler-<namespace>
 		templateSpec.ServiceAccountName = reconcilerName
