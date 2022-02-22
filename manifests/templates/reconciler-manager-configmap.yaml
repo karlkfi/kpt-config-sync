@@ -71,11 +71,6 @@ data:
                - NET_RAW
              runAsUser: 65533
            env:
-           - name: RECONCILER_NAME
-             valueFrom:
-               fieldRef:
-                 apiVersion: v1
-                 fieldPath: metadata.name
            - name: NAMESPACE_NAME
              valueFrom:
                fieldRef:
@@ -106,11 +101,6 @@ data:
              mountPath: /repo
              readOnly: true
            env:
-           - name: RECONCILER_NAME
-             valueFrom:
-               fieldRef:
-                 apiVersion: v1
-                 fieldPath: metadata.name
            - name: NAMESPACE_NAME
              valueFrom:
                fieldRef:
