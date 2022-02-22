@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -415,7 +416,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -453,7 +454,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -501,7 +502,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -531,7 +532,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -599,7 +600,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -634,7 +635,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -803,7 +804,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
-				Message: "rendering failed",
+				Message: parse.RenderingFailed,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -838,7 +839,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
-				Message: "rendering failed",
+				Message: parse.RenderingFailed,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -865,7 +866,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -882,12 +883,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("abc123", "rendering succeeded"),
+				syncingTrueCondition("abc123", parse.RenderingSucceeded),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -903,7 +904,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -933,12 +934,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("def456", "rendering succeeded"),
+				syncingTrueCondition("def456", parse.RenderingSucceeded),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -963,7 +964,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -992,7 +993,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1015,7 +1016,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1050,7 +1051,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1078,7 +1079,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1100,12 +1101,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("abc123", "Rendering skipped"),
+				syncingTrueCondition("abc123", parse.RenderingSkipped),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "Rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1125,7 +1126,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1155,12 +1156,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("def456", "Rendering skipped"),
+				syncingTrueCondition("def456", parse.RenderingSkipped),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "Rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1185,7 +1186,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1217,7 +1218,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1245,7 +1246,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1277,7 +1278,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1306,7 +1307,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1336,7 +1337,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1440,7 +1441,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1478,7 +1479,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1526,7 +1527,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1556,7 +1557,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1624,7 +1625,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1659,7 +1660,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -1828,7 +1829,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
-				Message: "rendering failed",
+				Message: parse.RenderingFailed,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1863,7 +1864,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
-				Message: "rendering failed",
+				Message: parse.RenderingFailed,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1890,7 +1891,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1907,12 +1908,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("abc123", "rendering succeeded"),
+				syncingTrueCondition("abc123", parse.RenderingSucceeded),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1928,7 +1929,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1958,12 +1959,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("def456", "rendering succeeded"),
+				syncingTrueCondition("def456", parse.RenderingSucceeded),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering succeeded",
+				Message: parse.RenderingSucceeded,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1988,7 +1989,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -2017,7 +2018,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -2040,7 +2041,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -2075,7 +2076,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -2103,7 +2104,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -2125,12 +2126,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("abc123", "Rendering skipped"),
+				syncingTrueCondition("abc123", parse.RenderingSkipped),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "Rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -2150,7 +2151,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -2180,12 +2181,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingTrueCondition("def456", "Rendering skipped"),
+				syncingTrueCondition("def456", parse.RenderingSkipped),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "Rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -2210,7 +2211,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -2242,7 +2243,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -2270,7 +2271,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -2302,7 +2303,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
@@ -2330,7 +2331,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -2358,7 +2359,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
-				Message: "rendering skipped",
+				Message: parse.RenderingSkipped,
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
