@@ -7,10 +7,11 @@
 package graph
 
 import (
-	"bytes"
-	"fmt"
+	"sort"
 
 	"sigs.k8s.io/cli-utils/pkg/object"
+	"sigs.k8s.io/cli-utils/pkg/object/validation"
+	"sigs.k8s.io/cli-utils/pkg/ordering"
 )
 
 // Graph is contains a directed set of edges, implemented as
@@ -19,13 +20,6 @@ import (
 type Graph struct {
 	// map "from" vertex -> list of "to" vertices
 	edges map[object.ObjMetadata]object.ObjMetadataSet
-}
-
-// Edge encapsulates a pair of vertices describing a
-// directed edge.
-type Edge struct {
-	From object.ObjMetadata
-	To   object.ObjMetadata
 }
 
 // New returns a pointer to an empty Graph data structure.
@@ -41,6 +35,18 @@ func (g *Graph) AddVertex(v object.ObjMetadata) {
 	if _, exists := g.edges[v]; !exists {
 		g.edges[v] = object.ObjMetadataSet{}
 	}
+}
+
+// GetVertices returns a sorted set of unique vertices in the graph.
+func (g *Graph) GetVertices() object.ObjMetadataSet {
+	keys := make(object.ObjMetadataSet, len(g.edges))
+	i := 0
+	for k := range g.edges {
+		keys[i] = k
+		i++
+	}
+	sort.Sort(ordering.SortableMetas(keys))
+	return keys
 }
 
 // AddEdge adds a edge from one ObjMetadata vertex to another. The
@@ -61,8 +67,7 @@ func (g *Graph) AddEdge(from object.ObjMetadata, to object.ObjMetadata) {
 	}
 }
 
-// GetEdges returns the slice of vertex pairs which are
-// the directed edges of the graph.
+// GetEdges returns a sorted slice of directed graph edges (vertex pairs).
 func (g *Graph) GetEdges() []Edge {
 	edges := []Edge{}
 	for from, toList := range g.edges {
@@ -71,6 +76,7 @@ func (g *Graph) GetEdges() []Edge {
 			edges = append(edges, edge)
 		}
 	}
+	sort.Sort(SortableEdges(edges))
 	return edges
 }
 
@@ -121,9 +127,10 @@ func (g *Graph) Sort() ([]object.ObjMetadataSet, error) {
 		// No leaf vertices means cycle in the directed graph,
 		// where remaining edges define the cycle.
 		if len(leafVertices) == 0 {
-			return []object.ObjMetadataSet{}, CyclicDependencyError{
+			// Error can be ignored, so return the full set list
+			return sorted, validation.NewError(CyclicDependencyError{
 				Edges: g.GetEdges(),
-			}
+			}, g.GetVertices()...)
 		}
 		// Remove all edges to leaf vertices.
 		for _, v := range leafVertices {
@@ -132,21 +139,4 @@ func (g *Graph) Sort() ([]object.ObjMetadataSet, error) {
 		sorted = append(sorted, leafVertices)
 	}
 	return sorted, nil
-}
-
-// CyclicDependencyError when directed acyclic graph contains a cycle.
-// The cycle makes it impossible to topological sort.
-type CyclicDependencyError struct {
-	Edges []Edge
-}
-
-func (cde CyclicDependencyError) Error() string {
-	var errorBuf bytes.Buffer
-	errorBuf.WriteString("cyclic dependency")
-	for _, edge := range cde.Edges {
-		from := fmt.Sprintf("%s/%s", edge.From.Namespace, edge.From.Name)
-		to := fmt.Sprintf("%s/%s", edge.To.Namespace, edge.To.Name)
-		errorBuf.WriteString(fmt.Sprintf("\n\t%s -> %s", from, to))
-	}
-	return errorBuf.String()
 }

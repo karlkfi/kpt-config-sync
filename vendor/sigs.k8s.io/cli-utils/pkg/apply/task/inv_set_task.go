@@ -16,8 +16,8 @@ import (
 // inventory references at the end of the apply/prune.
 type InvSetTask struct {
 	TaskName      string
-	InvClient     inventory.InventoryClient
-	InvInfo       inventory.InventoryInfo
+	InvClient     inventory.Client
+	InvInfo       inventory.Info
 	PrevInventory object.ObjMetadataSet
 	DryRun        common.DryRunStrategy
 }
@@ -59,8 +59,11 @@ func (i *InvSetTask) Start(taskContext *taskrunner.TaskContext) {
 		klog.V(2).Infof("inventory set task starting (name: %q)", i.Name())
 		invObjs := object.ObjMetadataSet{}
 
+		// TODO: Just use InventoryManager.Store()
+		im := taskContext.InventoryManager()
+
 		// If an object applied successfully, keep or add it to the inventory.
-		appliedObjs := taskContext.SuccessfulApplies()
+		appliedObjs := im.SuccessfulApplies()
 		klog.V(4).Infof("set inventory %d successful applies", len(appliedObjs))
 		invObjs = invObjs.Union(appliedObjs)
 
@@ -69,7 +72,7 @@ func (i *InvSetTask) Start(taskContext *taskrunner.TaskContext) {
 		// This will remove new resources that failed to apply from the inventory,
 		// because even tho they were added by InvAddTask, the PrevInventory
 		// represents the inventory before the pipeline has run.
-		applyFailures := i.PrevInventory.Intersection(taskContext.FailedApplies())
+		applyFailures := i.PrevInventory.Intersection(im.FailedApplies())
 		klog.V(4).Infof("keep in inventory %d failed applies", len(applyFailures))
 		invObjs = invObjs.Union(applyFailures)
 
@@ -78,7 +81,7 @@ func (i *InvSetTask) Start(taskContext *taskrunner.TaskContext) {
 		// It's likely that all the skipped applies are already in the inventory,
 		// because the apply filters all currently depend on cluster state,
 		// but we're doing the intersection anyway just to be sure.
-		applySkips := i.PrevInventory.Intersection(taskContext.SkippedApplies())
+		applySkips := i.PrevInventory.Intersection(im.SkippedApplies())
 		klog.V(4).Infof("keep in inventory %d skipped applies", len(applySkips))
 		invObjs = invObjs.Union(applySkips)
 
@@ -87,7 +90,7 @@ func (i *InvSetTask) Start(taskContext *taskrunner.TaskContext) {
 		// It's likely that all the delete failures are already in the inventory,
 		// because the set of resources to prune comes from the inventory,
 		// but we're doing the intersection anyway just to be sure.
-		pruneFailures := i.PrevInventory.Intersection(taskContext.FailedDeletes())
+		pruneFailures := i.PrevInventory.Intersection(im.FailedDeletes())
 		klog.V(4).Infof("set inventory %d failed prunes", len(pruneFailures))
 		invObjs = invObjs.Union(pruneFailures)
 
@@ -96,7 +99,7 @@ func (i *InvSetTask) Start(taskContext *taskrunner.TaskContext) {
 		// It's likely that all the skipped deletes are already in the inventory,
 		// because the set of resources to prune comes from the inventory,
 		// but we're doing the intersection anyway just to be sure.
-		pruneSkips := i.PrevInventory.Intersection(taskContext.SkippedDeletes())
+		pruneSkips := i.PrevInventory.Intersection(im.SkippedDeletes())
 		klog.V(4).Infof("keep in inventory %d skipped prunes", len(pruneSkips))
 		invObjs = invObjs.Union(pruneSkips)
 
@@ -105,8 +108,17 @@ func (i *InvSetTask) Start(taskContext *taskrunner.TaskContext) {
 		klog.V(4).Infof("remove from inventory %d abandoned objects", len(abandonedObjects))
 		invObjs = invObjs.Diff(abandonedObjects)
 
+		// If an object is invalid and was previously stored in the inventory,
+		// then keep it in the inventory so it can be applied/pruned next time.
+		invalidObjects := i.PrevInventory.Intersection(taskContext.InvalidObjects())
+		klog.V(4).Infof("keep in inventory %d invalid objects", len(invalidObjects))
+		invObjs = invObjs.Union(invalidObjects)
+
+		klog.V(4).Infof("get the apply status for %d objects", len(invObjs))
+		objStatus := taskContext.InventoryManager().Inventory().Status.Objects
+
 		klog.V(4).Infof("set inventory %d total objects", len(invObjs))
-		err := i.InvClient.Replace(i.InvInfo, invObjs, i.DryRun)
+		err := i.InvClient.Replace(i.InvInfo, invObjs, objStatus, i.DryRun)
 
 		klog.V(2).Infof("inventory set task completing (name: %q)", i.Name())
 		taskContext.TaskChannel() <- taskrunner.TaskResult{Err: err}

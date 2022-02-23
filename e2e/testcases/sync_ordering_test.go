@@ -175,6 +175,10 @@ func TestSyncOrdering(t *testing.T) {
 	//   * cm3 depends on cm1
 
 	nt.T.Log("A new test: verify that an object can be removed without affecting its dependency (cm3 depends on cm1, and both cm3 and cm1 exist in the Git repo and on the cluster.)")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cm3.yaml", fake.ConfigMapObject(core.Name(cm3Name), core.Namespace(namespaceName)))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove the depends on annotation in cm3")
+	nt.WaitForRepoSyncs()
+
 	nt.T.Log("Remove cm3")
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm3.yaml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove cm3")
@@ -198,6 +202,10 @@ func TestSyncOrdering(t *testing.T) {
 	//   * cm2 depends on cm1
 
 	nt.T.Log("A new test: verify that an object and its dependency can be removed together (cm1 and cm2 both exist in the Git repo and on the cluster. cm2 depends on cm1.)")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cm1.yaml", fake.ConfigMapObject(core.Name(cm1Name), core.Namespace(namespaceName)))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/cm2.yaml", fake.ConfigMapObject(core.Name(cm2Name), core.Namespace(namespaceName)))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove the depends on annotation in cm1 and cm2")
+	nt.WaitForRepoSyncs()
 	nt.T.Log("Remove cm1 and cm2")
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm1.yaml")
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm2.yaml")

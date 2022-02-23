@@ -10,6 +10,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 const (
@@ -42,7 +43,10 @@ func ReadAnnotation(u *unstructured.Unstructured) (DependencySet, error) {
 
 	depSet, err := ParseDependencySet(depSetStr)
 	if err != nil {
-		return depSet, fmt.Errorf("failed to parse dependency set: %w", err)
+		return depSet, object.InvalidAnnotationError{
+			Annotation: Annotation,
+			Cause:      err,
+		}
 	}
 	return depSet, nil
 }
@@ -61,7 +65,7 @@ func WriteAnnotation(obj *unstructured.Unstructured, depSet DependencySet) error
 
 	depSetStr, err := FormatDependencySet(depSet)
 	if err != nil {
-		return fmt.Errorf("failed to format dependency set: %w", err)
+		return fmt.Errorf("failed to format depends-on annotation: %w", err)
 	}
 
 	a := obj.GetAnnotations()

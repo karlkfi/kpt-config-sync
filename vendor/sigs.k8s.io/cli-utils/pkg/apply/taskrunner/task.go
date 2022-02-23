@@ -6,13 +6,12 @@ package taskrunner
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/restmapper"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
@@ -38,11 +37,11 @@ type Task interface {
 // the resources specifies by ids all meet the specified condition.
 func NewWaitTask(name string, ids object.ObjMetadataSet, cond Condition, timeout time.Duration, mapper meta.RESTMapper) *WaitTask {
 	return &WaitTask{
-		name:      name,
+		TaskName:  name,
 		Ids:       ids,
 		Condition: cond,
 		Timeout:   timeout,
-		mapper:    mapper,
+		Mapper:    mapper,
 	}
 }
 
@@ -54,8 +53,8 @@ func NewWaitTask(name string, ids object.ObjMetadataSet, cond Condition, timeout
 // is handled in a special way to the taskrunner and is a part of the core
 // package.
 type WaitTask struct {
-	// name allows providing a name for the task.
-	name string
+	// TaskName allows providing a name for the task.
+	TaskName string
 	// Ids is the full list of resources that we are waiting for.
 	Ids object.ObjMetadataSet
 	// Condition defines the status we want all resources to reach
@@ -63,8 +62,8 @@ type WaitTask struct {
 	// Timeout defines how long we are willing to wait for the condition
 	// to be met.
 	Timeout time.Duration
-	// mapper is the RESTMapper to update after CRDs have been reconciled
-	mapper meta.RESTMapper
+	// Mapper is the RESTMapper to update after CRDs have been reconciled
+	Mapper meta.RESTMapper
 	// cancelFunc is a function that will cancel the timeout timer
 	// on the task.
 	cancelFunc context.CancelFunc
@@ -78,7 +77,7 @@ type WaitTask struct {
 }
 
 func (w *WaitTask) Name() string {
-	return w.name
+	return w.TaskName
 }
 
 func (w *WaitTask) Action() event.ResourceAction {
@@ -114,7 +113,7 @@ func (w *WaitTask) Start(taskContext *TaskContext) {
 		// Err is always non-nil when Done channel is closed.
 		err := ctx.Err()
 
-		klog.V(2).Infof("wait task completing (name: %q,): %v", w.name, err)
+		klog.V(2).Infof("wait task completing (name: %q,): %v", w.TaskName, err)
 
 		switch err {
 		case context.Canceled:
@@ -153,11 +152,29 @@ func (w *WaitTask) startInner(taskContext *TaskContext) {
 	pending := object.ObjMetadataSet{}
 	for _, id := range w.Ids {
 		switch {
+		case w.changedUID(taskContext, id):
+			// replaced
+			w.handleChangedUID(taskContext, id)
 		case w.skipped(taskContext, id):
+			err := taskContext.InventoryManager().SetSkippedReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as skipped reconcile: %v", err)
+			}
 			w.sendEvent(taskContext, id, event.ReconcileSkipped)
 		case w.reconciledByID(taskContext, id):
+			err := taskContext.InventoryManager().SetSuccessfulReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as successful reconcile: %v", err)
+			}
 			w.sendEvent(taskContext, id, event.Reconciled)
 		default:
+			err := taskContext.InventoryManager().SetPendingReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as pending reconcile: %v", err)
+			}
 			pending = append(pending, id)
 			w.sendEvent(taskContext, id, event.ReconcilePending)
 		}
@@ -166,7 +183,7 @@ func (w *WaitTask) startInner(taskContext *TaskContext) {
 
 	if len(pending) == 0 {
 		// all reconciled - clear pending and exit
-		klog.V(3).Infof("all objects reconciled or skipped (name: %q)", w.name)
+		klog.V(3).Infof("all objects reconciled or skipped (name: %q)", w.TaskName)
 		w.cancelFunc()
 	}
 }
@@ -178,6 +195,11 @@ func (w *WaitTask) sendTimeoutEvents(taskContext *TaskContext) {
 	defer w.mu.RUnlock()
 
 	for _, id := range w.pending {
+		err := taskContext.InventoryManager().SetTimeoutReconcile(id)
+		if err != nil {
+			// Object never applied or deleted!
+			klog.Errorf("Failed to mark object as pending reconcile: %v", err)
+		}
 		w.sendEvent(taskContext, id, event.ReconcileTimeout)
 	}
 }
@@ -191,12 +213,13 @@ func (w *WaitTask) reconciledByID(taskContext *TaskContext, id object.ObjMetadat
 // skipped returns true if the object failed or was skipped by a preceding
 // apply/delete/prune task.
 func (w *WaitTask) skipped(taskContext *TaskContext, id object.ObjMetadata) bool {
+	im := taskContext.InventoryManager()
 	if w.Condition == AllCurrent &&
-		taskContext.IsFailedApply(id) || taskContext.IsSkippedApply(id) {
+		im.IsFailedApply(id) || im.IsSkippedApply(id) {
 		return true
 	}
 	if w.Condition == AllNotFound &&
-		taskContext.IsFailedDelete(id) || taskContext.IsSkippedDelete(id) {
+		im.IsFailedDelete(id) || im.IsSkippedDelete(id) {
 		return true
 	}
 	return false
@@ -206,6 +229,77 @@ func (w *WaitTask) skipped(taskContext *TaskContext, id object.ObjMetadata) bool
 func (w *WaitTask) failedByID(taskContext *TaskContext, id object.ObjMetadata) bool {
 	cached := taskContext.ResourceCache().Get(id)
 	return cached.Status == status.FailedStatus
+}
+
+// changedUID returns true if the UID of the object has changed since it was
+// applied or deleted. This indicates that the object was deleted and recreated.
+func (w *WaitTask) changedUID(taskContext *TaskContext, id object.ObjMetadata) bool {
+	var oldUID, newUID types.UID
+
+	// Get the uid from the ApplyTask/PruneTask
+	taskObj, found := taskContext.InventoryManager().ObjectStatus(id)
+	if !found {
+		klog.Errorf("Unknown object UID from InventoryManager: %v", id)
+		return false
+	}
+	oldUID = taskObj.UID
+	if oldUID == "" {
+		// All objects should have been given a UID by the apiserver
+		klog.Errorf("Empty object UID from InventoryManager: %v", id)
+		return false
+	}
+
+	// Get the uid from the StatusPoller
+	pollerObj := taskContext.ResourceCache().Get(id)
+	if pollerObj.Resource == nil {
+		switch pollerObj.Status {
+		case status.UnknownStatus:
+			// Resource is expected to be nil when Unknown.
+		case status.NotFoundStatus:
+			// Resource is expected to be nil when NotFound.
+			// K8s DELETE API doesn't always return an object.
+		default:
+			// For all other statuses, nil Resource is probably a bug.
+			klog.Errorf("Unknown object UID from ResourceCache (status: %v): %v", pollerObj.Status, id)
+		}
+		return false
+	}
+	newUID = pollerObj.Resource.GetUID()
+	if newUID == "" {
+		// All objects should have been given a UID by the apiserver
+		klog.Errorf("Empty object UID from ResourceCache (status: %v): %v", pollerObj.Status, id)
+		return false
+	}
+
+	return (oldUID != newUID)
+}
+
+// handleChangedUID updates the object status and sends an event
+func (w *WaitTask) handleChangedUID(taskContext *TaskContext, id object.ObjMetadata) {
+	switch w.Condition {
+	case AllNotFound:
+		// Object recreated by another actor after deletion.
+		// Treat as success.
+		klog.Infof("UID change detected: deleted object have been recreated: marking reconcile successful: %v", id)
+		err := taskContext.InventoryManager().SetSuccessfulReconcile(id)
+		if err != nil {
+			// Object never applied or deleted!
+			klog.Errorf("Failed to mark object as successful reconcile: %v", err)
+		}
+		w.sendEvent(taskContext, id, event.Reconciled)
+	case AllCurrent:
+		// Object deleted and recreated by another actor after apply.
+		// Treat as failure (unverifiable).
+		klog.Infof("UID change detected: applied object has been deleted and recreated: marking reconcile failed: %v", id)
+		err := taskContext.InventoryManager().SetFailedReconcile(id)
+		if err != nil {
+			// Object never applied or deleted!
+			klog.Errorf("Failed to mark object as failed reconcile: %v", err)
+		}
+		w.sendEvent(taskContext, id, event.ReconcileFailed)
+	default:
+		panic(fmt.Sprintf("Invalid wait condition: %v", w.Condition))
+	}
 }
 
 // Cancel exits early with a timeout error
@@ -222,19 +316,32 @@ func (w *WaitTask) StatusUpdate(taskContext *TaskContext, id object.ObjMetadata)
 
 	if klog.V(5).Enabled() {
 		status := taskContext.ResourceCache().Get(id).Status
-		klog.Errorf("status update (object: %q, status: %q)", id, status)
+		klog.Infof("status update (object: %q, status: %q)", id, status)
 	}
 
 	switch {
 	case w.pending.Contains(id):
 		switch {
-		// pending - check if reconciled
+		case w.changedUID(taskContext, id):
+			// replaced
+			w.handleChangedUID(taskContext, id)
+			w.pending = w.pending.Remove(id)
 		case w.reconciledByID(taskContext, id):
 			// reconciled - remove from pending & send event
+			err := taskContext.InventoryManager().SetSuccessfulReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as successful reconcile: %v", err)
+			}
 			w.pending = w.pending.Remove(id)
 			w.sendEvent(taskContext, id, event.Reconciled)
 		case w.failedByID(taskContext, id):
 			// failed - remove from pending & send event
+			err := taskContext.InventoryManager().SetFailedReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as failed reconcile: %v", err)
+			}
 			w.pending = w.pending.Remove(id)
 			w.failed = append(w.failed, id)
 			w.sendEvent(taskContext, id, event.ReconcileFailed)
@@ -253,11 +360,22 @@ func (w *WaitTask) StatusUpdate(taskContext *TaskContext, id object.ObjMetadata)
 		// resources have completed/timed out, we consider it
 		// current.
 		if w.reconciledByID(taskContext, id) {
+			// reconciled - remove from pending & send event
+			err := taskContext.InventoryManager().SetSuccessfulReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as successful reconcile: %v", err)
+			}
 			w.failed = w.failed.Remove(id)
 			w.sendEvent(taskContext, id, event.Reconciled)
 		} else if !w.failedByID(taskContext, id) {
 			// If a resource is no longer reported as Failed and is not Reconciled,
 			// they should just go back to InProgress.
+			err := taskContext.InventoryManager().SetPendingReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as pending reconcile: %v", err)
+			}
 			w.failed = w.failed.Remove(id)
 			w.pending = append(w.pending, id)
 			w.sendEvent(taskContext, id, event.ReconcilePending)
@@ -270,6 +388,11 @@ func (w *WaitTask) StatusUpdate(taskContext *TaskContext, id object.ObjMetadata)
 		// reconciled - check if unreconciled
 		if !w.reconciledByID(taskContext, id) {
 			// unreconciled - add to pending & send event
+			err := taskContext.InventoryManager().SetPendingReconcile(id)
+			if err != nil {
+				// Object never applied or deleted!
+				klog.Errorf("Failed to mark object as pending reconcile: %v", err)
+			}
 			w.pending = append(w.pending, id)
 			w.sendEvent(taskContext, id, event.ReconcilePending)
 			// can't be all reconciled now, so don't bother checking
@@ -281,7 +404,7 @@ func (w *WaitTask) StatusUpdate(taskContext *TaskContext, id object.ObjMetadata)
 	// can be completed.
 	if len(w.pending) == 0 {
 		// all reconciled, so exit
-		klog.V(3).Infof("all objects reconciled or skipped (name: %q)", w.name)
+		klog.V(3).Infof("all objects reconciled or skipped (name: %q)", w.TaskName)
 		w.cancelFunc()
 	}
 }
@@ -304,30 +427,5 @@ func (w *WaitTask) updateRESTMapper(taskContext *TaskContext) {
 	}
 
 	klog.V(5).Infof("resetting RESTMapper")
-	ddRESTMapper, err := extractDeferredDiscoveryRESTMapper(w.mapper)
-	if err != nil {
-		if klog.V(4).Enabled() {
-			klog.Errorf("error resetting RESTMapper: %v", err)
-		}
-	}
-	ddRESTMapper.Reset()
-}
-
-// extractDeferredDiscoveryRESTMapper unwraps the provided RESTMapper
-// interface to get access to the underlying DeferredDiscoveryRESTMapper
-// that can be reset.
-func extractDeferredDiscoveryRESTMapper(mapper meta.RESTMapper) (
-	*restmapper.DeferredDiscoveryRESTMapper,
-	error,
-) {
-	val := reflect.ValueOf(mapper)
-	if val.Type().Kind() != reflect.Struct {
-		return nil, fmt.Errorf("unexpected RESTMapper type: %s", val.Type().String())
-	}
-	fv := val.FieldByName("RESTMapper")
-	ddRESTMapper, ok := fv.Interface().(*restmapper.DeferredDiscoveryRESTMapper)
-	if !ok {
-		return nil, fmt.Errorf("unexpected RESTMapper field type: %s", fv.Type())
-	}
-	return ddRESTMapper, nil
+	meta.MaybeResetRESTMapper(w.Mapper)
 }

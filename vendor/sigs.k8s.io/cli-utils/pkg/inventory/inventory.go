@@ -17,6 +17,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/cli-utils/pkg/apis/actuation"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
@@ -24,25 +25,25 @@ import (
 // The default inventory name stored in the inventory template.
 const legacyInvName = "inventory"
 
-// Inventory describes methods necessary for an object which
+// Storage describes methods necessary for an object which
 // can persist the object metadata for pruning and other group
 // operations.
-type Inventory interface {
+type Storage interface {
 	// Load retrieves the set of object metadata from the inventory object
 	Load() (object.ObjMetadataSet, error)
 	// Store the set of object metadata in the inventory object
-	Store(objs object.ObjMetadataSet) error
+	Store(objs object.ObjMetadataSet, status []actuation.ObjectStatus) error
 	// GetObject returns the object that stores the inventory
 	GetObject() (*unstructured.Unstructured, error)
 }
 
-// InventoryFactoryFunc creates the object which implements the Inventory
+// StorageFactoryFunc creates the object which implements the Inventory
 // interface from the passed info object.
-type InventoryFactoryFunc func(*unstructured.Unstructured) Inventory
+type StorageFactoryFunc func(*unstructured.Unstructured) Storage
 
-// InventoryToUnstructuredFunc returns the unstructured object for the
-// given InventoryInfo.
-type InventoryToUnstructuredFunc func(InventoryInfo) *unstructured.Unstructured
+// ToUnstructuredFunc returns the unstructured object for the
+// given Info.
+type ToUnstructuredFunc func(Info) *unstructured.Unstructured
 
 // FindInventoryObj returns the "Inventory" object (ConfigMap with
 // inventory label) if it exists, or nil if it does not exist.

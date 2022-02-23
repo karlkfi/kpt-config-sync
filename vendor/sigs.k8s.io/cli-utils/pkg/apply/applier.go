@@ -6,13 +6,14 @@ package apply
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/cli-utils/pkg/apply/cache"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/apply/filter"
@@ -24,34 +25,11 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply/taskrunner"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/engine"
 	"sigs.k8s.io/cli-utils/pkg/object"
-	"sigs.k8s.io/cli-utils/pkg/ordering"
+	"sigs.k8s.io/cli-utils/pkg/object/validation"
 )
 
-// NewApplier returns a new Applier.
-func NewApplier(factory cmdutil.Factory, invClient inventory.InventoryClient) (*Applier, error) {
-	pruner, err := prune.NewPruner(factory, invClient)
-	if err != nil {
-		return nil, err
-	}
-	statusPoller, err := polling.NewStatusPollerFromFactory(factory, []engine.StatusReader{})
-	if err != nil {
-		return nil, err
-	}
-	mapper, err := factory.ToRESTMapper()
-	if err != nil {
-		return nil, err
-	}
-	return &Applier{
-		pruner:       pruner,
-		StatusPoller: statusPoller,
-		factory:      factory,
-		invClient:    invClient,
-		infoHelper:   info.NewInfoHelper(mapper, factory),
-	}, nil
-}
+const defaultPollInterval = 2 * time.Second
 
 // Applier performs the step of applying a set of resources into a cluster,
 // conditionally waits for all of them to be fully reconciled and finally
@@ -64,17 +42,19 @@ func NewApplier(factory cmdutil.Factory, invClient inventory.InventoryClient) (*
 // parameters and/or the set of resources that needs to be applied to the
 // cluster, different sets of tasks might be needed.
 type Applier struct {
-	pruner       *prune.Pruner
-	StatusPoller poller.Poller
-	factory      cmdutil.Factory
-	invClient    inventory.InventoryClient
-	infoHelper   info.InfoHelper
+	pruner        *prune.Pruner
+	statusPoller  poller.Poller
+	invClient     inventory.Client
+	client        dynamic.Interface
+	openAPIGetter discovery.OpenAPISchemaInterface
+	mapper        meta.RESTMapper
+	infoHelper    info.Helper
 }
 
 // prepareObjects returns the set of objects to apply and to prune or
 // an error if one occurred.
-func (a *Applier) prepareObjects(localInv inventory.InventoryInfo, localObjs object.UnstructuredSet,
-	o Options) (object.UnstructuredSet, object.UnstructuredSet, error) {
+func (a *Applier) prepareObjects(localInv inventory.Info, localObjs object.UnstructuredSet,
+	o ApplierOptions) (object.UnstructuredSet, object.UnstructuredSet, error) {
 	if localInv == nil {
 		return nil, nil, fmt.Errorf("the local inventory can't be nil")
 	}
@@ -111,45 +91,33 @@ func (a *Applier) prepareObjects(localInv inventory.InventoryInfo, localObjs obj
 	if err != nil {
 		return nil, nil, err
 	}
-	sort.Sort(ordering.SortableUnstructureds(localObjs))
 	return localObjs, pruneObjs, nil
 }
 
 // Run performs the Apply step. This happens asynchronously with updates
-// on progress and any errors are reported back on the event channel.
+// on progress and any errors reported back on the event channel.
 // Cancelling the operation or setting timeout on how long to Wait
 // for it complete can be done with the passed in context.
 // Note: There isn't currently any way to interrupt the operation
 // before all the given resources have been applied to the cluster. Any
 // cancellation or timeout will only affect how long we Wait for the
 // resources to become current.
-func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, objects object.UnstructuredSet, options Options) <-chan event.Event {
+func (a *Applier) Run(ctx context.Context, invInfo inventory.Info, objects object.UnstructuredSet, options ApplierOptions) <-chan event.Event {
 	klog.V(4).Infof("apply run for %d objects", len(objects))
 	eventChannel := make(chan event.Event)
 	setDefaults(&options)
 	go func() {
 		defer close(eventChannel)
-
-		client, err := a.factory.DynamicClient()
-		if err != nil {
-			handleError(eventChannel, err)
-			return
-		}
-		mapper, err := a.factory.ToRESTMapper()
-		if err != nil {
-			handleError(eventChannel, err)
-			return
-		}
-
 		// Validate the resources to make sure we catch those problems early
 		// before anything has been updated in the cluster.
-		if err := (&object.Validator{
-			Mapper: mapper,
-		}).Validate(objects); err != nil {
-			handleError(eventChannel, err)
-			return
+		vCollector := &validation.Collector{}
+		validator := &validation.Validator{
+			Collector: vCollector,
+			Mapper:    a.mapper,
 		}
+		validator.Validate(objects)
 
+		// Decide which objects to apply and which to prune
 		applyObjs, pruneObjs, err := a.prepareObjects(invInfo, objects, options)
 		if err != nil {
 			handleError(eventChannel, err)
@@ -160,12 +128,14 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 		// Fetch the queue (channel) of tasks that should be executed.
 		klog.V(4).Infoln("applier building task queue...")
 		taskBuilder := &solver.TaskQueueBuilder{
-			Pruner:     a.pruner,
-			Factory:    a.factory,
-			InfoHelper: a.infoHelper,
-			Mapper:     mapper,
-			InvClient:  a.invClient,
-			Destroy:    false,
+			Pruner:        a.pruner,
+			DynamicClient: a.client,
+			OpenAPIGetter: a.openAPIGetter,
+			InfoHelper:    a.infoHelper,
+			Mapper:        a.mapper,
+			InvClient:     a.invClient,
+			Destroy:       false,
+			Collector:     vCollector,
 		}
 		opts := solver.Options{
 			ServerSideOptions:      options.ServerSideOptions,
@@ -177,14 +147,13 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 			InventoryPolicy:        options.InventoryPolicy,
 		}
 		// Build list of apply validation filters.
-		applyFilters := []filter.ValidationFilter{}
-		if options.InventoryPolicy != inventory.AdoptAll {
-			applyFilters = append(applyFilters, filter.InventoryPolicyApplyFilter{
-				Client:    client,
-				Mapper:    mapper,
+		applyFilters := []filter.ValidationFilter{
+			filter.InventoryPolicyApplyFilter{
+				Client:    a.client,
+				Mapper:    a.mapper,
 				Inv:       invInfo,
 				InvPolicy: options.InventoryPolicy,
-			})
+			},
 		}
 
 		// Build list of prune validation filters.
@@ -199,26 +168,51 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 			},
 		}
 		// Build list of apply mutators.
-		// Share a thread-safe cache with the status poller.
 		resourceCache := cache.NewResourceCacheMap()
 		applyMutators := []mutator.Interface{
 			&mutator.ApplyTimeMutator{
-				Client:        client,
-				Mapper:        mapper,
+				Client:        a.client,
+				Mapper:        a.mapper,
 				ResourceCache: resourceCache,
 			},
 		}
-		// Build the task queue by appending tasks in the proper order.
-		taskQueue, err := taskBuilder.
+
+		// Build the ordered set of tasks to execute.
+		taskQueue := taskBuilder.
 			AppendInvAddTask(invInfo, applyObjs, options.DryRunStrategy).
 			AppendApplyWaitTasks(applyObjs, applyFilters, applyMutators, opts).
 			AppendPruneWaitTasks(pruneObjs, pruneFilters, opts).
 			AppendInvSetTask(invInfo, options.DryRunStrategy).
 			Build()
-		if err != nil {
-			handleError(eventChannel, err)
+
+		klog.V(4).Infof("validation errors: %d", len(vCollector.Errors))
+		klog.V(4).Infof("invalid objects: %d", len(vCollector.InvalidIds))
+
+		// Handle validation errors
+		switch options.ValidationPolicy {
+		case validation.ExitEarly:
+			err = vCollector.ToError()
+			if err != nil {
+				handleError(eventChannel, err)
+				return
+			}
+		case validation.SkipInvalid:
+			for _, err := range vCollector.Errors {
+				handleValidationError(eventChannel, err)
+			}
+		default:
+			handleError(eventChannel, fmt.Errorf("invalid ValidationPolicy: %q", options.ValidationPolicy))
 			return
 		}
+
+		// Build a TaskContext for passing info between tasks
+		taskContext := taskrunner.NewTaskContext(eventChannel, resourceCache)
+
+		// Register invalid objects to be retained in the inventory, if present.
+		for _, id := range vCollector.InvalidIds {
+			taskContext.AddInvalidObject(id)
+		}
+
 		// Send event to inform the caller about the resources that
 		// will be applied/pruned.
 		eventChannel <- event.Event{
@@ -230,11 +224,10 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 		// Create a new TaskStatusRunner to execute the taskQueue.
 		klog.V(4).Infoln("applier building TaskStatusRunner...")
 		allIds := object.UnstructuredSetToObjMetadataSet(append(applyObjs, pruneObjs...))
-		runner := taskrunner.NewTaskStatusRunner(allIds, a.StatusPoller, resourceCache)
+		runner := taskrunner.NewTaskStatusRunner(allIds, a.statusPoller)
 		klog.V(4).Infoln("applier running TaskStatusRunner...")
-		err = runner.Run(ctx, taskQueue.ToChannel(), eventChannel, taskrunner.Options{
+		err = runner.Run(ctx, taskContext, taskQueue.ToChannel(), taskrunner.Options{
 			PollInterval:     options.PollInterval,
-			UseCache:         true,
 			EmitStatusEvents: options.EmitStatusEvents,
 		})
 		if err != nil {
@@ -245,7 +238,7 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 	return eventChannel
 }
 
-type Options struct {
+type ApplierOptions struct {
 	// Encapsulates the fields for server-side apply.
 	ServerSideOptions common.ServerSideOptions
 
@@ -281,14 +274,17 @@ type Options struct {
 	PruneTimeout time.Duration
 
 	// InventoryPolicy defines the inventory policy of apply.
-	InventoryPolicy inventory.InventoryPolicy
+	InventoryPolicy inventory.Policy
+
+	// ValidationPolicy defines how to handle invalid objects.
+	ValidationPolicy validation.Policy
 }
 
 // setDefaults set the options to the default values if they
 // have not been provided.
-func setDefaults(o *Options) {
-	if o.PollInterval == time.Duration(0) {
-		o.PollInterval = poller.DefaultPollInterval
+func setDefaults(o *ApplierOptions) {
+	if o.PollInterval == 0 {
+		o.PollInterval = defaultPollInterval
 	}
 	if o.PrunePropagationPolicy == "" {
 		o.PrunePropagationPolicy = metav1.DeletePropagationBackground
@@ -308,7 +304,7 @@ func handleError(eventChannel chan event.Event, err error) {
 // for the passed non cluster-scoped localObjs, plus the namespace
 // of the passed inventory object. This is used to skip deleting
 // namespaces which have currently applied objects in them.
-func localNamespaces(localInv inventory.InventoryInfo, localObjs []object.ObjMetadata) sets.String {
+func localNamespaces(localInv inventory.Info, localObjs []object.ObjMetadata) sets.String {
 	namespaces := sets.NewString()
 	for _, obj := range localObjs {
 		if obj.Namespace != "" {
@@ -320,4 +316,26 @@ func localNamespaces(localInv inventory.InventoryInfo, localObjs []object.ObjMet
 		namespaces.Insert(invNamespace)
 	}
 	return namespaces
+}
+
+func handleValidationError(eventChannel chan<- event.Event, err error) {
+	switch tErr := err.(type) {
+	case *validation.Error:
+		// handle validation error about one or more specific objects
+		eventChannel <- event.Event{
+			Type: event.ValidationType,
+			ValidationEvent: event.ValidationEvent{
+				Identifiers: tErr.Identifiers(),
+				Error:       tErr,
+			},
+		}
+	default:
+		// handle general validation error (no specific object)
+		eventChannel <- event.Event{
+			Type: event.ValidationType,
+			ValidationEvent: event.ValidationEvent{
+				Error: tErr,
+			},
+		}
+	}
 }

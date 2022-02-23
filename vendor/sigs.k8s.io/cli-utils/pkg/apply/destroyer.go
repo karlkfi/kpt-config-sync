@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply/cache"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/apply/filter"
+	"sigs.k8s.io/cli-utils/pkg/apply/info"
 	"sigs.k8s.io/cli-utils/pkg/apply/poller"
 	"sigs.k8s.io/cli-utils/pkg/apply/prune"
 	"sigs.k8s.io/cli-utils/pkg/apply/solver"
@@ -21,8 +22,8 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/engine"
 	"sigs.k8s.io/cli-utils/pkg/object"
+	"sigs.k8s.io/cli-utils/pkg/object/validation"
 )
 
 // NewDestroyer returns a new destroyer. It will set up the ApplyOptions and
@@ -31,12 +32,12 @@ import (
 // the ApplyOptions were responsible for printing progress. This is now
 // handled by a separate printer with the KubectlPrinterAdapter bridging
 // between the two.
-func NewDestroyer(factory cmdutil.Factory, invClient inventory.InventoryClient) (*Destroyer, error) {
+func NewDestroyer(factory cmdutil.Factory, invClient inventory.Client) (*Destroyer, error) {
 	pruner, err := prune.NewPruner(factory, invClient)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up PruneOptions: %w", err)
 	}
-	statusPoller, err := polling.NewStatusPollerFromFactory(factory, []engine.StatusReader{})
+	statusPoller, err := polling.NewStatusPollerFromFactory(factory, polling.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +55,12 @@ type Destroyer struct {
 	pruner       *prune.Pruner
 	StatusPoller poller.Poller
 	factory      cmdutil.Factory
-	invClient    inventory.InventoryClient
+	invClient    inventory.Client
 }
 
 type DestroyerOptions struct {
 	// InventoryPolicy defines the inventory policy of apply.
-	InventoryPolicy inventory.InventoryPolicy
+	InventoryPolicy inventory.Policy
 
 	// DryRunStrategy defines whether changes should actually be performed,
 	// or if it is just talk and no action.
@@ -81,11 +82,14 @@ type DestroyerOptions struct {
 	// PollInterval defines how often we should poll for the status
 	// of resources.
 	PollInterval time.Duration
+
+	// ValidationPolicy defines how to handle invalid objects.
+	ValidationPolicy validation.Policy
 }
 
 func setDestroyerDefaults(o *DestroyerOptions) {
 	if o.PollInterval == time.Duration(0) {
-		o.PollInterval = poller.DefaultPollInterval
+		o.PollInterval = defaultPollInterval
 	}
 	if o.DeletePropagationPolicy == "" {
 		o.DeletePropagationPolicy = metav1.DeletePropagationBackground
@@ -95,7 +99,7 @@ func setDestroyerDefaults(o *DestroyerOptions) {
 // Run performs the destroy step. Passes the inventory object. This
 // happens asynchronously on progress and any errors are reported
 // back on the event channel.
-func (d *Destroyer) Run(ctx context.Context, inv inventory.InventoryInfo, options DestroyerOptions) <-chan event.Event {
+func (d *Destroyer) Run(ctx context.Context, inv inventory.Info, options DestroyerOptions) <-chan event.Event {
 	eventChannel := make(chan event.Event)
 	setDestroyerDefaults(&options)
 	go func() {
@@ -115,13 +119,31 @@ func (d *Destroyer) Run(ctx context.Context, inv inventory.InventoryInfo, option
 			handleError(eventChannel, err)
 			return
 		}
-		klog.V(4).Infoln("destroyer building task queue...")
-		taskBuilder := &solver.TaskQueueBuilder{
-			Pruner:    d.pruner,
-			Factory:   d.factory,
+
+		// Validate the resources to make sure we catch those problems early
+		// before anything has been updated in the cluster.
+		vCollector := &validation.Collector{}
+		validator := &validation.Validator{
+			Collector: vCollector,
 			Mapper:    mapper,
-			InvClient: d.invClient,
-			Destroy:   true,
+		}
+		validator.Validate(deleteObjs)
+
+		klog.V(4).Infoln("destroyer building task queue...")
+		dynamicClient, err := d.factory.DynamicClient()
+		if err != nil {
+			handleError(eventChannel, err)
+			return
+		}
+		taskBuilder := &solver.TaskQueueBuilder{
+			Pruner:        d.pruner,
+			DynamicClient: dynamicClient,
+			OpenAPIGetter: d.factory.OpenAPIGetter(),
+			InfoHelper:    info.NewHelper(mapper, d.factory.UnstructuredClientForMapping),
+			Mapper:        mapper,
+			InvClient:     d.invClient,
+			Destroy:       true,
+			Collector:     vCollector,
 		}
 		opts := solver.Options{
 			Prune:                  true,
@@ -136,15 +158,42 @@ func (d *Destroyer) Run(ctx context.Context, inv inventory.InventoryInfo, option
 				InvPolicy: options.InventoryPolicy,
 			},
 		}
+
 		// Build the ordered set of tasks to execute.
-		taskQueue, err := taskBuilder.
+		taskQueue := taskBuilder.
 			AppendPruneWaitTasks(deleteObjs, deleteFilters, opts).
 			AppendDeleteInvTask(inv, options.DryRunStrategy).
 			Build()
-		if err != nil {
-			handleError(eventChannel, err)
+
+		klog.V(4).Infof("validation errors: %d", len(vCollector.Errors))
+		klog.V(4).Infof("invalid objects: %d", len(vCollector.InvalidIds))
+
+		// Handle validation errors
+		switch options.ValidationPolicy {
+		case validation.ExitEarly:
+			err = vCollector.ToError()
+			if err != nil {
+				handleError(eventChannel, err)
+				return
+			}
+		case validation.SkipInvalid:
+			for _, err := range vCollector.Errors {
+				handleValidationError(eventChannel, err)
+			}
+		default:
+			handleError(eventChannel, fmt.Errorf("invalid ValidationPolicy: %q", options.ValidationPolicy))
 			return
 		}
+
+		// Build a TaskContext for passing info between tasks
+		resourceCache := cache.NewResourceCacheMap()
+		taskContext := taskrunner.NewTaskContext(eventChannel, resourceCache)
+
+		// Register invalid objects to be retained in the inventory, if present.
+		for _, id := range vCollector.InvalidIds {
+			taskContext.AddInvalidObject(id)
+		}
+
 		// Send event to inform the caller about the resources that
 		// will be pruned.
 		eventChannel <- event.Event{
@@ -156,12 +205,9 @@ func (d *Destroyer) Run(ctx context.Context, inv inventory.InventoryInfo, option
 		// Create a new TaskStatusRunner to execute the taskQueue.
 		klog.V(4).Infoln("destroyer building TaskStatusRunner...")
 		deleteIds := object.UnstructuredSetToObjMetadataSet(deleteObjs)
-		resourceCache := cache.NewResourceCacheMap()
-		runner := taskrunner.NewTaskStatusRunner(deleteIds, d.StatusPoller, resourceCache)
+		runner := taskrunner.NewTaskStatusRunner(deleteIds, d.StatusPoller)
 		klog.V(4).Infoln("destroyer running TaskStatusRunner...")
-		// TODO(seans): Make the poll interval configurable like the applier.
-		err = runner.Run(ctx, taskQueue.ToChannel(), eventChannel, taskrunner.Options{
-			UseCache:         true,
+		err = runner.Run(ctx, taskContext, taskQueue.ToChannel(), taskrunner.Options{
 			PollInterval:     options.PollInterval,
 			EmitStatusEvents: options.EmitStatusEvents,
 		})

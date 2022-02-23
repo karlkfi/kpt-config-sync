@@ -1,78 +1,81 @@
 // Copyright 2020 The Kubernetes Authors.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Introduces the InventoryConfigMap struct which implements
-// the Inventory interface. The InventoryConfigMap wraps a
+// Introduces the ConfigMap struct which implements
+// the Inventory interface. The ConfigMap wraps a
 // ConfigMap resource which stores the set of inventory
 // (object metadata).
 
 package inventory
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/cli-utils/pkg/apis/actuation"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 // WrapInventoryObj takes a passed ConfigMap (as a resource.Info),
-// wraps it with the InventoryConfigMap and upcasts the wrapper as
+// wraps it with the ConfigMap and upcasts the wrapper as
 // an the Inventory interface.
-func WrapInventoryObj(inv *unstructured.Unstructured) Inventory {
-	return &InventoryConfigMap{inv: inv}
+func WrapInventoryObj(inv *unstructured.Unstructured) Storage {
+	return &ConfigMap{inv: inv}
 }
 
 // WrapInventoryInfoObj takes a passed ConfigMap (as a resource.Info),
-// wraps it with the InventoryConfigMap and upcasts the wrapper as
-// an the InventoryInfo interface.
-func WrapInventoryInfoObj(inv *unstructured.Unstructured) InventoryInfo {
-	return &InventoryConfigMap{inv: inv}
+// wraps it with the ConfigMap and upcasts the wrapper as
+// an the Info interface.
+func WrapInventoryInfoObj(inv *unstructured.Unstructured) Info {
+	return &ConfigMap{inv: inv}
 }
 
-func InvInfoToConfigMap(inv InventoryInfo) *unstructured.Unstructured {
-	icm, ok := inv.(*InventoryConfigMap)
+func InvInfoToConfigMap(inv Info) *unstructured.Unstructured {
+	icm, ok := inv.(*ConfigMap)
 	if ok {
 		return icm.inv
 	}
 	return nil
 }
 
-// InventoryConfigMap wraps a ConfigMap resource and implements
+// ConfigMap wraps a ConfigMap resource and implements
 // the Inventory interface. This wrapper loads and stores the
 // object metadata (inventory) to and from the wrapped ConfigMap.
-type InventoryConfigMap struct {
-	inv      *unstructured.Unstructured
-	objMetas object.ObjMetadataSet
+type ConfigMap struct {
+	inv       *unstructured.Unstructured
+	objMetas  object.ObjMetadataSet
+	objStatus []actuation.ObjectStatus
 }
 
-var _ InventoryInfo = &InventoryConfigMap{}
-var _ Inventory = &InventoryConfigMap{}
+var _ Info = &ConfigMap{}
+var _ Storage = &ConfigMap{}
 
-func (icm *InventoryConfigMap) Name() string {
+func (icm *ConfigMap) Name() string {
 	return icm.inv.GetName()
 }
 
-func (icm *InventoryConfigMap) Namespace() string {
+func (icm *ConfigMap) Namespace() string {
 	return icm.inv.GetNamespace()
 }
 
-func (icm *InventoryConfigMap) ID() string {
+func (icm *ConfigMap) ID() string {
 	// Empty string if not set.
 	return icm.inv.GetLabels()[common.InventoryLabel]
 }
 
-func (icm *InventoryConfigMap) Strategy() InventoryStrategy {
+func (icm *ConfigMap) Strategy() Strategy {
 	return LabelStrategy
 }
 
-func (icm *InventoryConfigMap) UnstructuredInventory() *unstructured.Unstructured {
+func (icm *ConfigMap) UnstructuredInventory() *unstructured.Unstructured {
 	return icm.inv
 }
 
 // Load is an Inventory interface function returning the set of
 // object metadata from the wrapped ConfigMap, or an error.
-func (icm *InventoryConfigMap) Load() (object.ObjMetadataSet, error) {
+func (icm *ConfigMap) Load() (object.ObjMetadataSet, error) {
 	objs := object.ObjMetadataSet{}
 	objMap, exists, err := unstructured.NestedStringMap(icm.inv.Object, "data")
 	if err != nil {
@@ -94,20 +97,24 @@ func (icm *InventoryConfigMap) Load() (object.ObjMetadataSet, error) {
 // Store is an Inventory interface function implemented to store
 // the object metadata in the wrapped ConfigMap. Actual storing
 // happens in "GetObject".
-func (icm *InventoryConfigMap) Store(objMetas object.ObjMetadataSet) error {
+func (icm *ConfigMap) Store(objMetas object.ObjMetadataSet, status []actuation.ObjectStatus) error {
 	icm.objMetas = objMetas
+	icm.objStatus = status
 	return nil
 }
 
 // GetObject returns the wrapped object (ConfigMap) as a resource.Info
 // or an error if one occurs.
-func (icm *InventoryConfigMap) GetObject() (*unstructured.Unstructured, error) {
+func (icm *ConfigMap) GetObject() (*unstructured.Unstructured, error) {
 	// Create the objMap of all the resources, and compute the hash.
-	objMap := buildObjMap(icm.objMetas)
+	objMap, err := buildObjMap(icm.objMetas, icm.objStatus)
+	if err != nil {
+		return nil, err
+	}
 	// Create the inventory object by copying the template.
 	invCopy := icm.inv.DeepCopy()
 	// Adds the inventory map to the ConfigMap "data" section.
-	err := unstructured.SetNestedStringMap(invCopy.UnstructuredContent(),
+	err = unstructured.SetNestedStringMap(invCopy.UnstructuredContent(),
 		objMap, "data")
 	if err != nil {
 		return nil, err
@@ -115,10 +122,33 @@ func (icm *InventoryConfigMap) GetObject() (*unstructured.Unstructured, error) {
 	return invCopy, nil
 }
 
-func buildObjMap(objMetas object.ObjMetadataSet) map[string]string {
+func buildObjMap(objMetas object.ObjMetadataSet, objStatus []actuation.ObjectStatus) (map[string]string, error) {
 	objMap := map[string]string{}
-	for _, objMetadata := range objMetas {
-		objMap[objMetadata.String()] = ""
+	objStatusMap := map[object.ObjMetadata]actuation.ObjectStatus{}
+	for _, status := range objStatus {
+		objStatusMap[ObjMetadataFromObjectReference(status.ObjectReference)] = status
 	}
-	return objMap
+	for _, objMetadata := range objMetas {
+		if status, found := objStatusMap[objMetadata]; found {
+			objMap[objMetadata.String()] = stringFrom(status)
+		} else {
+			// This should never happen since the objStatus have captured all the
+			// object status
+			return nil, fmt.Errorf("object status not found for %s", objMetadata)
+		}
+	}
+	return objMap, nil
+}
+
+func stringFrom(status actuation.ObjectStatus) string {
+	tmp := map[string]string{
+		"strategy":  status.Strategy.String(),
+		"actuation": status.Actuation.String(),
+		"reconcile": status.Reconcile.String(),
+	}
+	data, err := json.Marshal(tmp)
+	if err != nil || string(data) == "{}" {
+		return ""
+	}
+	return string(data)
 }

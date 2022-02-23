@@ -12,7 +12,7 @@ import (
 )
 
 // ApplyTimeMutation is a list of substitutions to perform in the target
-// resource before applying, after waiting for the source resources to be
+// object before applying, after waiting for the source objects to be
 // reconciled.
 // This most notibly allows status fields to be substituted into spec fields.
 type ApplyTimeMutation []FieldSubstitution
@@ -44,17 +44,17 @@ func (a ApplyTimeMutation) Equal(b ApplyTimeMutation) bool {
 }
 
 // FieldSubstitution specifies a substitution that will be performed at
-// apply-time. The source resource field will be read and substituted into the
-// target resource field, replacing the token.
+// apply-time. The source object field will be read and substituted into the
+// target object field, replacing the token.
 type FieldSubstitution struct {
-	// SourceRef is a reference to the resource that contains the source field.
+	// SourceRef is a reference to the object that contains the source field.
 	SourceRef ResourceReference `json:"sourceRef"`
 
-	// SourcePath is a JSONPath reference to a field in the source resource.
+	// SourcePath is a JSONPath reference to a field in the source object.
 	// Example: "$.status.number"
 	SourcePath string `json:"sourcePath"`
 
-	// TargetPath is a JSONPath reference to a field in the target resource.
+	// TargetPath is a JSONPath reference to a field in the target object.
 	// Example: "$.spec.member"
 	TargetPath string `json:"targetPath"`
 
@@ -85,23 +85,33 @@ type ResourceReference struct {
 	// +optional
 	Group string `json:"group,omitempty"`
 
-	// Name of the resource.
+	// Name of the object.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 	Name string `json:"name,omitempty"`
 
-	// Namespace is optional, defaults to the namespace of the target resource.
+	// Namespace is optional, defaults to the namespace of the target object.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }
 
-// NewResourceReference returns the object as a ResourceReference
-func NewResourceReference(obj *unstructured.Unstructured) ResourceReference {
+// ResourceReferenceFromUnstructured returns the object as a ResourceReference
+func ResourceReferenceFromUnstructured(obj *unstructured.Unstructured) ResourceReference {
 	return ResourceReference{
 		Name:       obj.GetName(),
 		Namespace:  obj.GetNamespace(),
 		Kind:       obj.GetKind(),
 		APIVersion: obj.GetAPIVersion(),
+	}
+}
+
+// ResourceReferenceFromObjMetadata returns the object as a ResourceReference
+func ResourceReferenceFromObjMetadata(id object.ObjMetadata) ResourceReference {
+	return ResourceReference{
+		Name:      id.Name,
+		Namespace: id.Namespace,
+		Kind:      id.GroupKind.Kind,
+		Group:     id.GroupKind.Group,
 	}
 }
 
@@ -112,16 +122,6 @@ func (r ResourceReference) GroupVersionKind() schema.GroupVersionKind {
 		return schema.GroupVersionKind{Group: r.Group, Kind: r.Kind}
 	}
 	return schema.FromAPIVersionAndKind(r.APIVersion, r.Kind)
-}
-
-// ObjMetadata returns the name, namespace, group, and kind of the
-// ResourceReference, wrapped in a new ObjMetadata object.
-func (r ResourceReference) ObjMetadata() object.ObjMetadata {
-	return object.ObjMetadata{
-		Name:      r.Name,
-		Namespace: r.Namespace,
-		GroupKind: r.GroupVersionKind().GroupKind(),
-	}
 }
 
 // ToUnstructured returns the name, namespace, group, version, and kind of the

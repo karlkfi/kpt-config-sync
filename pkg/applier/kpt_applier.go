@@ -47,7 +47,7 @@ import (
 // Applier declares the Applier component in the Multi Repo Reconciler Process.
 type Applier struct {
 	// inventory policy for the applier.
-	policy inventory.InventoryPolicy
+	policy inventory.Policy
 	// inventory is the inventory ResourceGroup for current Applier.
 	inventory *live.InventoryResourceGroup
 	// clientSetFunc is the function to create kpt clientSet.
@@ -94,7 +94,7 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName str
 		inventory:     inv,
 		client:        c,
 		clientSetFunc: newClientSet,
-		policy:        inventory.AdoptIfNoInventory,
+		policy:        inventory.PolicyAdoptIfNoInventory,
 	}
 	klog.V(4).Infof("Applier %s/%s is initialized", namespace, syncName)
 	return a, nil
@@ -112,7 +112,7 @@ func NewRootApplier(c client.Client, syncName string) (*Applier, error) {
 		inventory:     inv,
 		client:        c,
 		clientSetFunc: newClientSet,
-		policy:        inventory.AdoptAll,
+		policy:        inventory.PolicyAdoptAll,
 	}
 	klog.V(4).Infof("Root applier %s is initialized and synced with the API server", syncName)
 	return a, nil
@@ -211,7 +211,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	}
 
 	unknownTypeResources := make(map[core.ID]struct{})
-	options := apply.Options{
+	options := apply.ApplierOptions{
 		ServerSideOptions: common.ServerSideOptions{
 			ServerSideApply: true,
 			ForceConflicts:  true,

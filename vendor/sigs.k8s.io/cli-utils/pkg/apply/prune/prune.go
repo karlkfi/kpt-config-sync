@@ -13,7 +13,6 @@ package prune
 
 import (
 	"context"
-	"sort"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -27,20 +26,19 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object"
-	"sigs.k8s.io/cli-utils/pkg/ordering"
 )
 
 // Pruner implements GetPruneObjs to calculate which objects to prune and Prune
 // to delete them.
 type Pruner struct {
-	InvClient inventory.InventoryClient
+	InvClient inventory.Client
 	Client    dynamic.Interface
 	Mapper    meta.RESTMapper
 }
 
 // NewPruner returns a new Pruner.
 // Returns an error if dependency injection fails using the factory.
-func NewPruner(factory util.Factory, invClient inventory.InventoryClient) (*Pruner, error) {
+func NewPruner(factory util.Factory, invClient inventory.Client) (*Pruner, error) {
 	// Client/Builder fields from the Factory.
 	client, err := factory.DynamicClient()
 	if err != nil {
@@ -99,6 +97,16 @@ func (p *Pruner) Prune(
 	for _, obj := range objs {
 		id := object.UnstructuredToObjMetadata(obj)
 		klog.V(5).Infof("evaluating prune filters (object: %q)", id)
+
+		// UID will change if the object is deleted and re-created.
+		uid := obj.GetUID()
+		if uid == "" {
+			err := object.NotFound([]interface{}{"metadata", "uid"}, "")
+			taskContext.SendEvent(eventFactory.CreateFailedEvent(id, err))
+			taskContext.InventoryManager().AddFailedDelete(id)
+			continue
+		}
+
 		// Check filters to see if we're prevented from pruning/deleting object.
 		var filtered bool
 		var reason string
@@ -111,7 +119,7 @@ func (p *Pruner) Prune(
 					klog.Errorf("error during %s, (%s): %v", pruneFilter.Name(), id, err)
 				}
 				taskContext.SendEvent(eventFactory.CreateFailedEvent(id, err))
-				taskContext.AddFailedDelete(id)
+				taskContext.InventoryManager().AddFailedDelete(id)
 				break
 			}
 			if filtered {
@@ -125,7 +133,7 @@ func (p *Pruner) Prune(
 								klog.Errorf("error removing annotation (object: %q, annotation: %q): %v", id, inventory.OwningInventoryKey, err)
 							}
 							taskContext.SendEvent(eventFactory.CreateFailedEvent(id, err))
-							taskContext.AddFailedDelete(id)
+							taskContext.InventoryManager().AddFailedDelete(id)
 							break
 						} else {
 							// Inventory annotation was successfully removed from the object.
@@ -135,7 +143,7 @@ func (p *Pruner) Prune(
 					}
 				}
 				taskContext.SendEvent(eventFactory.CreateSkippedEvent(obj, reason))
-				taskContext.AddSkippedDelete(id)
+				taskContext.InventoryManager().AddSkippedDelete(id)
 				break
 			}
 		}
@@ -146,6 +154,11 @@ func (p *Pruner) Prune(
 		if !opts.DryRunStrategy.ClientOrServerDryRun() {
 			klog.V(4).Infof("deleting object (object: %q)", id)
 			err := p.deleteObject(id, metav1.DeleteOptions{
+				// Only delete the resource if it hasn't already been deleted
+				// and recreated since the last GET. Otherwise error.
+				Preconditions: &metav1.Preconditions{
+					UID: &uid,
+				},
 				PropagationPolicy: &opts.PropagationPolicy,
 			})
 			if err != nil {
@@ -153,10 +166,11 @@ func (p *Pruner) Prune(
 					klog.Errorf("error deleting object (object: %q): %v", id, err)
 				}
 				taskContext.SendEvent(eventFactory.CreateFailedEvent(id, err))
-				taskContext.AddFailedDelete(id)
+				taskContext.InventoryManager().AddFailedDelete(id)
 				continue
 			}
 		}
+		taskContext.InventoryManager().AddSuccessfulDelete(id, obj.GetUID())
 		taskContext.SendEvent(eventFactory.CreateSuccessEvent(obj))
 	}
 	return nil
@@ -190,12 +204,12 @@ func (p *Pruner) removeInventoryAnnotation(obj *unstructured.Unstructured) (*uns
 // objects minus the set of currently applied objects. Returns an error
 // if one occurs.
 func (p *Pruner) GetPruneObjs(
-	inv inventory.InventoryInfo,
+	inv inventory.Info,
 	objs object.UnstructuredSet,
 	opts Options,
 ) (object.UnstructuredSet, error) {
 	ids := object.UnstructuredSetToObjMetadataSet(objs)
-	invIDs, err := p.InvClient.GetClusterObjs(inv, opts.DryRunStrategy)
+	invIDs, err := p.InvClient.GetClusterObjs(inv)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +231,6 @@ func (p *Pruner) GetPruneObjs(
 		}
 		objs = append(objs, pruneObj)
 	}
-	sort.Sort(sort.Reverse(ordering.SortableUnstructureds(objs)))
 	return objs, nil
 }
 

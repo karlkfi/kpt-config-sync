@@ -5,14 +5,11 @@ package poller
 
 import (
 	"context"
-	"time"
 
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
 	pollevent "sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
-
-const DefaultPollInterval = 2 * time.Second
 
 // Poller defines the interface the applier needs to poll for status of resources.
 // The context is the preferred way to shut down the poller.
@@ -21,5 +18,5 @@ const DefaultPollInterval = 2 * time.Second
 // The options allows callers to override some of the settings of the poller,
 // like the polling frequency and the caching strategy.
 type Poller interface {
-	Poll(ctx context.Context, identifiers object.ObjMetadataSet, options polling.Options) <-chan pollevent.Event
+	Poll(ctx context.Context, identifiers object.ObjMetadataSet, options polling.PollOptions) <-chan pollevent.Event
 }

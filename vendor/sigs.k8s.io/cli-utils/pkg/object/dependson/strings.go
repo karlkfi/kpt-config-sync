@@ -54,10 +54,10 @@ func FormatDependencySet(depSet DependencySet) (string, error) {
 // Returns the parsed DependencySet or an error if unable to parse.
 func ParseDependencySet(depsStr string) (DependencySet, error) {
 	objs := DependencySet{}
-	for _, objStr := range strings.Split(depsStr, annotationSeparator) {
+	for i, objStr := range strings.Split(depsStr, annotationSeparator) {
 		obj, err := ParseObjMetadata(objStr)
 		if err != nil {
-			return objs, fmt.Errorf("failed to parse object metadata: %w", err)
+			return objs, fmt.Errorf("failed to parse object reference (index: %d): %w", i, err)
 		}
 		objs = append(objs, obj)
 	}
@@ -114,8 +114,8 @@ func ParseObjMetadata(objStr string) (object.ObjMetadata, error) {
 	fields := strings.Split(objStr, fieldSeparator)
 
 	if len(fields) != numFieldsClusterScoped && len(fields) != numFieldsNamespacedScoped {
-		return obj, fmt.Errorf("too many fields (expected %d or %d): %q",
-			numFieldsClusterScoped, numFieldsNamespacedScoped, objStr)
+		return obj, fmt.Errorf("expected %d or %d fields, found %d: %q",
+			numFieldsClusterScoped, numFieldsNamespacedScoped, len(fields), objStr)
 	}
 
 	group = fields[0]

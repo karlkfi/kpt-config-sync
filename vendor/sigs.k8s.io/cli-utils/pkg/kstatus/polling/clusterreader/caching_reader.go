@@ -5,14 +5,16 @@ package clusterreader
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/engine"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,7 +51,7 @@ var genGroupKinds = map[schema.GroupKind][]schema.GroupKind{
 // identifiers is needed so the ClusterReader can figure out which GroupKind
 // and namespace combinations it needs to cache when the Sync function is called.
 // We only want to fetch the resources that are actually needed.
-func NewCachingClusterReader(reader client.Reader, mapper meta.RESTMapper, identifiers object.ObjMetadataSet) (*CachingClusterReader, error) {
+func NewCachingClusterReader(reader client.Reader, mapper meta.RESTMapper, identifiers object.ObjMetadataSet) (engine.ClusterReader, error) {
 	gvkNamespaceSet := newGnSet()
 	for _, id := range identifiers {
 		// For every identifier, add the GroupVersionKind and namespace combination to the gvkNamespaceSet and
@@ -168,7 +170,7 @@ func (c *CachingClusterReader) Get(_ context.Context, key client.ObjectKey, obj 
 			return nil
 		}
 	}
-	return errors.NewNotFound(mapping.Resource.GroupResource(), key.Name)
+	return apierrors.NewNotFound(mapping.Resource.GroupResource(), key.Name)
 }
 
 // ListNamespaceScoped lists all resource identifier by the GVK of the list, the namespace and the selector
@@ -238,7 +240,12 @@ func (c *CachingClusterReader) Sync(ctx context.Context) error {
 		list.SetGroupVersionKind(mapping.GroupVersionKind)
 		err = c.reader.List(ctx, &list, listOptions...)
 		if err != nil {
-			// We continue even if there is an error. Whenever any pollers
+			// If the context was cancelled, we just stop the work and return
+			// the error.
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return err
+			}
+			// For other errors, we just keep it the error. Whenever any pollers
 			// request a resource covered by this gns, we just return the
 			// error.
 			cache[gn] = cacheEntry{

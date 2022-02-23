@@ -33,18 +33,17 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object"
-	"sigs.k8s.io/cli-utils/pkg/util/factory"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type kptApplier interface {
-	Run(context.Context, inventory.InventoryInfo, object.UnstructuredSet, apply.Options) <-chan event.Event
+	Run(context.Context, inventory.Info, object.UnstructuredSet, apply.ApplierOptions) <-chan event.Event
 }
 
 // clientSet includes the clients required for using the apply library from cli-utils
 type clientSet struct {
 	kptApplier    kptApplier
-	invClient     inventory.InventoryClient
+	invClient     inventory.Client
 	client        client.Client
 	resouceClient *resourceClient
 }
@@ -52,16 +51,15 @@ type clientSet struct {
 // newClientSet creates a clientSet object.
 func newClientSet(c client.Client) (*clientSet, error) {
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
-	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(&factory.CachingRESTClientGetter{
-		Delegate: kubeConfigFlags,
-	})
+	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(kubeConfigFlags)
 	f := util.NewFactory(matchVersionKubeConfigFlags)
 
-	invClient, err := inventory.NewInventoryClient(f, live.WrapInventoryObj, live.InvToUnstructuredFunc)
+	invClient, err := inventory.NewClient(f, live.WrapInventoryObj, live.InvToUnstructuredFunc)
 	if err != nil {
 		return nil, err
 	}
-	applier, err := apply.NewApplier(f, invClient)
+	builder := apply.NewApplierBuilder()
+	applier, err := builder.WithInventoryClient(invClient).WithFactory(f).Build()
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +82,7 @@ func newClientSet(c client.Client) (*clientSet, error) {
 	}, nil
 }
 
-func (cs *clientSet) apply(ctx context.Context, inv inventory.InventoryInfo, resources []*unstructured.Unstructured, option apply.Options) <-chan event.Event {
+func (cs *clientSet) apply(ctx context.Context, inv inventory.Info, resources []*unstructured.Unstructured, option apply.ApplierOptions) <-chan event.Event {
 	return cs.kptApplier.Run(ctx, inv, object.UnstructuredSet(resources), option)
 }
 
@@ -118,11 +116,11 @@ func (cs *clientSet) removeFromInventory(rg *live.InventoryResourceGroup, objs [
 		return err
 	}
 	newObjs := removeFrom(oldObjs, objs)
-	err = rg.Store(newObjs)
+	err = rg.Store(newObjs, nil)
 	if err != nil {
 		return err
 	}
-	return cs.invClient.Replace(rg, newObjs, common.DryRunNone)
+	return cs.invClient.Replace(rg, newObjs, nil, common.DryRunNone)
 }
 
 // disableObject disables the management for a single object by removing
