@@ -13,9 +13,6 @@
 // limitations under the License.
 
 // Package lifecycle defines the client-side lifecycle directives ACM honors.
-//
-// Implementation conforms with:
-// go/lifecycle-directives-in-detail
 package lifecycle
 
 import (

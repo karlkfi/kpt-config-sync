@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// This file includes e2e tests for sync ordering (design doc: go/cs-sync-ordering).
+// This file includes e2e tests for sync ordering.
 // The sync ordering feature is only supported in the multi-repo mode.
 
 func TestSyncOrdering(t *testing.T) {

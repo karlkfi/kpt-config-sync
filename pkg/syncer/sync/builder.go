@@ -29,7 +29,6 @@ import (
 )
 
 // syncAwareBuilder creates controllers for managing resources with sync enabled.
-// More info on Syncs available at go/nomos-syncless
 type syncAwareBuilder struct {
 	scoper discovery.Scoper
 }

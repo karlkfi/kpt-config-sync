@@ -120,7 +120,7 @@ func (d Diff) Type() Type {
 		//
 		// A resource having some Nomos annotations/labels may not be
 		// managed by Config Sync, because the annotations may be copied from another controller
-		// managed by Config Sync (see go/config-sync-managed-resources). Config Sync may not
+		// managed by Config Sync. Config Sync may not
 		// be allowed to unmanage such a resource, if the controller owning the resource
 		// has a webhook to prevent Config Sync from unmanaging the resource (See http://b/185161298
 		// for an example how Hierarchical Controller denies Config Sync unmanaging a resource).

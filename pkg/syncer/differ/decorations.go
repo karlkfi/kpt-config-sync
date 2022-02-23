@@ -25,7 +25,7 @@ import (
 //
 // A resource whose `configmanagement.gke.io/managed` anntation is `enabled` may not be
 // managed by Config Sync, because the annotation may be copied from another resource
-// managed by Config Sync. See go/config-sync-managed-resources.
+// managed by Config Sync.
 //
 // Use `ManagedByConfigSync` to decide whether a resource is managed by Config Sync.
 func ManagementEnabled(obj client.Object) bool {
@@ -45,7 +45,7 @@ func ManagementDisabled(obj client.Object) bool {
 //
 // A resource whose `configmanagement.gke.io/managed` anntation is `enabled` may not be
 // managed by Config Sync, because the annotation may be copied from another resource
-// managed by Config Sync. See go/config-sync-managed-resources.
+// managed by Config Sync.
 func ManagedByConfigSync(obj client.Object) bool {
 	return obj != nil && ManagementEnabled(obj) && core.GetAnnotation(obj, metadata.ResourceIDKey) == core.GKNN(obj)
 }

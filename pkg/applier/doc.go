@@ -16,8 +16,7 @@ package applier
 
 /*
 Package applier is a component of a reconcile process (RP),
-designed in the Config Sync V2 Multi-Repo design doc.
-See go/csmr-applier
+designed in the Config Sync V2 Multi-Repo design.
 
 Initialization
 - When Initialzing a new applier, the `NewRootApplier` shall be used for root RP and the

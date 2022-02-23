@@ -127,7 +127,7 @@ func mustDeleteOutput(err error, output string) {
 // kustomizeBuild runs the 'kustomize build' command to render the configs.
 func kustomizeBuild(input, output string, sendMetrics bool) HydrationError {
 	// The `--enable-alpha-plugins` and `--enable-exec` flags are to support rendering
-	// Helm charts using the Helm inflation function, see go/kust-helm-for-config-sync.
+	// Helm charts using the Helm inflation function.
 	// The `--enable-helm` flag is to enable use of the Helm chart inflator generator.
 	// We decided to enable all the flags so that both the Helm plugin and Helm
 	// inflation function are supported. This provides us with a fallback plan

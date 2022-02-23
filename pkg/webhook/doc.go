@@ -13,5 +13,5 @@
 // limitations under the License.
 
 // Package webhook contains the implementation of the validating admission
-// webhook described in go/config-sync-hook.
+// webhook.
 package webhook

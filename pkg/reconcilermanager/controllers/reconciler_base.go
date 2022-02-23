@@ -110,7 +110,7 @@ func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []confi
 
 	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
 	// Reconciler deployment's spec.template.annotation updated with the hash to recreate the
-	// deployment in the event of configmap update. More information: go/csmr-update-deployment.
+	// deployment in the event of configmap update.
 	return hash(configMapData)
 }
 

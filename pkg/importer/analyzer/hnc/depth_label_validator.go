@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package hnc adds additional HNC-understandable annotation and labels to namespaces managed by
-// ACM. Please send code reviews to gke-kubernetes-hnc-core@.
+// ACM.
 package hnc
 
 import (

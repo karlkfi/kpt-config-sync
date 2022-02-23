@@ -133,7 +133,6 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 			// the repository, the update, which uses SSA, would not remove the annotation
 			// from the actual object. However, Config Sync would not respect the annotation
 			// on the actual object since the annotation is not declared in the git repository.
-			// See go/config-sync-drift for more information.
 			//
 			// If the annotation is on the declared object but not the actual one
 			// on the cluster, we need to add it to the one in the cluster.

@@ -304,7 +304,7 @@ func parseSource(ctx context.Context, p Parser, trigger string, state *reconcile
 			// Don't block if updating the admission webhook fails.
 			// Return an error instead if we remove the remediator as otherwise we
 			// will simply never correct the type.
-			// This should be treated as a warning (go/nomos-warning) once we have
+			// This should be treated as a warning once we have
 			// that capability.
 			klog.Errorf("Failed to update admission webhook: %v", err)
 			// TODO(b/178605725): Handle case where multiple reconciler Pods try to

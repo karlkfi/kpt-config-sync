@@ -234,7 +234,6 @@ func (c *clientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.Resou
 }
 
 // apply updates a resource using the same approach as running `kubectl apply`.
-// The implementation here has been mostly extracted from the apply command: k8s.io/kubectl/cmd/apply.go
 func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) ([]byte, error) {
 	if intendedState.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
 		return c.updateAPIService(ctx, intendedState, currentState)

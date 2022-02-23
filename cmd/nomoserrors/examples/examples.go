@@ -65,7 +65,6 @@ type AllExamples map[string]ExamplesOrDeprecated
 // KNV1XXX means the user has a mistake in their repository they need to fix.
 // KNV2XXX means something went wrong in the cluster - it could be transient or users may need to change something on the cluster.
 // KNV9XXX means we made a mistake programming, and users should file a bug.
-// More details in go/nomos-style.
 func Generate() AllExamples {
 	// exampleErrors is a map of exampleErrors of each error type. For documentation purposes, i.e. for use
 	// in the internal-only nomoserrors command.
