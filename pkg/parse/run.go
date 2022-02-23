@@ -38,16 +38,16 @@ const (
 
 const (
 	// RenderingInProgress means that the configs are still being rendered by Config Sync.
-	RenderingInProgress string = "RenderingInProgress"
+	RenderingInProgress string = "Rendering is still in progress"
 
 	// RenderingSucceeded means that the configs have been rendered successfully.
-	RenderingSucceeded string = "RenderingSucceeded"
+	RenderingSucceeded string = "Rendering succeeded"
 
 	// RenderingFailed means that the configs have failed to be rendered.
-	RenderingFailed string = "RenderingFailed"
+	RenderingFailed string = "Rendering failed"
 
 	// RenderingSkipped means that the configs don't need to be rendered.
-	RenderingSkipped string = "RenderingSkipped"
+	RenderingSkipped string = "Rendering skipped"
 )
 
 // Run keeps checking whether a parse-apply-watch loop is necessary and starts a loop if needed.
