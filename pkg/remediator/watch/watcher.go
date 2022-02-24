@@ -33,13 +33,16 @@ type startWatchFunc func(metav1.ListOptions) (watch.Interface, error)
 // watcherConfig contains the options needed
 // to create a watcher.
 type watcherConfig struct {
-	gvk        schema.GroupVersionKind
-	mapper     meta.RESTMapper
-	config     *rest.Config
-	resources  *declared.Resources
-	queue      *queue.ObjectQueue
-	reconciler declared.Scope
-	startWatch startWatchFunc
+	gvk                     schema.GroupVersionKind
+	mapper                  meta.RESTMapper
+	config                  *rest.Config
+	resources               *declared.Resources
+	queue                   *queue.ObjectQueue
+	scope                   declared.Scope
+	syncName                string
+	startWatch              startWatchFunc
+	addConflictErrorFunc    func(status.Error)
+	removeConflictErrorFunc func(status.Error)
 }
 
 // createWatcherFunc is the type of functions to create watchers
@@ -58,13 +61,13 @@ func createWatcher(ctx context.Context, cfg watcherConfig) (Runnable, status.Err
 			return nil, status.APIServerErrorf(err, "watcher failed to get dynamic client for %s", cfg.gvk.String())
 		}
 
-		if cfg.reconciler == declared.RootReconciler {
+		if cfg.scope == declared.RootReconciler {
 			cfg.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
 				return dynamicClient.Resource(mapping.Resource).Watch(ctx, options)
 			}
 		} else {
 			cfg.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
-				return dynamicClient.Resource(mapping.Resource).Namespace(string(cfg.reconciler)).Watch(ctx, options)
+				return dynamicClient.Resource(mapping.Resource).Namespace(string(cfg.scope)).Watch(ctx, options)
 			}
 		}
 	}

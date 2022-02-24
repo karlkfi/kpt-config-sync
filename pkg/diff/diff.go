@@ -71,7 +71,7 @@ type Diff struct {
 }
 
 // Operation returns the type of the difference between the repository and the API Server.
-func (d Diff) Operation(ctx context.Context, manager declared.Scope) Operation {
+func (d Diff) Operation(ctx context.Context, scope declared.Scope, syncName string) Operation {
 	switch {
 	case d.Declared != nil && d.Actual == nil:
 		// Create Branch.
@@ -84,13 +84,13 @@ func (d Diff) Operation(ctx context.Context, manager declared.Scope) Operation {
 		//
 		// We have a declared and actual resource, so we need to figure out whether
 		// we update the resource.
-		return d.updateType(manager)
+		return d.updateType(scope, syncName)
 	case d.Declared == nil && d.Actual != nil:
 		// Delete Branch.
 		//
 		// There is no declaration for the resource, but the resource exists on the
 		// cluster, so we need to figure out whether we delete the resource.
-		return d.deleteType(manager)
+		return d.deleteType(scope, syncName)
 	default:
 		klog.Warning("Calculated diff for object with no declaration and not on the cluster")
 		metrics.RecordInternalError(ctx, "differ")
@@ -116,11 +116,11 @@ func (d Diff) createType() Operation {
 	}
 }
 
-func (d Diff) updateType(manager declared.Scope) Operation {
+func (d Diff) updateType(scope declared.Scope, syncName string) Operation {
 	// We don't need to check for owner references here since that would be a
 	// nomos vet error. Note that as-is, it is valid to declare something owned by
 	// another object, possible causing (and being surfaced as) a resource fight.
-	canManage := CanManage(manager, d.Actual)
+	canManage := CanManage(scope, syncName, d.Actual)
 	switch {
 	case differ.ManagementEnabled(d.Declared) && canManage:
 		if d.Actual.GetAnnotations()[metadata.LifecycleMutationAnnotation] == metadata.IgnoreMutation &&
@@ -144,11 +144,9 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 		return ManagementConflict
 	case differ.ManagementDisabled(d.Declared) && canManage:
 		if metadata.HasConfigSyncMetadata(d.Actual) {
-			switch d.Actual.GetAnnotations()[metadata.ResourceManagerKey] {
-			case string(declared.RootReconciler), "":
+			manager := d.Actual.GetAnnotations()[metadata.ResourceManagerKey]
+			if manager == "" || manager == declared.ResourceManager(scope, syncName) {
 				return Unmanage
-			default:
-				return NoOp
 			}
 		}
 		return NoOp
@@ -161,7 +159,7 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 	}
 }
 
-func (d Diff) deleteType(reconciler declared.Scope) Operation {
+func (d Diff) deleteType(scope declared.Scope, syncName string) Operation {
 	// Degenerate cases where we never want to take any action.
 	switch {
 	case !metadata.HasConfigSyncMetadata(d.Actual):
@@ -171,7 +169,7 @@ func (d Diff) deleteType(reconciler declared.Scope) Operation {
 		// This object is owned by something else.
 		// It may be copying our metadata, so we don't have anything to check.
 		return NoOp
-	case !CanManage(reconciler, d.Actual):
+	case !CanManage(scope, syncName, d.Actual):
 		// We can't manage this and there isn't a competing declaration for it so,
 		// nothing to do.
 		return NoOp

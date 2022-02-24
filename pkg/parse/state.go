@@ -151,7 +151,7 @@ func (s *reconcilerState) needToSetSourceStatus(newStatus gitStatus) bool {
 	return !newStatus.equal(s.sourceStatus) || s.sourceStatus.lastUpdate.IsZero() || s.sourceStatus.lastUpdate.Before(&s.syncingConditionLastUpdate)
 }
 
-// needToSetSyncStatus returns true if `p.setSyncStatus` should be called.
+// needToSetSyncStatus returns true if `p.SetSyncStatus` should be called.
 func (s *reconcilerState) needToSetSyncStatus(newStatus gitStatus) bool {
 	return !newStatus.equal(s.syncStatus) || s.syncStatus.lastUpdate.IsZero() || s.syncStatus.lastUpdate.Before(&s.syncingConditionLastUpdate)
 }

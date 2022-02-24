@@ -36,7 +36,8 @@ type action struct {
 }
 
 func TestFilteredWatcher(t *testing.T) {
-	reconciler := declared.Scope("test")
+	scope := declared.Scope("test")
+	syncName := "rs"
 
 	deployment1 := fake.DeploymentObject(core.Name("hello"))
 	deployment1Beta := fake.DeploymentObject(core.Name("hello"))
@@ -46,10 +47,10 @@ func TestFilteredWatcher(t *testing.T) {
 	deployment3 := fake.DeploymentObject(core.Name("nomes"))
 
 	managedBySelfDeployment := fake.DeploymentObject(core.Name("not-declared"),
-		syncertest.ManagementEnabled, difftest.ManagedBy(reconciler))
+		syncertest.ManagementEnabled, difftest.ManagedBy(scope, syncName))
 	managedByOtherDeployment := fake.DeploymentObject(core.Name("not-declared"),
-		syncertest.ManagementEnabled, difftest.ManagedBy("other"))
-	deploymentForRoot := fake.DeploymentObject(core.Name("managed-by-root"), difftest.ManagedByRoot)
+		syncertest.ManagementEnabled, difftest.ManagedBy("other", "other-rs"))
+	deploymentForRoot := fake.DeploymentObject(core.Name("managed-by-root"), difftest.ManagedBy(declared.RootReconciler, "any-rs"))
 
 	testCases := []struct {
 		name     string
@@ -85,7 +86,7 @@ func TestFilteredWatcher(t *testing.T) {
 			},
 		},
 		{
-			"Enqueue events for undeclared-but-managed-by-other-reconciler resource",
+			"Filter events for undeclared-but-managed-by-other-reconciler resource",
 			[]client.Object{
 				deployment1,
 			},
@@ -187,9 +188,10 @@ func TestFilteredWatcher(t *testing.T) {
 			base := watch.NewFake()
 			q := queue.New("test")
 			cfg := watcherConfig{
-				reconciler: reconciler,
-				resources:  dr,
-				queue:      q,
+				scope:     scope,
+				syncName:  syncName,
+				resources: dr,
+				queue:     q,
 				startWatch: func(options metav1.ListOptions) (watch.Interface, error) {
 					return base, nil
 				},

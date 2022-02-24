@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -205,7 +206,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			// Simulate the Parser having already parsed the resource and recorded it.
 			d := makeDeclared(t, tc.declared)
 
-			r := newReconciler(declared.RootReconciler, c.Applier(), d)
+			r := newReconciler(declared.RootReconciler, configsync.RootSyncName, c.Applier(), d)
 
 			// Get the triggering object for the reconcile event.
 			var obj client.Object

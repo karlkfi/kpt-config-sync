@@ -127,7 +127,9 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 			unknownTypeResources[id] = struct{}{}
 			return ErrorForResource(e.Error, id)
 		case *inventory.InventoryOverlapError:
-			return ManagementConflictError(cache[id])
+			// TODO: return ManagementConflictError with the conflicting manager if
+			// cli-utils supports reporting the conflicting manager in InventoryOverlapError.
+			return KptManagementConflictError(cache[id])
 		default:
 			// The default case covers other reason for failed applying a resource.
 			return ErrorForResource(e.Error, id)

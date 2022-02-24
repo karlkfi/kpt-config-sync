@@ -79,7 +79,6 @@ func Run(ctx context.Context, p Parser) {
 		case <-tickerRetryOrWatchUpdate.C:
 			var trigger string
 			if opts.managementConflict() {
-				klog.Infof("One of the watchers noticed a management conflict")
 				// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 				// The cached gitState will not be reset to avoid reading all the git files unnecessarily.
 				state.resetAllButGitState()
@@ -355,8 +354,7 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 		lastUpdate: metav1.Now(),
 	}
 	if state.needToSetSyncStatus(newSyncStatus) {
-		// TODO (b/209689848): update the status to reflect the remediator errors
-		if err := p.setSyncStatus(ctx, syncErrs); err != nil {
+		if err := p.SetSyncStatus(ctx, syncErrs); err != nil {
 			syncErrs = status.Append(syncErrs, err)
 		} else {
 			state.syncStatus = newSyncStatus
@@ -377,10 +375,13 @@ func updateSyncStatus(ctx context.Context, p Parser) {
 			return
 
 		case <-ticker.C:
-			// TODO (b/209689848): update the status to reflect the remediator errors
-			if err := p.setSyncStatus(ctx, p.options().updater.applier.Errors()); err != nil {
-				klog.Infof("failed to update sync status: %v", err)
-				continue
+			allErrs := p.options().updater.applier.Errors()
+			remediatorErrs := p.RemediatorConflictErrors()
+			for _, e := range remediatorErrs {
+				allErrs = status.Append(allErrs, e)
+			}
+			if err := p.SetSyncStatus(ctx, allErrs); err != nil {
+				klog.Warningf("failed to update sync status: %v", err)
 			}
 		}
 	}

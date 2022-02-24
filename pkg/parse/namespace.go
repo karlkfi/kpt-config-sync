@@ -229,10 +229,10 @@ func (p *namespace) setRenderingStatusWithRetires(ctx context.Context, newStatus
 	return nil
 }
 
-// setSyncStatus implements the Parser interface
-// setSyncStatus sets the RepoSync sync status.
-// errs inclucdes the errors encountered during the apply step;
-func (p *namespace) setSyncStatus(ctx context.Context, errs status.MultiError) error {
+// SetSyncStatus implements the Parser interface
+// SetSyncStatus sets the RepoSync sync status.
+// `errs` includes the errors encountered during the apply step;
+func (p *namespace) SetSyncStatus(ctx context.Context, errs status.MultiError) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 	return p.setSyncStatusWithRetries(ctx, errs, defaultDenominator)
@@ -278,4 +278,9 @@ func (p *namespace) setSyncStatusWithRetries(ctx context.Context, errs status.Mu
 		return status.APIServerError(err, fmt.Sprintf("failed to update the RepoSync sync status for the %v namespace", p.scope))
 	}
 	return nil
+}
+
+// RemediatorConflictErrors implements the Parser interface
+func (p *namespace) RemediatorConflictErrors() []status.Error {
+	return p.remediator.ConflictErrors()
 }

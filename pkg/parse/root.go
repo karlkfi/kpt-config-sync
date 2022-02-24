@@ -273,10 +273,10 @@ func setRenderingStatus(rendering *v1beta1.RenderingStatus, p Parser, newStatus 
 	rendering.LastUpdate = newStatus.lastUpdate
 }
 
-// setSyncStatus implements the Parser interface
-// setSyncStatus sets the RootSync sync status.
-// errs inclucdes the errors encountered during the apply step;
-func (p *root) setSyncStatus(ctx context.Context, errs status.MultiError) error {
+// SetSyncStatus implements the Parser interface
+// SetSyncStatus sets the RootSync sync status.
+// `errs` includes the errors encountered during the apply step;
+func (p *root) SetSyncStatus(ctx context.Context, errs status.MultiError) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 	return p.setSyncStatusWithRetries(ctx, errs, defaultDenominator)
@@ -404,4 +404,9 @@ func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.Mult
 	}
 
 	return objs, nil
+}
+
+// RemediatorConflictErrors implements the Parser interface
+func (p *root) RemediatorConflictErrors() []status.Error {
+	return p.remediator.ConflictErrors()
 }

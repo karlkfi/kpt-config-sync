@@ -31,8 +31,11 @@ import (
 // Manager accepts new resource lists that are parsed from Git and then
 // updates declared resources and get GVKs.
 type Manager struct {
-	// reconciler is the name of the reconciler process running the Manager.
-	reconciler declared.Scope
+	// scope is the scope of the reconciler process running the Manager.
+	scope declared.Scope
+
+	// syncName is the corresponding RootSync|RepoSync name of the reconciler process running the Manager.
+	syncName string
 
 	// cfg is the rest config used to talk to apiserver.
 	cfg *rest.Config
@@ -55,6 +58,10 @@ type Manager struct {
 	watcherMap map[schema.GroupVersionKind]Runnable
 	// needsUpdate indicates if the Manager's watches need to be updated.
 	needsUpdate bool
+	// addConflictErrorFunc is a function that adds the conflict error detected by the remediator.
+	addConflictErrorFunc func(status.Error)
+	// removeConflictErrorFunc is a function that removes the conflict error detected by the remediator.
+	removeConflictErrorFunc func(status.Error)
 }
 
 // Options contains options for creating a watch manager.
@@ -81,7 +88,10 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 }
 
 // NewManager starts a new watch manager
-func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueue, decls *declared.Resources, options *Options) (*Manager, error) {
+func NewManager(scope declared.Scope, syncName string, cfg *rest.Config,
+	q *queue.ObjectQueue, decls *declared.Resources, options *Options,
+	addConflictErrorFunc func(status.Error),
+	removeConflictErrorFunc func(status.Error)) (*Manager, error) {
 	if options == nil {
 		var err error
 		options, err = DefaultOptions(cfg)
@@ -91,13 +101,16 @@ func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueu
 	}
 
 	return &Manager{
-		reconciler:        reconciler,
-		cfg:               cfg,
-		resources:         decls,
-		watcherMap:        make(map[schema.GroupVersionKind]Runnable),
-		createWatcherFunc: options.watcherFunc,
-		mapper:            options.Mapper,
-		queue:             q,
+		scope:                   scope,
+		syncName:                syncName,
+		cfg:                     cfg,
+		resources:               decls,
+		watcherMap:              make(map[schema.GroupVersionKind]Runnable),
+		createWatcherFunc:       options.watcherFunc,
+		mapper:                  options.Mapper,
+		queue:                   q,
+		addConflictErrorFunc:    addConflictErrorFunc,
+		removeConflictErrorFunc: removeConflictErrorFunc,
 	}, nil
 }
 
@@ -120,7 +133,7 @@ func (m *Manager) ManagementConflict() bool {
 	for _, watcher := range m.watcherMap {
 		if watcher.ManagementConflict() {
 			managementConflict = true
-			watcher.SetManagementConflict(false)
+			watcher.ClearManagementConflict()
 		}
 	}
 	return managementConflict
@@ -190,12 +203,15 @@ func (m *Manager) startWatcher(ctx context.Context, gvk schema.GroupVersionKind)
 		return nil
 	}
 	cfg := watcherConfig{
-		gvk:        gvk,
-		mapper:     m.mapper,
-		config:     m.cfg,
-		resources:  m.resources,
-		queue:      m.queue,
-		reconciler: m.reconciler,
+		gvk:                     gvk,
+		mapper:                  m.mapper,
+		config:                  m.cfg,
+		resources:               m.resources,
+		queue:                   m.queue,
+		scope:                   m.scope,
+		syncName:                m.syncName,
+		addConflictErrorFunc:    m.addConflictErrorFunc,
+		removeConflictErrorFunc: m.removeConflictErrorFunc,
 	}
 	w, err := m.createWatcherFunc(ctx, cfg)
 	if err != nil {

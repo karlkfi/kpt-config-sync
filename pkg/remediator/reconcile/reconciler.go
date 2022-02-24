@@ -37,7 +37,8 @@ type reconcilerInterface interface {
 // reconciler ensures objects are consistent with their declared state in the
 // repository.
 type reconciler struct {
-	scope declared.Scope
+	scope    declared.Scope
+	syncName string
 	// applier is where to write the declared configuration to.
 	applier syncerreconcile.Applier
 	// declared is the threadsafe in-memory representation of declared configuration.
@@ -47,11 +48,13 @@ type reconciler struct {
 // newReconciler instantiates a new reconciler.
 func newReconciler(
 	scope declared.Scope,
+	syncName string,
 	applier syncerreconcile.Applier,
 	declared *declared.Resources,
 ) *reconciler {
 	return &reconciler{
 		scope:    scope,
+		syncName: syncName,
 		applier:  applier,
 		declared: declared,
 	}
@@ -73,7 +76,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj client.Objec
 		Declared: decl,
 		Actual:   obj,
 	}
-	switch t := d.Operation(ctx, r.scope); t {
+	switch t := d.Operation(ctx, r.scope, r.syncName); t {
 	case diff.NoOp:
 		return nil
 	case diff.Create:

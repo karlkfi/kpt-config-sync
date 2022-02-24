@@ -56,6 +56,10 @@ type noOpRemediator struct {
 	needsUpdate bool
 }
 
+func (r *noOpRemediator) ConflictErrors() []status.Error {
+	return nil
+}
+
 func (r *noOpRemediator) NeedsUpdate() bool {
 	return r.needsUpdate
 }
@@ -101,7 +105,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
 					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
 					core.Annotation(metadata.ResourceIDKey, "_namespace_foo"),
-					difftest.ManagedByRoot,
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
 				),
 				fake.Role(core.Namespace("foo"),
 					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
@@ -113,7 +117,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
 					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
 					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
-					difftest.ManagedByRoot,
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
 				),
 			},
 		},

@@ -48,7 +48,7 @@ func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, syncNa
 	for _, obj := range objs {
 		core.SetLabel(obj, metadata.ManagedByKey, metadata.ManagedByValue)
 		core.SetAnnotation(obj, metadata.GitContextKey, string(gcVal))
-		core.SetAnnotation(obj, metadata.ResourceManagerKey, string(scope))
+		core.SetAnnotation(obj, metadata.ResourceManagerKey, declared.ResourceManager(scope, syncName))
 		core.SetAnnotation(obj, metadata.SyncTokenAnnotationKey, commitHash)
 		core.SetAnnotation(obj, metadata.ResourceIDKey, core.GKNN(obj))
 		core.SetAnnotation(obj, metadata.OwningInventoryKey, inventoryID)

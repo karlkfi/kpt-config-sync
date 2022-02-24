@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
@@ -33,14 +34,16 @@ import (
 )
 
 const (
-	testNs1 = "fake-namespace-1"
-	testNs2 = "fake-namespace-2"
+	testNs1  = "fake-namespace-1"
+	testNs2  = "fake-namespace-2"
+	syncName = "rs"
 )
 
 func TestDiffType(t *testing.T) {
 	testCases := []struct {
 		name     string
 		scope    declared.Scope
+		syncName string
 		declared client.Object
 		actual   client.Object
 		want     Operation
@@ -64,62 +67,161 @@ func TestDiffType(t *testing.T) {
 		},
 		// Declared + actual paths.
 		{
-			name:     "declared + actual, management enabled, can manage: update",
+			name:     "declared + actual, management enabled, no manager annotation, root scope, can manage: update",
 			scope:    declared.RootReconciler,
 			declared: fake.RoleObject(syncertest.ManagementEnabled),
 			actual:   fake.RoleObject(syncertest.ManagementEnabled),
 			want:     Update,
 		},
 		{
-			name:  "declared + actual, management enabled, namespace reconciler / root-owned object: conflict",
+			name:     "declared + actual, management enabled, no manager annotation, namespace scope, can manage: update",
+			scope:    "shipping",
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual:   fake.RoleObject(syncertest.ManagementEnabled),
+			want:     Update,
+		},
+		{
+			name:     "declared + actual, management enabled, root scope / self-owned object, can manage: update",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				difftest.ManagedBy(declared.RootReconciler, syncName)),
+			want: Update,
+		},
+		{
+			name:     "declared + actual, management enabled, root scope / namespace-owned object, can manage: update",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				difftest.ManagedBy("shipping", "any-rs")),
+			want: Update,
+		},
+		{
+			name:     "declared + actual, management enabled, namespace scope / self-owned object, can manage: update",
+			scope:    "shipping",
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				difftest.ManagedBy("shipping", syncName)),
+			want: Update,
+		},
+		{
+			name:     "declared + actual, management enabled, root scope / other root-owned object, can manage: conflict",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				difftest.ManagedBy(declared.RootReconciler, "other-rs")),
+			want: ManagementConflict,
+		},
+		{
+			name:     "declared + actual, management enabled, namespace scope / other namespace-owned object, can manage: conflict",
+			scope:    "shipping",
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				difftest.ManagedBy("shipping", "other-rs")),
+			want: ManagementConflict,
+		},
+		{
+			name:  "declared + actual, management enabled, namespace scope / root-owned object: conflict",
 			scope: "foo",
 			declared: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Namespace("foo")),
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Namespace("foo"),
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, "any-rs")),
 			want: ManagementConflict,
 		},
 		{
-			name:     "declared + actual, management disabled, can manage, with meta: unmanage",
+			name:     "declared + actual, management disabled, root scope, can manage, with meta, no manager: unmanage",
 			scope:    declared.RootReconciler,
 			declared: fake.RoleObject(syncertest.ManagementDisabled),
 			actual:   fake.RoleObject(syncertest.ManagementEnabled),
 			want:     Unmanage,
 		},
 		{
-			name:     "declared + actual, management disabled, can manage, no meta: no op",
+			name:     "declared + actual, management disabled, namespace scope, can manage, with meta, no manager: unmanage",
+			scope:    "shipping",
+			declared: fake.RoleObject(syncertest.ManagementDisabled),
+			actual:   fake.RoleObject(syncertest.ManagementEnabled),
+			want:     Unmanage,
+		},
+		{
+			name:     "declared + actual, management disabled, root scope, can manage, no meta: no op",
 			scope:    declared.RootReconciler,
 			declared: fake.RoleObject(syncertest.ManagementDisabled),
 			actual:   fake.RoleObject(),
 			want:     NoOp,
 		},
 		{
-			name:  "declared + actual, management disabled, namespace reconciler / root-owned object: no op",
+			name:     "declared + actual, management disabled, namespace scope, can manage, no meta: no op",
+			scope:    "shipping",
+			declared: fake.RoleObject(syncertest.ManagementDisabled),
+			actual:   fake.RoleObject(),
+			want:     NoOp,
+		},
+		{
+			name:  "declared + actual, management disabled, namespace scope / root-owned object: no op",
 			scope: "shipping",
 			declared: fake.RoleObject(syncertest.ManagementDisabled,
 				core.Namespace("shipping")),
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Namespace("shipping"),
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, "any-rs")),
 			want: NoOp,
 		},
 		{
-			name: "declared + actual, management disabled, root reconciler / namespace-owned object: no op",
+			name:  "declared + actual, management disabled, namespace scope / self-owned object: unmanage",
+			scope: "shipping",
 			declared: fake.RoleObject(syncertest.ManagementDisabled,
 				core.Namespace("shipping")),
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Namespace("shipping"),
-				difftest.ManagedBy("shipping")),
-			want: NoOp,
+				difftest.ManagedBy("shipping", syncName)),
+			want: Unmanage,
 		},
 		{
-			name: "declared + actual, management disabled, root reconciler / empty management annotation object: unmanage",
+			name:  "declared + actual, management disabled, namespace scope / other namespace-owned object: no op",
+			scope: "shipping",
 			declared: fake.RoleObject(syncertest.ManagementDisabled,
 				core.Namespace("shipping")),
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Namespace("shipping"),
-				difftest.ManagedBy("")),
+				difftest.ManagedBy("shipping", "other-rs")),
+			want: NoOp,
+		},
+		{
+			name: "declared + actual, management disabled, root scope / namespace-owned object: no op",
+			declared: fake.RoleObject(syncertest.ManagementDisabled,
+				core.Namespace("shipping")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("shipping"),
+				difftest.ManagedBy("shipping", "any-rs")),
+			want: NoOp,
+		},
+		{
+			name: "declared + actual, management disabled, root scope / self-owned object: unmanage",
+			declared: fake.RoleObject(syncertest.ManagementDisabled,
+				core.Namespace("shipping")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("shipping"),
+				difftest.ManagedBy(declared.RootReconciler, syncName)),
+			want: Unmanage,
+		},
+		{
+			name: "declared + actual, management disabled, root scope / other root-owned object: no op",
+			declared: fake.RoleObject(syncertest.ManagementDisabled,
+				core.Namespace("shipping")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("shipping"),
+				difftest.ManagedBy(declared.RootReconciler, "other-rs")),
+			want: NoOp,
+		},
+		{
+			name: "declared + actual, management disabled, root scope / empty management annotation object: unmanage",
+			declared: fake.RoleObject(syncertest.ManagementDisabled,
+				core.Namespace("shipping")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("shipping"),
+				difftest.ManagedBy("", configsync.RepoSyncName)),
 			want: Unmanage,
 		},
 		{
@@ -205,7 +307,7 @@ func TestDiffType(t *testing.T) {
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, configsync.RootSyncName)),
 			want: NoOp,
 		},
 		{
@@ -213,28 +315,28 @@ func TestDiffType(t *testing.T) {
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, configsync.RootSyncName)),
 			want: NoOp,
 		},
 		{
 			name:  "actual + no declared, not managed by Config Sync but has other Config Sync annotations: noop",
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.TokenAnnotation,
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, configsync.RootSyncName)),
 			want: NoOp,
 		},
 		{
 			name:  "actual + no declared, not managed by Config Sync (the configsync.gke.io/resource-id annotation is unset): noop",
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, configsync.RootSyncName)),
 			want: NoOp,
 		},
 		{
 			name:  "actual + no declared, not managed by Config Sync (the configmanagement.gke.io/managed annotation is set to disabled): noop",
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementDisabled,
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, configsync.RootSyncName)),
 			want: NoOp,
 		},
 		{
@@ -242,11 +344,11 @@ func TestDiffType(t *testing.T) {
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
-				difftest.ManagedByRoot),
+				difftest.ManagedBy(declared.RootReconciler, configsync.RootSyncName)),
 			want: NoOp,
 		},
 		{
-			name: "actual + no declared, prevent deletion: unmanage",
+			name: "actual + no declared, managed by Config Sync, prevent deletion: unmanage",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
 				core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)),
@@ -291,6 +393,9 @@ func TestDiffType(t *testing.T) {
 			if scope == "" {
 				scope = declared.RootReconciler
 			}
+			if tc.syncName == "" {
+				tc.syncName = syncName
+			}
 
 			diff := Diff{
 				Declared: tc.declared,
@@ -298,7 +403,7 @@ func TestDiffType(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			if d := cmp.Diff(tc.want, diff.Operation(ctx, scope)); d != "" {
+			if d := cmp.Diff(tc.want, diff.Operation(ctx, scope, tc.syncName)); d != "" {
 				t.Fatal(d)
 			}
 		})

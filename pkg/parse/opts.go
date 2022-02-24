@@ -76,12 +76,14 @@ type Parser interface {
 	parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError)
 	setSourceStatus(ctx context.Context, newStatus gitStatus) error
 	setRenderingStatus(ctx context.Context, oldStatus, newStatus renderingStatus) error
-	setSyncStatus(ctx context.Context, errs status.MultiError) error
+	SetSyncStatus(ctx context.Context, errs status.MultiError) error
 	options() *opts
 	// SetReconciling sets the field indicating whether the reconciler is reconciling a change.
 	SetReconciling(value bool)
 	// Reconciling returns whether the reconciler is reconciling a change.
 	Reconciling() bool
+	// RemediatorConflictErrors returns the conflict errors detected by the remediator.
+	RemediatorConflictErrors() []status.Error
 }
 
 func (o *opts) k8sClient() client.Client {

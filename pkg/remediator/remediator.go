@@ -16,6 +16,7 @@ package remediator
 
 import (
 	"context"
+	"sync"
 
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
@@ -26,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 // Remediator knows how to keep the state of a Kubernetes cluster in sync with
@@ -38,8 +40,11 @@ type Remediator struct {
 	watchMgr *watch.Manager
 	workers  []*reconcile.Worker
 	started  bool
-	// errs tracks all the errors the remediator encounters.
-	errs status.MultiError
+	// The following fields are guarded by the mutex.
+	mux sync.Mutex
+	// conflictErrs tracks all the management conflicts the remediator encounters,
+	// and report to RootSync|RepoSync status.
+	conflictErrs []status.Error
 }
 
 // Interface is a fake-able subset of the interface Remediator implements that
@@ -55,8 +60,8 @@ type Interface interface {
 	UpdateWatches(context.Context, map[schema.GroupVersionKind]struct{}) status.MultiError
 	// ManagementConflict returns true if one of the watchers noticed a management conflict.
 	ManagementConflict() bool
-	// Errors returns the errors the remediator encounters.
-	Errors() status.MultiError
+	// ConflictErrors returns the errors the remediator encounters.
+	ConflictErrors() []status.Error
 }
 
 var _ Interface = &Remediator{}
@@ -66,22 +71,25 @@ var _ Interface = &Remediator{}
 //
 // It is safe for decls to be modified after they have been passed into the
 // Remediator.
-func New(reconciler declared.Scope, cfg *rest.Config, applier syncerreconcile.Applier, decls *declared.Resources, numWorkers int) (*Remediator, error) {
-	q := queue.New(string(reconciler))
+func New(scope declared.Scope, syncName string, cfg *rest.Config, applier syncerreconcile.Applier, decls *declared.Resources, numWorkers int) (*Remediator, error) {
+	q := queue.New(string(scope))
 	workers := make([]*reconcile.Worker, numWorkers)
 	for i := 0; i < numWorkers; i++ {
-		workers[i] = reconcile.NewWorker(reconciler, applier, q, decls)
+		workers[i] = reconcile.NewWorker(scope, syncName, applier, q, decls)
 	}
 
-	watchMgr, err := watch.NewManager(reconciler, cfg, q, decls, nil)
+	remediator := &Remediator{
+		workers: workers,
+	}
+
+	watchMgr, err := watch.NewManager(scope, syncName, cfg, q, decls, nil,
+		remediator.addConflictError, remediator.removeConflictError)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating watch manager")
 	}
 
-	return &Remediator{
-		watchMgr: watchMgr,
-		workers:  workers,
-	}, nil
+	remediator.watchMgr = watchMgr
+	return remediator, nil
 }
 
 // Start begins the asynchronous processes for the Remediator's reconcile workers.
@@ -110,7 +118,36 @@ func (r *Remediator) ManagementConflict() bool {
 	return r.watchMgr.ManagementConflict()
 }
 
-// Errors implements Interface.
-func (r *Remediator) Errors() status.MultiError {
-	return r.errs
+// ConflictErrors implements Interface.
+func (r *Remediator) ConflictErrors() []status.Error {
+	return r.conflictErrs
+}
+
+func (r *Remediator) addConflictError(e status.Error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+
+	for _, existingErr := range r.conflictErrs {
+		if e.Error() == existingErr.Error() {
+			return
+		}
+	}
+	r.conflictErrs = append(r.conflictErrs, e)
+}
+
+func (r *Remediator) removeConflictError(e status.Error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+
+	newErrs := make([]status.Error, len(r.conflictErrs))
+	i := 0
+	for _, existingErr := range r.conflictErrs {
+		if e.Error() != existingErr.Error() {
+			newErrs[i] = existingErr
+			i++
+		} else {
+			klog.Infof("Conflict error resolved: %v", e)
+		}
+	}
+	r.conflictErrs = newErrs[0:i]
 }

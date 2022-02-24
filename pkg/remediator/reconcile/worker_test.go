@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
@@ -112,7 +113,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 			}
 
 			d := makeDeclared(t, tc.declared...)
-			w := NewWorker(declared.RootReconciler, c.Applier(), q, d)
+			w := NewWorker(declared.RootReconciler, configsync.RootSyncName, c.Applier(), q, d)
 
 			for _, obj := range tc.toProcess {
 				if ok := w.processNextObject(context.Background()); !ok {

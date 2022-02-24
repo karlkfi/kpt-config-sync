@@ -24,12 +24,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const rsName = "test-rs"
+
 func TestCanManage(t *testing.T) {
 	testCases := []struct {
-		name       string
-		reconciler declared.Scope
-		object     client.Object
-		want       bool
+		name   string
+		scope  declared.Scope
+		object client.Object
+		want   bool
 	}{
 		{
 			"Root can manage unmanaged object",
@@ -38,15 +40,27 @@ func TestCanManage(t *testing.T) {
 			true,
 		},
 		{
-			"Root can manage other-managed object",
+			"Root can manage any non-root-managed object",
 			declared.RootReconciler,
-			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo")),
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo", "any-rs")),
 			true,
 		},
 		{
 			"Root can manage self-managed object",
 			declared.RootReconciler,
-			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedByRoot),
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler, rsName)),
+			true,
+		},
+		{
+			"Root can NOT manage other root-managed object",
+			declared.RootReconciler,
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler, "other-rs")),
+			false,
+		},
+		{
+			"Root can manage seemingly other root-managed object",
+			declared.RootReconciler,
+			fake.DeploymentObject(difftest.ManagedBy(declared.RootReconciler, "other-rs")),
 			true,
 		},
 		{
@@ -58,32 +72,38 @@ func TestCanManage(t *testing.T) {
 		{
 			"Non-root can manage self-managed object",
 			"foo",
-			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo")),
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo", rsName)),
 			true,
 		},
 		{
-			"Non-root can manage other-managed object",
+			"Non-root can NOT manage other non-root-managed object",
 			"foo",
-			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo")),
-			true,
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo", "other-rs")),
+			false,
 		},
 		{
 			"Non-root can NOT manage root-managed object",
 			"foo",
-			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedByRoot),
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler, "any-rs")),
 			false,
+		},
+		{
+			"Non-root can manage seemingly other non-root-managed object",
+			"foo",
+			fake.DeploymentObject(difftest.ManagedBy("foo", "other-rs")),
+			true,
 		},
 		{
 			"Non-root can manage seemingly root-managed object",
 			"foo",
-			fake.DeploymentObject(difftest.ManagedByRoot),
+			fake.DeploymentObject(difftest.ManagedBy(declared.RootReconciler, "any-rs")),
 			true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := CanManage(tc.reconciler, tc.object)
+			got := CanManage(tc.scope, rsName, tc.object)
 			if got != tc.want {
 				t.Errorf("CanManage() = %v; want %v", got, tc.want)
 			}

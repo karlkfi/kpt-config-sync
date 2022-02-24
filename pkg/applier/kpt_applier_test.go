@@ -88,7 +88,7 @@ func TestSync(t *testing.T) {
 				formApplyEvent(fakeID(), inventory.NewInventoryOverlapError(errors.New("conflict"))),
 				formApplyEvent(nil, nil),
 			},
-			multiErr: ManagementConflictError(resources[0]),
+			multiErr: KptManagementConflictError(resources[0]),
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 				fakeKind():         {},

@@ -31,7 +31,7 @@ import (
 
 func fakeRunnable(ctx context.Context) Runnable {
 	cfg := watcherConfig{
-		reconciler: "test",
+		scope: "test",
 		startWatch: func(options metav1.ListOptions) (watch.Interface, error) {
 			return watch.NewFake(), nil
 		},
@@ -51,6 +51,8 @@ func testRunnables(_ context.Context, errOnType map[schema.GroupVersionKind]bool
 		return fakeRunnable(ctx), nil
 	}
 }
+
+var fakeNoOpFnc = func(_ status.Error) {}
 
 func TestManager_Update(t *testing.T) {
 	testCases := []struct {
@@ -141,7 +143,7 @@ func TestManager_Update(t *testing.T) {
 			options := &Options{
 				watcherFunc: testRunnables(ctx, tc.failedWatchers),
 			}
-			m, err := NewManager(":test", nil, nil, &declared.Resources{}, options)
+			m, err := NewManager(":test", "rs", nil, nil, &declared.Resources{}, options, fakeNoOpFnc, fakeNoOpFnc)
 			if err != nil {
 				t.Fatal(err)
 			}

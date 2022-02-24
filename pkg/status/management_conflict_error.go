@@ -12,21 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package applier
+package status
 
 import (
 	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// KptManagementConflictError indicates that the passed resource is illegally
+// ManagementConflictErrorCode is the error code for management conflict errors.
+const ManagementConflictErrorCode = "1060"
+
+// ManagementConflictErrorBuilder is the builder for management conflict errors.
+var ManagementConflictErrorBuilder = NewErrorBuilder(ManagementConflictErrorCode)
+
+// ManagementConflictError indicates that the passed resource is illegally
 // declared in multiple repositories.
-// TODO: merge with status.ManagementConflictError if cli-utils supports reporting the conflicting manager in InventoryOverlapError.
-func KptManagementConflictError(resource client.Object) status.Error {
-	return status.ManagementConflictErrorBuilder.
+func ManagementConflictError(resource client.Object, newManager string) Error {
+	currentManager := resource.GetAnnotations()[metadata.ResourceManagerKey]
+	return ManagementConflictErrorBuilder.
 		Sprintf("The %q reconciler cannot manage resources declared in another repository. "+
-			"Remove the declaration for this resource from either the current repository, or the managed repository.",
-			resource.GetAnnotations()[metadata.ResourceManagerKey]).
+			"Remove the declaration for this resource from either the current repository, or the repository managed by %q.",
+			newManager, currentManager).
 		BuildWithResources(resource)
 }

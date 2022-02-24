@@ -23,7 +23,7 @@ import (
 )
 
 // IsManager returns true if the given reconciler is the manager for the resource.
-func IsManager(reconciler declared.Scope, obj client.Object) bool {
+func IsManager(scope declared.Scope, syncName string, obj client.Object) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return false
@@ -32,16 +32,12 @@ func IsManager(reconciler declared.Scope, obj client.Object) bool {
 	if !ok || !differ.ManagedByConfigSync(obj) {
 		return false
 	}
-	return manager == string(reconciler)
+	return manager == declared.ResourceManager(scope, syncName)
 }
 
 // CanManage returns true if the given reconciler is allowed to manage the given
 // resource.
-func CanManage(reconciler declared.Scope, obj client.Object) bool {
-	if reconciler == declared.RootReconciler {
-		// The root reconciler can always manage any resource.
-		return true
-	}
+func CanManage(scope declared.Scope, syncName string, obj client.Object) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		// If the object somehow has no annotations, it is unmanaged and therefore
@@ -53,11 +49,12 @@ func CanManage(reconciler declared.Scope, obj client.Object) bool {
 		// Any reconciler can manage any unmanaged resource.
 		return true
 	}
+	managerScope, _ := declared.ManagerScopeAndName(manager)
 	if manager != "" {
 		// Most objects have no manager, and ValidateScope will return an error in
 		// this case. Explicitly checking for empty string means we don't do this
 		// relatively expensive operation every time we're processing an object.
-		if err := declared.ValidateScope(manager); err != nil {
+		if err := declared.ValidateScope(string(managerScope)); err != nil {
 			// We don't care if the actual object's manager declaration is invalid.
 			// If it is and it's a managed object, we'll just overwrite it anyway.
 			// If it isn't actually managed, we'll show this message every time the
@@ -66,16 +63,14 @@ func CanManage(reconciler declared.Scope, obj client.Object) bool {
 			klog.Warningf("Invalid manager annotation %s=%q", metadata.ResourceManagerKey, manager)
 		}
 	}
-	switch manager {
-	case string(declared.RootReconciler):
-		// Only the root reconciler can manage its own resources.
+
+	if scope != declared.RootReconciler && managerScope == declared.RootReconciler {
+		// The namespace scope cannot manage root resources
 		return false
-	default:
-		// Ideally we would verify that the calling reconciler matches the annotated
-		// manager. However we do not yet have a validating admission controller to
-		// protect our annotations from being modified by users or controllers. A
-		// user could block a non-root reconciler by modfiying the value of this
-		// annotation to not match the proper reconciler.
+	}
+	if scope == declared.RootReconciler && managerScope != declared.RootReconciler {
+		// The root scope can always manage any namespace-scope managed resource.
 		return true
 	}
+	return manager == declared.ResourceManager(scope, syncName)
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/remediator/watch"
+	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -163,7 +164,7 @@ func Run(opts Options) {
 		klog.Fatalf("failed to create rest config for the remediator: %v", err)
 	}
 
-	rem, err := remediator.New(opts.ReconcilerScope, cfgForRemediator, baseApplier, decls, opts.NumWorkers)
+	rem, err := remediator.New(opts.ReconcilerScope, opts.SyncName, cfgForRemediator, baseApplier, decls, opts.NumWorkers)
 	if err != nil {
 		klog.Fatalf("Instantiating Remediator: %v", err)
 	}
@@ -225,8 +226,18 @@ func updateStatus(ctx context.Context, p parse.Parser) {
 
 		case <-ticker.C:
 			if !p.Reconciling() {
-				// TODO (b/209689848): update the status to reflect the remediator errors
-				continue
+				remediatorErrs := p.RemediatorConflictErrors()
+				if len(remediatorErrs) == 0 {
+					continue
+				}
+				var errs status.MultiError
+				for _, e := range remediatorErrs {
+					errs = status.Append(errs, e)
+				}
+
+				if err := p.SetSyncStatus(ctx, errs); err != nil {
+					klog.Warningf("failed to update remediator errors: %v", err)
+				}
 			}
 			// if `p.Reconciling` is true, `parse.Run` would update the status periodically.
 		}

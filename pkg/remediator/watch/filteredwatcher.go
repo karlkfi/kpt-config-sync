@@ -26,10 +26,10 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +61,9 @@ type Runnable interface {
 	Stop()
 	Run(ctx context.Context) status.Error
 	ManagementConflict() bool
-	SetManagementConflict(v bool)
+	SetManagementConflict(object client.Object)
+	ClearManagementConflict()
+	removeManagementConflictError(object client.Object)
 }
 
 const (
@@ -77,21 +79,25 @@ const errorLoggingInterval = time.Second
 // filteredWatcher is wrapper around a watch interface.
 // It only keeps the events for objects that are
 // - either present in the declared resources,
-// - or managed by Config Sync.
+// - or managed by the same reconciler.
 type filteredWatcher struct {
 	gvk        string
 	startWatch startWatchFunc
 	resources  *declared.Resources
 	queue      *queue.ObjectQueue
-	reconciler declared.Scope
+	scope      declared.Scope
+	syncName   string
 	// errorTracker maps an error to the time when the same error happened last time.
 	errorTracker map[string]time.Time
 
 	// The following fields are guarded by the mutex.
-	mux                sync.Mutex
-	base               watch.Interface
-	stopped            bool
-	managementConflict bool
+	mux                     sync.Mutex
+	base                    watch.Interface
+	stopped                 bool
+	managementConflict      bool
+	conflictErrMap          map[core.ID]status.Error
+	addConflictErrorFunc    func(status.Error)
+	removeConflictErrorFunc func(status.Error)
 }
 
 // filteredWatcher implements the Runnable interface.
@@ -100,13 +106,17 @@ var _ Runnable = &filteredWatcher{}
 // NewFiltered returns a new filtered watch initialized with the given options.
 func NewFiltered(_ context.Context, cfg watcherConfig) Runnable {
 	return &filteredWatcher{
-		gvk:          cfg.gvk.String(),
-		startWatch:   cfg.startWatch,
-		resources:    cfg.resources,
-		queue:        cfg.queue,
-		reconciler:   cfg.reconciler,
-		base:         watch.NewEmptyWatch(),
-		errorTracker: make(map[string]time.Time),
+		gvk:                     cfg.gvk.String(),
+		startWatch:              cfg.startWatch,
+		resources:               cfg.resources,
+		queue:                   cfg.queue,
+		scope:                   cfg.scope,
+		syncName:                cfg.syncName,
+		base:                    watch.NewEmptyWatch(),
+		errorTracker:            make(map[string]time.Time),
+		conflictErrMap:          make(map[core.ID]status.Error),
+		addConflictErrorFunc:    cfg.addConflictErrorFunc,
+		removeConflictErrorFunc: cfg.removeConflictErrorFunc,
 	}
 }
 
@@ -143,9 +153,61 @@ func (w *filteredWatcher) ManagementConflict() bool {
 	return w.managementConflict
 }
 
-func (w *filteredWatcher) SetManagementConflict(v bool) {
+func (w *filteredWatcher) SetManagementConflict(object client.Object) {
 	w.mux.Lock()
-	w.managementConflict = v
+	defer w.mux.Unlock()
+
+	// The resource should be managed by a namespace reconciler, but now is updated.
+	// Most likely the resource is now managed by a root reconciler.
+	// In this case, set `managementConflict` true to trigger the namespace reconciler's
+	// parse-apply-watch loop. The kpt_applier should report the ManagementConflictError (KNV1060).
+	// No need to add the conflictError to the remediator because it will be surfaced by kpt_applier.
+	if w.scope != declared.RootReconciler {
+		w.managementConflict = true
+		return
+	}
+
+	manager, found := object.GetAnnotations()[metadata.ResourceManagerKey]
+	// There should be no conflict if the resource manager key annotation is not found
+	// because any reconciler can manage a non-ConfigSync managed resource.
+	if !found {
+		klog.Warningf("No management conflict as the object %q is not managed by Config Sync", core.IDOf(object))
+		return
+	}
+	// Root reconciler can override resource managed by namespace reconciler.
+	// It is not a conflict in this case.
+	if !declared.IsRootManager(manager) {
+		klog.Warningf("No management conflict as the root reconciler %q should update the object %q that is managed by the namespace reconciler %q",
+			w.syncName, core.IDOf(object), manager)
+		return
+	}
+
+	// The remediator detects conflict between two root reconcilers.
+	// Add the conflict error to the remediator, and the updateStatus goroutine will surface the ManagementConflictError (KNV1060).
+	// It also sets `managementConflict` true to keep retrying the parse-apply-watch loop
+	// so that the error can auto-resolve if the resource is removed from the conflicting manager's repository.
+	w.managementConflict = true
+	newManager := declared.ResourceManager(w.scope, w.syncName)
+	klog.Warningf("The remediator detects a management conflict for object %q between root reconcilers: %q and %q",
+		core.GKNN(object), newManager, manager)
+	w.conflictErrMap[core.IDOf(object)] = status.ManagementConflictError(object, newManager)
+	w.addConflictErrorFunc(w.conflictErrMap[core.IDOf(object)])
+	metrics.RecordResourceConflict(context.Background(), object.GetObjectKind().GroupVersionKind())
+}
+
+func (w *filteredWatcher) ClearManagementConflict() {
+	w.mux.Lock()
+	w.managementConflict = false
+	w.mux.Unlock()
+}
+
+func (w *filteredWatcher) removeManagementConflictError(object client.Object) {
+	w.mux.Lock()
+	id := core.IDOf(object)
+	if conflictError, found := w.conflictErrMap[id]; found {
+		w.removeConflictErrorFunc(conflictError)
+		delete(w.conflictErrMap, id)
+	}
 	w.mux.Unlock()
 }
 
@@ -293,7 +355,7 @@ func errorID(err error) string {
 // in the event to the controller work queue.
 //
 // handle returns the new resource version, whether the event should be ignored,
-// and an error indicating that an a watch.Error event type is encounted and the
+// and an error indicating that a watch.Error event type is encountered and the
 // watch should be restarted.
 func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string, bool, error) {
 	var deleted bool
@@ -351,27 +413,30 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string
 // shouldProcess returns true if the given object should be enqueued by the
 // watcher for processing.
 func (w *filteredWatcher) shouldProcess(object client.Object) bool {
-	if !diff.CanManage(w.reconciler, object) {
-		klog.Infof("Found management conflict for object: %v", object)
-		w.SetManagementConflict(true)
-		return false
+	// Process the resource if we are the manager regardless if it is declared or not.
+	if diff.IsManager(w.scope, w.syncName, object) {
+		w.removeManagementConflictError(object)
+		return true
 	}
-
 	id := core.IDOf(object)
-	if decl, ok := w.resources.Get(id); ok {
-		// If the object is declared, we only process it if it has the same GVK as
-		// its declaration. Otherwise we expect to get another event for the same
-		// object but with a matching GVK so we can actually compare it to its
-		// declaration.
-		return object.GetObjectKind().GroupVersionKind() == decl.GroupVersionKind()
-	}
-
-	// Even if the object is undeclared, we still want to process it if it is
-	// tagged as a managed object.
-	if !differ.ManagedByConfigSync(object) {
+	decl, ok := w.resources.Get(id)
+	if !ok {
+		// The resource is neither declared nor managed by the same reconciler, so don't manage it.
 		return false
 	}
 
-	// Only process non declared, managed resources if we are the manager.
-	return diff.IsManager(w.reconciler, object)
+	// If the object is declared, we only process it if it has the same GVK as
+	// its declaration. Otherwise we expect to get another event for the same
+	// object but with a matching GVK so we can actually compare it to its
+	// declaration.
+	if object.GetObjectKind().GroupVersionKind() != decl.GroupVersionKind() {
+		return false
+	}
+
+	if !diff.CanManage(w.scope, w.syncName, object) {
+		w.SetManagementConflict(object)
+		return false
+	}
+	w.removeManagementConflictError(object)
+	return true
 }

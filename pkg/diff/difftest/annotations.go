@@ -20,11 +20,7 @@ import (
 	"github.com/google/nomos/pkg/metadata"
 )
 
-// ManagedBy adds the annotation that a resource is managed by a particular
-// Namespace's reconciler.
-func ManagedBy(manager declared.Scope) core.MetaMutator {
-	return core.Annotation(metadata.ResourceManagerKey, string(manager))
+// ManagedBy adds the annotation that a resource is managed by a particular reconciler.
+func ManagedBy(scope declared.Scope, syncName string) core.MetaMutator {
+	return core.Annotation(metadata.ResourceManagerKey, declared.ResourceManager(scope, syncName))
 }
-
-// ManagedByRoot indicates the resource is managed by the Root reconciler.
-var ManagedByRoot = ManagedBy(declared.RootReconciler)
