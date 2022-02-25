@@ -160,9 +160,21 @@ func TestCanManage(t *testing.T) {
 			want:     true,
 		},
 		{
-			name:     "Root reconciler can manage object with different manager",
+			name:     "Root reconciler can manage object with any namespace manager",
 			username: "system:serviceaccount:config-management-system:root-reconciler",
 			manager:  "bookstore",
+			want:     true,
+		},
+		{
+			name:     "Root reconciler can not manage object with other root manager",
+			username: "system:serviceaccount:config-management-system:root-reconciler",
+			manager:  ":root_test-rs",
+			want:     false,
+		},
+		{
+			name:     "Root reconciler can manage object with no manager",
+			username: "system:serviceaccount:config-management-system:root-reconciler",
+			manager:  "",
 			want:     true,
 		},
 		{
@@ -172,9 +184,21 @@ func TestCanManage(t *testing.T) {
 			want:     true,
 		},
 		{
-			name:     "Namespace reconciler can not manage object with different manager",
+			name:     "Namespace reconciler can not manage object with manager in different namespace",
 			username: "system:serviceaccount:config-management-system:ns-reconciler-bookstore",
 			manager:  "videostore",
+			want:     false,
+		},
+		{
+			name:     "Namespace reconciler can not manage object with different manager in the same namespace",
+			username: "system:serviceaccount:config-management-system:ns-reconciler-bookstore",
+			manager:  "bookstore_test-rs",
+			want:     false,
+		},
+		{
+			name:     "Namespace reconciler can not manage object with any root manager",
+			username: "system:serviceaccount:config-management-system:ns-reconciler-bookstore",
+			manager:  ":root",
 			want:     false,
 		},
 		{

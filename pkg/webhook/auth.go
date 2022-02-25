@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/reconciler"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -34,7 +35,6 @@ const (
 
 	saImporter             = saNamespaceGroupPrefix + ":" + importer.Name
 	saRootReconcilerPrefix = saNamespaceGroupPrefix + ":" + reconciler.RootReconcilerPrefix
-	saNamespacePrefix      = saNamespaceGroupPrefix + ":" + reconciler.NsReconcilerPrefix + "-"
 )
 
 // isConfigSyncSA returns true if the given UserInfo represents a Config Sync
@@ -64,9 +64,24 @@ func isRootReconciler(username string) bool {
 }
 
 func canManage(username, manager string) bool {
-	if isRootReconciler(username) || manager == "" {
+	if manager == "" {
 		return true
 	}
-	username = strings.TrimPrefix(username, saNamespacePrefix)
-	return username == manager
+
+	scope, name := declared.ManagerScopeAndName(manager)
+	var reconcilerName string
+	if scope == declared.RootReconciler {
+		reconcilerName = reconciler.RootReconcilerName(name)
+	} else {
+		reconcilerName = reconciler.NsReconcilerName(string(scope), name)
+	}
+
+	if isRootReconciler(username) && scope != declared.RootReconciler {
+		return true
+	}
+	if !isRootReconciler(username) && scope == declared.RootReconciler {
+		return false
+	}
+	username = strings.TrimPrefix(username, saNamespaceGroupPrefix+":")
+	return username == reconcilerName
 }
