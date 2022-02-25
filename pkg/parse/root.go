@@ -381,7 +381,9 @@ func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.Mult
 	}
 
 	for ns, isDeclared := range namespaces {
-		if isDeclared {
+		// Do not treat config-management-system as an implicit namespace for multi-sync support.
+		// Otherwise, the namespace will become a managed resource, and will cause conflict among multiple RootSyncs.
+		if isDeclared || ns == configsync.ControllerNamespace {
 			continue
 		}
 		u := &unstructured.Unstructured{}
