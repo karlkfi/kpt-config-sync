@@ -16,12 +16,14 @@ package parse
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
@@ -77,19 +79,29 @@ func (r *noOpRemediator) Errors() status.MultiError {
 	return nil
 }
 
+func gitSpec(repo, auth string) core.MetaMutator {
+	return func(o client.Object) {
+		if rs, ok := o.(*v1beta1.RootSync); ok {
+			rs.Spec.Git.Repo = repo
+			rs.Spec.Git.Auth = auth
+		}
+	}
+}
+
 func TestRoot_Parse(t *testing.T) {
 	testCases := []struct {
-		name   string
-		format filesystem.SourceFormat
-		parsed []ast.FileObject
-		want   []ast.FileObject
+		name            string
+		format          filesystem.SourceFormat
+		existingObjects []client.Object
+		parsed          []ast.FileObject
+		want            []ast.FileObject
 	}{
 		{
 			name:   "no objects",
 			format: filesystem.SourceFormatUnstructured,
 		},
 		{
-			name:   "implicit namespace if unstructured",
+			name:   "implicit namespace if unstructured and not present",
 			format: filesystem.SourceFormatUnstructured,
 			parsed: []ast.FileObject{
 				fake.Role(core.Namespace("foo")),
@@ -121,6 +133,277 @@ func TestRoot_Parse(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:   "implicit namespace if unstructured, present and self-managed",
+			format: filesystem.SourceFormatUnstructured,
+			existingObjects: []client.Object{fake.NamespaceObject("foo",
+				core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+				core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
+				core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+				core.Annotation(metadata.GitContextKey, nilGitContext),
+				core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+				core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+				core.Annotation(metadata.ResourceIDKey, "_namespace_foo"),
+				difftest.ManagedBy(declared.RootReconciler, rootSyncName))},
+			parsed: []ast.FileObject{
+				fake.Role(core.Namespace("foo")),
+			},
+			want: []ast.FileObject{
+				fake.UnstructuredAtPath(kinds.Namespace(),
+					"",
+					core.Name("foo"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_namespace_foo"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.Role(core.Namespace("foo"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+			},
+		},
+		{
+			name:   "no implicit namespace if unstructured, present, but managed by others",
+			format: filesystem.SourceFormatUnstructured,
+			existingObjects: []client.Object{fake.NamespaceObject("foo",
+				core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+				core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
+				core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+				core.Annotation(metadata.GitContextKey, nilGitContext),
+				core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+				core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+				core.Annotation(metadata.ResourceIDKey, "_namespace_foo"),
+				difftest.ManagedBy(declared.RootReconciler, "other-root-sync"))},
+			parsed: []ast.FileObject{
+				fake.Role(core.Namespace("foo")),
+			},
+			want: []ast.FileObject{
+				fake.Role(core.Namespace("foo"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+			},
+		},
+		{
+			name:            "no implicit namespace if unstructured, present, but unmanaged",
+			format:          filesystem.SourceFormatUnstructured,
+			existingObjects: []client.Object{fake.NamespaceObject("foo")},
+			parsed: []ast.FileObject{
+				fake.Role(core.Namespace("foo")),
+			},
+			want: []ast.FileObject{
+				fake.Role(core.Namespace("foo"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+			},
+		},
+		{
+			name:   "no implicit namespace if unstructured and namespace is config-management-system",
+			format: filesystem.SourceFormatUnstructured,
+			parsed: []ast.FileObject{
+				fake.RootSyncV1Beta1("test", gitSpec("https://github.com/test/test.git", "none")),
+			},
+			want: []ast.FileObject{
+				fake.RootSyncV1Beta1("test", gitSpec("https://github.com/test/test.git", "none"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1beta1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:spec":{".":{},"f:git":{".":{},"f:auth":{},"f:period":{},"f:repo":{},"f:secretRef":{}},"f:override":{}},"f:status":{".":{},"f:rendering":{".":{},"f:gitStatus":{".":{},"f:branch":{},"f:dir":{},"f:repo":{},"f:revision":{}},"f:lastUpdate":{}},"f:source":{".":{},"f:gitStatus":{".":{},"f:branch":{},"f:dir":{},"f:repo":{},"f:revision":{}},"f:lastUpdate":{}},"f:sync":{".":{},"f:gitStatus":{".":{},"f:branch":{},"f:dir":{},"f:repo":{},"f:revision":{}},"f:lastUpdate":{}}}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, fmt.Sprintf("namespaces/%s/test.yaml", configsync.ControllerNamespace)),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "configsync.gke.io_rootsync_config-management-system_test"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+			},
+		},
+		{
+			name:   "multiple objects share a single implicit namespace",
+			format: filesystem.SourceFormatUnstructured,
+			parsed: []ast.FileObject{
+				fake.Role(core.Namespace("bar")),
+				fake.ConfigMap(core.Namespace("bar")),
+			},
+			want: []ast.FileObject{
+				fake.UnstructuredAtPath(kinds.Namespace(),
+					"",
+					core.Name("bar"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_namespace_bar"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.Role(core.Namespace("bar"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_bar_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.ConfigMap(core.Namespace("bar"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/configmap.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_configmap_bar_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+			},
+		},
+		{
+			name:   "multiple implicit namespaces",
+			format: filesystem.SourceFormatUnstructured,
+			existingObjects: []client.Object{
+				fake.NamespaceObject("foo"), // foo exists but not managed, should NOT be added as an implicit namespace
+				// bar not exists, should be added as an implicit namespace
+				fake.NamespaceObject("baz", // baz exists and self-managed, should be added as an implicit namespace
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_namespace_baz"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName)),
+			},
+			parsed: []ast.FileObject{
+				fake.Role(core.Namespace("foo")),
+				fake.Role(core.Namespace("bar")),
+				fake.ConfigMap(core.Namespace("bar")),
+				fake.Role(core.Namespace("baz")),
+				fake.ConfigMap(core.Namespace("baz")),
+			},
+			want: []ast.FileObject{
+				fake.Role(core.Namespace("foo"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.UnstructuredAtPath(kinds.Namespace(),
+					"",
+					core.Name("bar"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_namespace_bar"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.Role(core.Namespace("bar"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_bar_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.ConfigMap(core.Namespace("bar"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/configmap.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_configmap_bar_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.UnstructuredAtPath(kinds.Namespace(),
+					"",
+					core.Name("baz"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_namespace_baz"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.Role(core.Namespace("baz"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_baz_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+				fake.ConfigMap(core.Namespace("baz"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/configmap.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(rootSyncName, configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_configmap_baz_default-name"),
+					difftest.ManagedBy(declared.RootReconciler, rootSyncName),
+				),
+			},
+		},
 	}
 
 	converter, err := declared.ValueConverterForTest()
@@ -147,6 +430,11 @@ func TestRoot_Parse(t *testing.T) {
 					},
 					mux: &sync.Mutex{},
 				},
+			}
+			for _, o := range tc.existingObjects {
+				if err := parser.client.Create(context.Background(), o); err != nil {
+					t.Fatal(err)
+				}
 			}
 			state := reconcilerState{}
 			if err := parseAndUpdate(context.Background(), parser, triggerReimport, &state); err != nil {

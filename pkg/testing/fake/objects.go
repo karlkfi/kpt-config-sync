@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
@@ -205,7 +206,7 @@ func ClusterAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 // RootSyncV1Beta1 returns a K8S RootSync resource in a FileObject.
 func RootSyncV1Beta1(name string, opts ...core.MetaMutator) ast.FileObject {
 	rootSync := RootSyncObjectV1Beta1(name, opts...)
-	return FileObject(rootSync, fmt.Sprintf("cluster/%s.yaml", name))
+	return FileObject(rootSync, fmt.Sprintf("namespaces/%s/%s.yaml", configsync.ControllerNamespace, name))
 }
 
 // RepoSyncV1Beta1 returns a K8S RepoSync resource in a FileObject.

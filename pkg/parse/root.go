@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -35,8 +36,12 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate"
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/cli-utils/pkg/common"
@@ -124,7 +129,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 	options = OptionsForScope(options, p.scope)
 
 	if p.sourceFormat == filesystem.SourceFormatUnstructured {
-		options.Visitors = append(options.Visitors, addImplicitNamespaces)
+		options.Visitors = append(options.Visitors, p.addImplicitNamespaces)
 		objs, err = validate.Unstructured(objs, options)
 	} else {
 		objs, err = validate.Hierarchical(objs, options)
@@ -363,9 +368,9 @@ func summarizeErrors(sourceStatus v1beta1.GitSourceStatus, syncStatus v1beta1.Gi
 // addImplicitNamespaces hydrates the given FileObjects by injecting implicit
 // namespaces into the list before returning it. Implicit namespaces are those
 // that are declared by an object's metadata namespace field but are not present
-// in the list. Note that this function always returns a nil error to conform to
-// the validate.VisitorFunc interface.
-func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.MultiError) {
+// in the list. The implicit namespace is only added if it doesn't exist.
+func (p *root) addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.MultiError) {
+	var errs status.MultiError
 	// namespaces will track the set of Namespaces we expect to exist, and those
 	// which actually do.
 	namespaces := make(map[string]bool)
@@ -386,6 +391,23 @@ func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.Mult
 		if isDeclared || ns == configsync.ControllerNamespace {
 			continue
 		}
+		existingNs := &corev1.Namespace{}
+		err := p.client.Get(context.Background(), types.NamespacedName{Name: ns}, existingNs)
+		if err != nil && !apierrors.IsNotFound(err) {
+			errs = status.Append(errs, errors.Wrapf(err, "unable to check the existence of the implicit namespace %q", ns))
+			continue
+		}
+
+		existingNs.SetGroupVersionKind(kinds.Namespace())
+		// If the namespace already exists and not self-managed, do not add it as an implicit namespace.
+		// This is to avoid conflicts caused by multiple Root reconcilers managing the same implicit namespace.
+		if err == nil && !diff.IsManager(p.scope, p.syncName, existingNs) {
+			continue
+		}
+
+		// Add the implicit namespace if it doesn't exist, or if it is managed by itself.
+		// If it is a self-managed namespace, still add it to the object list. Otherwise,
+		// it will be pruned because it is no longer in the inventory list.
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(kinds.Namespace())
 		u.SetName(ns)
@@ -403,7 +425,7 @@ func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.Mult
 		objs = append(objs, ast.NewFileObject(u, cmpath.RelativeOS("")))
 	}
 
-	return objs, nil
+	return objs, errs
 }
 
 // RemediatorConflictErrors implements the Parser interface

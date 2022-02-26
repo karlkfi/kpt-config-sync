@@ -80,6 +80,11 @@ func NewClient(t *testing.T, scheme *runtime.Scheme, objs ...client.Object) *Cli
 		t.Fatal(errors.Wrap(err, "unable to create fake Client"))
 	}
 
+	err = corev1.AddToScheme(result.scheme)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "unable to create fake Client"))
+	}
+
 	for _, o := range objs {
 		err = result.Create(context.Background(), o)
 		if err != nil {
