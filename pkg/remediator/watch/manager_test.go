@@ -52,7 +52,7 @@ func testRunnables(_ context.Context, errOnType map[schema.GroupVersionKind]bool
 	}
 }
 
-var fakeNoOpFnc = func(_ status.Error) {}
+var fakeNoOpFnc = func(_ status.ManagementConflictError) {}
 
 func TestManager_Update(t *testing.T) {
 	testCases := []struct {

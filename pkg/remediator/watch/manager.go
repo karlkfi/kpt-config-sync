@@ -59,9 +59,9 @@ type Manager struct {
 	// needsUpdate indicates if the Manager's watches need to be updated.
 	needsUpdate bool
 	// addConflictErrorFunc is a function that adds the conflict error detected by the remediator.
-	addConflictErrorFunc func(status.Error)
+	addConflictErrorFunc func(status.ManagementConflictError)
 	// removeConflictErrorFunc is a function that removes the conflict error detected by the remediator.
-	removeConflictErrorFunc func(status.Error)
+	removeConflictErrorFunc func(status.ManagementConflictError)
 }
 
 // Options contains options for creating a watch manager.
@@ -90,8 +90,8 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 // NewManager starts a new watch manager
 func NewManager(scope declared.Scope, syncName string, cfg *rest.Config,
 	q *queue.ObjectQueue, decls *declared.Resources, options *Options,
-	addConflictErrorFunc func(status.Error),
-	removeConflictErrorFunc func(status.Error)) (*Manager, error) {
+	addConflictErrorFunc func(status.ManagementConflictError),
+	removeConflictErrorFunc func(status.ManagementConflictError)) (*Manager, error) {
 	if options == nil {
 		var err error
 		options, err = DefaultOptions(cfg)
@@ -246,5 +246,8 @@ func (m *Manager) stopWatcher(gvk schema.GroupVersionKind) {
 
 	// Stop the watcher.
 	w.Stop()
+	// Remove all conflict errors for objects with the same GVK because the
+	// objects are no longer managed by the reconciler.
+	w.removeAllManagementConflictErrorsWithGVK(gvk)
 	delete(m.watcherMap, gvk)
 }

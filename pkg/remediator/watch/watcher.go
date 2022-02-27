@@ -41,8 +41,8 @@ type watcherConfig struct {
 	scope                   declared.Scope
 	syncName                string
 	startWatch              startWatchFunc
-	addConflictErrorFunc    func(status.Error)
-	removeConflictErrorFunc func(status.Error)
+	addConflictErrorFunc    func(status.ManagementConflictError)
+	removeConflictErrorFunc func(status.ManagementConflictError)
 }
 
 // createWatcherFunc is the type of functions to create watchers

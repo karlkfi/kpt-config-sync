@@ -44,7 +44,7 @@ type Remediator struct {
 	mux sync.Mutex
 	// conflictErrs tracks all the management conflicts the remediator encounters,
 	// and report to RootSync|RepoSync status.
-	conflictErrs []status.Error
+	conflictErrs []status.ManagementConflictError
 }
 
 // Interface is a fake-able subset of the interface Remediator implements that
@@ -61,7 +61,7 @@ type Interface interface {
 	// ManagementConflict returns true if one of the watchers noticed a management conflict.
 	ManagementConflict() bool
 	// ConflictErrors returns the errors the remediator encounters.
-	ConflictErrors() []status.Error
+	ConflictErrors() []status.ManagementConflictError
 }
 
 var _ Interface = &Remediator{}
@@ -119,11 +119,11 @@ func (r *Remediator) ManagementConflict() bool {
 }
 
 // ConflictErrors implements Interface.
-func (r *Remediator) ConflictErrors() []status.Error {
+func (r *Remediator) ConflictErrors() []status.ManagementConflictError {
 	return r.conflictErrs
 }
 
-func (r *Remediator) addConflictError(e status.Error) {
+func (r *Remediator) addConflictError(e status.ManagementConflictError) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
@@ -135,11 +135,11 @@ func (r *Remediator) addConflictError(e status.Error) {
 	r.conflictErrs = append(r.conflictErrs, e)
 }
 
-func (r *Remediator) removeConflictError(e status.Error) {
+func (r *Remediator) removeConflictError(e status.ManagementConflictError) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
-	newErrs := make([]status.Error, len(r.conflictErrs))
+	newErrs := make([]status.ManagementConflictError, len(r.conflictErrs))
 	i := 0
 	for _, existingErr := range r.conflictErrs {
 		if e.Error() != existingErr.Error() {

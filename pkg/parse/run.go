@@ -19,6 +19,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/metrics"
@@ -26,6 +27,7 @@ import (
 	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -380,6 +382,33 @@ func updateSyncStatus(ctx context.Context, p Parser) {
 			if err := p.SetSyncStatus(ctx, p.options().updater.applier.Errors()); err != nil {
 				klog.Warningf("failed to update sync status: %v", err)
 			}
+			remediatorErrs := p.options().updater.remediator.ConflictErrors()
+			if len(remediatorErrs) == 0 {
+				continue
+			}
+			UpdateConflictManagerStatus(ctx, remediatorErrs, p.K8sClient())
+
+		}
+	}
+}
+
+// UpdateConflictManagerStatus reports the conflict in the conflicting manager.
+func UpdateConflictManagerStatus(ctx context.Context, conflictErrs []status.ManagementConflictError, k8sClient client.Client) {
+	conflictingManagerErrors := map[string][]status.ManagementConflictError{}
+	for _, conflictError := range conflictErrs {
+		conflictingManager := conflictError.ConflictingManager()
+		err := conflictError.ConflictingManagerError()
+		conflictingManagerErrors[conflictingManager] = append(conflictingManagerErrors[conflictingManager], err)
+	}
+
+	for conflictingManager, conflictErrors := range conflictingManagerErrors {
+		scope, name := declared.ManagerScopeAndName(conflictingManager)
+		if scope != declared.RootReconciler {
+			klog.Infof("No need to notify namespace reconciler for the conflict")
+			continue
+		}
+		if err := prependRootSyncRemediatorStatus(ctx, k8sClient, name, conflictErrors, defaultDenominator); err != nil {
+			klog.Warningf("failed to add the management conflict error to RootSync %s: %v", name, err)
 		}
 	}
 }

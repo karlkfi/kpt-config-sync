@@ -84,6 +84,10 @@ type Parser interface {
 	Reconciling() bool
 	// ApplierErrors returns the errors surfaced by the applier.
 	ApplierErrors() status.MultiError
+	// RemediatorConflictErrors returns the conflict errors detected by the remediator.
+	RemediatorConflictErrors() []status.ManagementConflictError
+	// K8sClient returns the Kubernetes client that talks to the API server.
+	K8sClient() client.Client
 }
 
 func (o *opts) k8sClient() client.Client {

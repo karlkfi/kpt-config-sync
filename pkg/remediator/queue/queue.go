@@ -36,7 +36,8 @@ func (gvknn GVKNN) GroupVersionKind() schema.GroupVersionKind {
 	return gvknn.GroupKind.WithVersion(gvknn.Version)
 }
 
-func gvknnOfObject(obj client.Object) GVKNN {
+// GVKNNOf converts an Object to its GVKNN.
+func GVKNNOf(obj client.Object) GVKNN {
 	return GVKNN{
 		ID:      core.IDOf(obj),
 		Version: obj.GetObjectKind().GroupVersionKind().Version,
@@ -98,7 +99,7 @@ func (q *ObjectQueue) Add(obj client.Object) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
-	gvknn := gvknnOfObject(obj)
+	gvknn := GVKNNOf(obj)
 
 	// Generation is not incremented when metadata is changed. Therefore if
 	// generation is equal, we default to accepting the new object as it may have
@@ -135,7 +136,7 @@ func (q *ObjectQueue) Add(obj client.Object) {
 
 // Retry schedules the object to be requeued using the rate limiter.
 func (q *ObjectQueue) Retry(obj client.Object) {
-	gvknn := gvknnOfObject(obj)
+	gvknn := GVKNNOf(obj)
 	q.delayer.AddAfter(obj, q.rateLimiter.When(gvknn))
 }
 
@@ -184,7 +185,7 @@ func (q *ObjectQueue) Done(obj client.Object) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
-	gvknn := gvknnOfObject(obj)
+	gvknn := GVKNNOf(obj)
 	q.underlying.Done(gvknn)
 
 	if q.dirty[gvknn] {
@@ -199,7 +200,7 @@ func (q *ObjectQueue) Done(obj client.Object) {
 // Forget is a convenience method that allows callers to directly tell the
 // RateLimitingInterface to forget a specific client.Object.
 func (q *ObjectQueue) Forget(obj client.Object) {
-	gvknn := gvknnOfObject(obj)
+	gvknn := GVKNNOf(obj)
 	q.rateLimiter.Forget(gvknn)
 }
 

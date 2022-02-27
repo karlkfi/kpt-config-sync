@@ -251,7 +251,7 @@ func (p *namespace) setSyncStatusWithRetries(ctx context.Context, errs status.Mu
 	// syncing indicates whether the applier is syncing.
 	syncing := p.applier.Syncing()
 
-	setSyncStatus(&rs.Status.SyncStatus, errs, denominator)
+	setSyncStatus(&rs.Status.SyncStatus, status.ToCSE(errs), denominator)
 
 	metrics.RecordReconcilerErrors(ctx, "sync", status.ToCSE(errs))
 	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "sync", rs.Status.Sync.ErrorSummary.TotalCount)
@@ -283,4 +283,14 @@ func (p *namespace) setSyncStatusWithRetries(ctx context.Context, errs status.Mu
 // ApplierErrors implements the Parser interface
 func (p *namespace) ApplierErrors() status.MultiError {
 	return p.applier.Errors()
+}
+
+// RemediatorConflictErrors implements the Parser interface
+func (p *namespace) RemediatorConflictErrors() []status.ManagementConflictError {
+	return p.remediator.ConflictErrors()
+}
+
+// K8sClient implements the Parser interface
+func (p *namespace) K8sClient() client.Client {
+	return p.client
 }

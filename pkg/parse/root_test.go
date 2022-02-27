@@ -58,7 +58,7 @@ type noOpRemediator struct {
 	needsUpdate bool
 }
 
-func (r *noOpRemediator) ConflictErrors() []status.Error {
+func (r *noOpRemediator) ConflictErrors() []status.ManagementConflictError {
 	return nil
 }
 

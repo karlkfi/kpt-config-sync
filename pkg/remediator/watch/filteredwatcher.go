@@ -33,6 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,6 +65,7 @@ type Runnable interface {
 	SetManagementConflict(object client.Object)
 	ClearManagementConflict()
 	removeManagementConflictError(object client.Object)
+	removeAllManagementConflictErrorsWithGVK(gvk schema.GroupVersionKind)
 }
 
 const (
@@ -95,9 +97,9 @@ type filteredWatcher struct {
 	base                    watch.Interface
 	stopped                 bool
 	managementConflict      bool
-	conflictErrMap          map[core.ID]status.Error
-	addConflictErrorFunc    func(status.Error)
-	removeConflictErrorFunc func(status.Error)
+	conflictErrMap          map[queue.GVKNN]status.ManagementConflictError
+	addConflictErrorFunc    func(status.ManagementConflictError)
+	removeConflictErrorFunc func(status.ManagementConflictError)
 }
 
 // filteredWatcher implements the Runnable interface.
@@ -114,7 +116,7 @@ func NewFiltered(_ context.Context, cfg watcherConfig) Runnable {
 		syncName:                cfg.syncName,
 		base:                    watch.NewEmptyWatch(),
 		errorTracker:            make(map[string]time.Time),
-		conflictErrMap:          make(map[core.ID]status.Error),
+		conflictErrMap:          make(map[queue.GVKNN]status.ManagementConflictError),
 		addConflictErrorFunc:    cfg.addConflictErrorFunc,
 		removeConflictErrorFunc: cfg.removeConflictErrorFunc,
 	}
@@ -190,8 +192,9 @@ func (w *filteredWatcher) SetManagementConflict(object client.Object) {
 	newManager := declared.ResourceManager(w.scope, w.syncName)
 	klog.Warningf("The remediator detects a management conflict for object %q between root reconcilers: %q and %q",
 		core.GKNN(object), newManager, manager)
-	w.conflictErrMap[core.IDOf(object)] = status.ManagementConflictError(object, newManager)
-	w.addConflictErrorFunc(w.conflictErrMap[core.IDOf(object)])
+	gvknn := queue.GVKNNOf(object)
+	w.conflictErrMap[gvknn] = status.ManagementConflictErrorWrap(object, newManager)
+	w.addConflictErrorFunc(w.conflictErrMap[gvknn])
 	metrics.RecordResourceConflict(context.Background(), object.GetObjectKind().GroupVersionKind())
 }
 
@@ -203,10 +206,21 @@ func (w *filteredWatcher) ClearManagementConflict() {
 
 func (w *filteredWatcher) removeManagementConflictError(object client.Object) {
 	w.mux.Lock()
-	id := core.IDOf(object)
-	if conflictError, found := w.conflictErrMap[id]; found {
+	gvknn := queue.GVKNNOf(object)
+	if conflictError, found := w.conflictErrMap[gvknn]; found {
 		w.removeConflictErrorFunc(conflictError)
-		delete(w.conflictErrMap, id)
+		delete(w.conflictErrMap, gvknn)
+	}
+	w.mux.Unlock()
+}
+
+func (w *filteredWatcher) removeAllManagementConflictErrorsWithGVK(gvk schema.GroupVersionKind) {
+	w.mux.Lock()
+	for gvknn, conflictError := range w.conflictErrMap {
+		if gvknn.GroupVersionKind() == gvk {
+			w.removeConflictErrorFunc(conflictError)
+			delete(w.conflictErrMap, gvknn)
+		}
 	}
 	w.mux.Unlock()
 }

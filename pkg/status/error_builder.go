@@ -114,6 +114,18 @@ func (eb ErrorBuilder) BuildWithResources(resources ...client.Object) ResourceEr
 	}
 }
 
+// BuildWithConflictingManagers adds the conflicting manager and the resource declared in the repository to the Error.
+// newManager is the manager annotation for the current remediator/reconciler.
+// currentManager is the manager annotation in the actual resource. It is also known as conflictingManager.
+func (eb ErrorBuilder) BuildWithConflictingManagers(resource client.Object, newManager, currentManager string) ManagementConflictError {
+	return managementConflictErrorImpl{
+		underlying:     eb.error,
+		resource:       resource,
+		newManager:     newManager,
+		currentManager: currentManager,
+	}
+}
+
 // Sprint adds a message string into the Error inside the ErrorBuilder.
 func (eb ErrorBuilder) Sprint(message string) ErrorBuilder {
 	return ErrorBuilder{error: messageErrorImpl{

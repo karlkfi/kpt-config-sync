@@ -50,7 +50,7 @@ func (r resourceErrorImpl) Code() string {
 
 // Body implements Error.
 func (r resourceErrorImpl) Body() string {
-	return formatBody(r.underlying.Body(), "\n\n", formatResources(r.resources))
+	return formatBody(r.underlying.Body(), "\n\n", formatResources(r.resources...))
 }
 
 // Errors implements MultiError.
@@ -79,7 +79,7 @@ func (r resourceErrorImpl) Cause() error {
 }
 
 // formatResources returns a formatted string containing all Resources in the ResourceError.
-func formatResources(resources []client.Object) string {
+func formatResources(resources ...client.Object) string {
 	resStrs := make([]string, len(resources))
 	for i, res := range resources {
 		resStrs[i] = PrintResource(res)

@@ -228,6 +228,7 @@ func updateStatus(ctx context.Context, p parse.Parser) {
 				if err := p.SetSyncStatus(ctx, p.ApplierErrors()); err != nil {
 					klog.Warningf("failed to update remediator errors: %v", err)
 				}
+				parse.UpdateConflictManagerStatus(ctx, p.RemediatorConflictErrors(), p.K8sClient())
 			}
 			// if `p.Reconciling` is true, `parse.Run` would update the status periodically.
 		}
