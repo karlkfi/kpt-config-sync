@@ -83,6 +83,8 @@ func Run(ctx context.Context, p Parser) {
 				// The cached gitState will not be reset to avoid reading all the git files unnecessarily.
 				state.resetAllButGitState()
 				trigger = triggerManagementConflict
+				// When conflict is detected, wait longer (same as the polling frequency) for the next retry.
+				time.Sleep(opts.pollingFrequency)
 			} else if state.cache.needToRetry && state.cache.readyToRetry() {
 				klog.Infof("The last reconciliation failed")
 				trigger = triggerRetry
