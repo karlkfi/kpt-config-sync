@@ -29,7 +29,6 @@ import (
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/remediator/watch"
-	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -226,16 +225,7 @@ func updateStatus(ctx context.Context, p parse.Parser) {
 
 		case <-ticker.C:
 			if !p.Reconciling() {
-				remediatorErrs := p.RemediatorConflictErrors()
-				if len(remediatorErrs) == 0 {
-					continue
-				}
-				var errs status.MultiError
-				for _, e := range remediatorErrs {
-					errs = status.Append(errs, e)
-				}
-
-				if err := p.SetSyncStatus(ctx, errs); err != nil {
+				if err := p.SetSyncStatus(ctx, p.ApplierErrors()); err != nil {
 					klog.Warningf("failed to update remediator errors: %v", err)
 				}
 			}

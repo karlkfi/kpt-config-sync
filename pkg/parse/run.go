@@ -377,12 +377,7 @@ func updateSyncStatus(ctx context.Context, p Parser) {
 			return
 
 		case <-ticker.C:
-			allErrs := p.options().updater.applier.Errors()
-			remediatorErrs := p.RemediatorConflictErrors()
-			for _, e := range remediatorErrs {
-				allErrs = status.Append(allErrs, e)
-			}
-			if err := p.SetSyncStatus(ctx, allErrs); err != nil {
+			if err := p.SetSyncStatus(ctx, p.options().updater.applier.Errors()); err != nil {
 				klog.Warningf("failed to update sync status: %v", err)
 			}
 		}

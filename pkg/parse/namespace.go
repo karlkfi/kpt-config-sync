@@ -280,7 +280,7 @@ func (p *namespace) setSyncStatusWithRetries(ctx context.Context, errs status.Mu
 	return nil
 }
 
-// RemediatorConflictErrors implements the Parser interface
-func (p *namespace) RemediatorConflictErrors() []status.Error {
-	return p.remediator.ConflictErrors()
+// ApplierErrors implements the Parser interface
+func (p *namespace) ApplierErrors() status.MultiError {
+	return p.applier.Errors()
 }

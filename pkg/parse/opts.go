@@ -82,8 +82,8 @@ type Parser interface {
 	SetReconciling(value bool)
 	// Reconciling returns whether the reconciler is reconciling a change.
 	Reconciling() bool
-	// RemediatorConflictErrors returns the conflict errors detected by the remediator.
-	RemediatorConflictErrors() []status.Error
+	// ApplierErrors returns the errors surfaced by the applier.
+	ApplierErrors() status.MultiError
 }
 
 func (o *opts) k8sClient() client.Client {

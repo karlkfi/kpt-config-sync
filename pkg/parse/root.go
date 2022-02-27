@@ -284,7 +284,14 @@ func setRenderingStatus(rendering *v1beta1.RenderingStatus, p Parser, newStatus 
 func (p *root) SetSyncStatus(ctx context.Context, errs status.MultiError) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
-	return p.setSyncStatusWithRetries(ctx, errs, defaultDenominator)
+	var allErrs status.MultiError
+	remediatorErrs := p.remediator.ConflictErrors()
+	for _, e := range remediatorErrs {
+		allErrs = status.Append(allErrs, e)
+	}
+	// Add conflicting errors before other apply errors.
+	allErrs = status.Append(allErrs, errs)
+	return p.setSyncStatusWithRetries(ctx, allErrs, defaultDenominator)
 }
 
 func (p *root) setSyncStatusWithRetries(ctx context.Context, errs status.MultiError, denominator int) error {
@@ -428,7 +435,7 @@ func (p *root) addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, s
 	return objs, errs
 }
 
-// RemediatorConflictErrors implements the Parser interface
-func (p *root) RemediatorConflictErrors() []status.Error {
-	return p.remediator.ConflictErrors()
+// ApplierErrors implements the Parser interface
+func (p *root) ApplierErrors() status.MultiError {
+	return p.applier.Errors()
 }
