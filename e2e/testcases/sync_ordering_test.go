@@ -156,7 +156,7 @@ func TestSyncOrdering(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].Add("acme/cm0.yaml", fake.ConfigMapObject(core.Name(cm0Name), core.Namespace(namespaceName),
 		core.Annotation(dependson.Annotation, "/namespaces/bookstore/ConfigMap/cm2")))
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Create a cyclic dependency between cm0, cm1, and cm2")
-	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "cyclic dependency")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "cyclic dependency", false)
 
 	nt.T.Log("Verify that cm0 does not have the dependsOn annotation")
 	if err := nt.Validate(cm0Name, namespaceName, &corev1.ConfigMap{}, nomostest.MissingAnnotation(dependson.Annotation)); err != nil {
@@ -328,7 +328,7 @@ func TestSyncOrdering(t *testing.T) {
 	nt.WaitForRepoSyncs()
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm0.yaml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Removing cm0 from the git repo")
-	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency", false)
 
 	// TestCase: cm1 depends on cm0; both are managed by ConfigSync.
 	// Both exist in the repo and in the cluster.
@@ -342,7 +342,7 @@ func TestSyncOrdering(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].Add("acme/cm0.yaml", fake.ConfigMapObject(core.Name(cm0Name), core.Namespace(namespaceName),
 		core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementDisabled)))
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Disabling management for cm0 in the git repo")
-	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency", false)
 
 	// TestCase: cm1 depends on cm0; cm0 is disabled.
 	// Neither exists in the cluster.
@@ -361,7 +361,7 @@ func TestSyncOrdering(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].Add("acme/cm1.yaml", fake.ConfigMapObject(core.Name(cm1Name), core.Namespace(namespaceName),
 		core.Annotation(dependson.Annotation, "/namespaces/bookstore/ConfigMap/cm0")))
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding cm1 and cm0: cm1 depends on cm0, cm0 is disabled")
-	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency", false)
 
 	// TestCase: cm1 depends on object that is not in the repo or cluster.
 	// Expected an ExternalDependencyError
@@ -373,7 +373,7 @@ func TestSyncOrdering(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].Add("acme/cm1.yaml", fake.ConfigMapObject(core.Name(cm1Name), core.Namespace(namespaceName),
 		core.Annotation(dependson.Annotation, "/namespaces/bookstore/ConfigMap/cm-not-exist")))
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding cm1: cm1 depends on a resource that doesn't exist in either the repo or in cluster")
-	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency", false)
 
 	// TestCase: cm1 depends on an object that is not in the repo, but in the cluster
 	// Expected an ExternalDependencyError
@@ -388,7 +388,7 @@ func TestSyncOrdering(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].Add("acme/cm1.yaml", fake.ConfigMapObject(core.Name(cm1Name), core.Namespace(namespaceName),
 		core.Annotation(dependson.Annotation, "/namespaces/bookstore/ConfigMap/cm4")))
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Adding cm1: cm1 depends on a resource that only exists in the cluster")
-	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency", false)
 	nt.T.Log("Cleaning up")
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm1.yaml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove cm1")

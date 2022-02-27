@@ -533,7 +533,12 @@ func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
 
 // DefaultRootSha1Fn is the default function to retrieve the commit hash of the root repo.
 func DefaultRootSha1Fn(nt *NT, nn types.NamespacedName) (string, error) {
-	return nt.RootRepos[nn.Name].Hash(), nil
+	// Get the repository this RootSync is syncing to, and ensure it is synced to HEAD.
+	repo, exists := nt.RootRepos[nn.Name]
+	if !exists {
+		return "", fmt.Errorf("nt.RootRepos doesn't include RootSync %q", nn.Name)
+	}
+	return repo.Hash(), nil
 }
 
 // DefaultRepoSha1Fn is the default function to retrieve the commit hash of the namespace repo.
@@ -569,10 +574,11 @@ func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 
 	if nt.MultiRepo {
 		for name := range nt.RootRepos {
+			syncDir := syncDirectory(waitForRepoSyncsOptions.syncDirectoryMap, RootSyncNN(name))
 			nt.WaitForSync(kinds.RootSyncV1Beta1(), name,
 				configmanagement.ControllerNamespace, syncTimeout,
 				waitForRepoSyncsOptions.rootSha1Fn, RootSyncHasStatusSyncCommit,
-				&SyncDirPredicatePair{waitForRepoSyncsOptions.syncDirectory, RootSyncHasStatusSyncDirectory})
+				&SyncDirPredicatePair{syncDir, RootSyncHasStatusSyncDirectory})
 		}
 
 		syncNamespaceRepos := waitForRepoSyncsOptions.syncNamespaceRepos
@@ -974,7 +980,7 @@ func validateError(errs []v1beta1.ConfigSyncError, code string, message string) 
 
 // WaitForRootSyncSourceError waits until the given error (code and message) is present on the RootSync resource
 func (nt *NT) WaitForRootSyncSourceError(rsName, code string, message string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code), nt.DefaultWaitTimeout,
+	Wait(nt.T, fmt.Sprintf("RootSync %s source error code %s", rsName, code), nt.DefaultWaitTimeout,
 		func() error {
 			rs := fake.RootSyncObjectV1Beta1(rsName)
 			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
@@ -989,7 +995,7 @@ func (nt *NT) WaitForRootSyncSourceError(rsName, code string, message string, op
 
 // WaitForRootSyncRenderingError waits until the given error (code and message) is present on the RootSync resource
 func (nt *NT) WaitForRootSyncRenderingError(rsName, code string, message string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
+	Wait(nt.T, fmt.Sprintf("RootSync %s rendering error code %s", rsName, code), nt.DefaultWaitTimeout,
 		func() error {
 			rs := fake.RootSyncObjectV1Beta1(rsName)
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -1004,13 +1010,16 @@ func (nt *NT) WaitForRootSyncRenderingError(rsName, code string, message string,
 }
 
 // WaitForRootSyncSyncError waits until the given error (code and message) is present on the RootSync resource
-func (nt *NT) WaitForRootSyncSyncError(rsName, code string, message string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
+func (nt *NT) WaitForRootSyncSyncError(rsName, code string, message string, ignoreSyncingCondition bool, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("RootSync %s rendering error code %s", rsName, code), nt.DefaultWaitTimeout,
 		func() error {
 			rs := fake.RootSyncObjectV1Beta1(rsName)
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {
 				return err
+			}
+			if ignoreSyncingCondition {
+				return validateError(rs.Status.Sync.Errors, code, message)
 			}
 			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
 			return validateRootSyncError(rs.Status.Sync.Errors, syncingCondition, code, message, []v1beta1.ErrorSource{v1beta1.SyncError})
@@ -1019,13 +1028,29 @@ func (nt *NT) WaitForRootSyncSyncError(rsName, code string, message string, opts
 	)
 }
 
+// WaitForRepoSyncSyncError waits until the given error (code and message) is present on the RepoSync resource
+func (nt *NT) WaitForRepoSyncSyncError(ns, rsName, code string, message string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("RepoSync %s/%s rendering error code %s", ns, rsName, code), nt.DefaultWaitTimeout,
+		func() error {
+			rs := fake.RepoSyncObjectV1Beta1(ns, rsName)
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncSyncing)
+			return validateRepoSyncError(rs.Status.Sync.Errors, syncingCondition, code, message, []v1beta1.ErrorSource{v1beta1.SyncError})
+		},
+		opts...,
+	)
+}
+
 // WaitForRepoSyncSourceError waits until the given error (code and message) is present on the RepoSync resource
-func (nt *NT) WaitForRepoSyncSourceError(namespace, rsName, code, message string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s", code), nt.DefaultWaitTimeout,
+func (nt *NT) WaitForRepoSyncSourceError(ns, rsName, code, message string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("RepoSync %s/%s source error code %s", ns, rsName, code), nt.DefaultWaitTimeout,
 		func() error {
 			nt.T.Helper()
 
-			rs := fake.RepoSyncObjectV1Beta1(namespace, rsName)
+			rs := fake.RepoSyncObjectV1Beta1(ns, rsName)
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {
 				return err
@@ -1113,15 +1138,52 @@ func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
 	)
 }
 
-// WaitForStalledError waits until the given Stalled error is present on the RootSync resource.
-func (nt *NT) WaitForStalledError(rsName, reason, message string) {
-	Wait(nt.T, "RootSync stalled error", nt.DefaultWaitTimeout,
+// WaitForRootSyncStalledError waits until the given Stalled error is present on the RootSync resource.
+func (nt *NT) WaitForRootSyncStalledError(rsNamespace, rsName, reason, message string) {
+	Wait(nt.T, fmt.Sprintf("RootSync %s/%s stalled error", rsNamespace, rsName), nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObjectV1Beta1(rsName)
-			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
+			rs := &v1beta1.RootSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      rsName,
+					Namespace: rsNamespace,
+				},
+				TypeMeta: fake.ToTypeMeta(kinds.RootSyncV1Beta1()),
+			}
+			if err := nt.Get(rsName, rsNamespace, rs); err != nil {
 				return err
 			}
 			stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncStalled)
+			if stalledCondition == nil {
+				return fmt.Errorf("stalled condition not found")
+			}
+			if stalledCondition.Status != metav1.ConditionTrue {
+				return fmt.Errorf("expected status.conditions['Stalled'].status is True, got %s", stalledCondition.Status)
+			}
+			if stalledCondition.Reason != reason {
+				return fmt.Errorf("expected status.conditions['Stalled'].reason is %s, got %s", reason, stalledCondition.Reason)
+			}
+			if !strings.Contains(stalledCondition.Message, message) {
+				return fmt.Errorf("expected status.conditions['Stalled'].message to contain %s, got %s", message, stalledCondition.Message)
+			}
+			return nil
+		})
+}
+
+// WaitForRepoSyncStalledError waits until the given Stalled error is present on the RepoSync resource.
+func (nt *NT) WaitForRepoSyncStalledError(rsNamespace, rsName, reason, message string) {
+	Wait(nt.T, fmt.Sprintf("RepoSync %s/%s stalled error", rsNamespace, rsName), nt.DefaultWaitTimeout,
+		func() error {
+			rs := &v1beta1.RepoSync{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      rsName,
+					Namespace: rsNamespace,
+				},
+				TypeMeta: fake.ToTypeMeta(kinds.RepoSyncV1Beta1()),
+			}
+			if err := nt.Get(rsName, rsNamespace, rs); err != nil {
+				return err
+			}
+			stalledCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncStalled)
 			if stalledCondition == nil {
 				return fmt.Errorf("stalled condition not found")
 			}
@@ -1243,7 +1305,7 @@ type waitForRepoSyncsOptions struct {
 	timeout            time.Duration
 	syncNamespaceRepos bool
 	rootSha1Fn         Sha1Func
-	syncDirectory      string
+	syncDirectoryMap   map[types.NamespacedName]string
 }
 
 func newWaitForRepoSyncsOptions(timeout time.Duration, fn Sha1Func) waitForRepoSyncsOptions {
@@ -1251,7 +1313,7 @@ func newWaitForRepoSyncsOptions(timeout time.Duration, fn Sha1Func) waitForRepoS
 		timeout:            timeout,
 		syncNamespaceRepos: true,
 		rootSha1Fn:         fn,
-		syncDirectory:      AcmeDir,
+		syncDirectoryMap:   map[types.NamespacedName]string{},
 	}
 }
 
@@ -1288,9 +1350,19 @@ type SyncDirPredicatePair struct {
 	predicate func(string) Predicate
 }
 
-// WithSyncDirectory specifies the sync directory in the `status.sync.gitStatus.dir` field.
-func WithSyncDirectory(dir string) WaitForRepoSyncsOption {
+// WithSyncDirectoryMap provides a map of RootSync|RepoSync and the corresponding sync directory.
+// The function is used to get the sync directory based on different RootSync|RepoSync name.
+func WithSyncDirectoryMap(syncDirectoryMap map[types.NamespacedName]string) WaitForRepoSyncsOption {
 	return func(options *waitForRepoSyncsOptions) {
-		options.syncDirectory = dir
+		options.syncDirectoryMap = syncDirectoryMap
 	}
+}
+
+// syncDirectory returns the sync directory if RootSync|RepoSync is in the map.
+// Otherwise, it returns the default sync directory: acme.
+func syncDirectory(syncDirectoryMap map[types.NamespacedName]string, nn types.NamespacedName) string {
+	if syncDir, found := syncDirectoryMap[nn]; found {
+		return syncDir
+	}
+	return AcmeDir
 }

@@ -183,7 +183,8 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 		}
 		return rs.Status.LastSyncedCommit, nil
 	}
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn), nomostest.WithSyncDirectory("kcc"))
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn),
+		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kcc"}))
 
 	// Verify that the GCP resources are created.
 	gvkPubSubTopic := schema.GroupVersionKind{
@@ -214,7 +215,8 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 	// Remove the kcc resources
 	nt.T.Log("sync to an empty directory from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc-empty"}}}`)
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn), nomostest.WithSyncDirectory("kcc-empty"))
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn),
+		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kcc-empty"}))
 
 	// Verify that the GCP resources are removed.
 	validateKCCResourceNotFound(nt, gvkPubSubTopic, "test-cs", "foo")

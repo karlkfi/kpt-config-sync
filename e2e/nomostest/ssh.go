@@ -24,6 +24,8 @@ import (
 	"github.com/google/nomos/e2e/nomostest/gitproviders"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const gitServerSecret = "ssh-pub"
@@ -65,12 +67,11 @@ func createSSHKeyPair(nt *NT) {
 
 // createSecret creates secret in the given namespace using 'keypath'.
 func createSecret(nt *NT, namespace, name, keyPath string) {
-	// kubectl create secret generic 'name' \
-	//   -n='namespace' \
-	//   --from-file='keyPath'
-	nt.MustKubectl("create", "secret", "generic", name,
-		"-n", namespace,
-		"--from-file", keyPath)
+	if err := nt.Get(name, namespace, &corev1.Secret{}); apierrors.IsNotFound(err) {
+		nt.MustKubectl("create", "secret", "generic", name,
+			"-n", namespace,
+			"--from-file", keyPath)
+	}
 }
 
 // generateSSHKeys generates a public/public key pair for the test.

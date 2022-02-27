@@ -231,7 +231,9 @@ func TestStressLargeRequest(t *testing.T) {
 		}
 		return rs.Status.Source.Commit, nil
 	}
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn), nomostest.WithSyncDirectory("configs"), nomostest.WithTimeout(30*time.Minute))
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn),
+		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "configs"}),
+		nomostest.WithTimeout(30*time.Minute))
 }
 
 func truncateSourceErrors() nomostest.Predicate {

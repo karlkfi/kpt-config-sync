@@ -235,6 +235,20 @@ func gitDeployment() *appsv1.Deployment {
 func portForwardGitServer(nt *NT, repos ...types.NamespacedName) int {
 	nt.T.Helper()
 
+	podName := InitGitRepos(nt, repos...)
+
+	if nt.gitRepoPort == 0 {
+		port, err := nt.ForwardToFreePort(testGitNamespace, podName, ":22")
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+		return port
+	}
+	return nt.gitRepoPort
+}
+
+// InitGitRepos initializes the repositories in the testing git-server and returns the pod names.
+func InitGitRepos(nt *NT, repos ...types.NamespacedName) string {
 	// This logic is not robust to the git-server pod being killed/restarted,
 	// but this is a rare occurrence.
 	// Consider if it is worth getting the Pod name again if port forwarding fails.
@@ -264,13 +278,5 @@ func portForwardGitServer(nt *NT, repos ...types.NamespacedName) int {
 		nt.MustKubectl("exec", "-n", testGitNamespace, podName, "--",
 			"git", "-C", fmt.Sprintf("/git-server/repos/%s", repo), "config", "receive.denyNonFastforwards", "false")
 	}
-
-	if nt.gitRepoPort == 0 {
-		port, err := nt.ForwardToFreePort(testGitNamespace, podName, ":22")
-		if err != nil {
-			nt.T.Fatal(err)
-		}
-		return port
-	}
-	return nt.gitRepoPort
+	return podName
 }

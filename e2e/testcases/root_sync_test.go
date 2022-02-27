@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -174,7 +175,8 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 
 	// Update RootSync.
 	nomostest.SetPolicyDir(nt, configsync.RootSyncName, fooDir)
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory(fooDir))
+	syncDirectoryMap := map[types.NamespacedName]string{nomostest.RootSyncNN(configsync.RootSyncName): fooDir}
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(syncDirectoryMap))
 
 	// Validate namespace 'shipping' created with the correct sourcePath annotation.
 	if err := nt.Validate(fooNS, "", fake.NamespaceObject(fooNS),

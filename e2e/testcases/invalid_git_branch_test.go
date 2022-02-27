@@ -70,7 +70,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 	}
 	rs := nomostest.RepoSyncObjectV1Beta1(namespaceRepo, configsync.RepoSyncName, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 	rs.Spec.Branch = "invalid-branch"
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(namespaceRepo, nomostest.RepoSyncFileName), rs)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(namespaceRepo, rs.Name), rs)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update RepoSync to invalid branch name")
 
 	nt.WaitForRepoSyncSourceError(namespaceRepo, configsync.RepoSyncName, status.SourceErrorCode, "")
@@ -84,7 +84,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 	}
 
 	rs.Spec.Branch = nomostest.MainBranch
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(namespaceRepo, nomostest.RepoSyncFileName), rs)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(namespaceRepo, rs.Name), rs)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update RepoSync to valid branch name")
 
 	nt.WaitForRepoSyncs()

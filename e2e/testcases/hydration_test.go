@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -51,7 +52,7 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kustomize-components"}}}`)
 
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("kustomize-components"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kustomize-components"}))
 
 	nt.T.Log("Validate resources are synced")
 	var expectedNamespaces = []string{"tenant-a", "tenant-b", "tenant-c"}
@@ -76,7 +77,7 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	nt.T.Log("Add kustomization.yaml back")
 	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/kustomize-components/kustomization.yml", "./kustomize-components/kustomization.yml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add kustomization.yml back")
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("kustomize-components"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kustomize-components"}))
 
 	nt.T.Log("Make kustomization.yaml invalid")
 	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/invalid-kustomization.yaml", "./kustomize-components/kustomization.yml")
@@ -98,7 +99,7 @@ func TestHydrateHelmComponents(t *testing.T) {
 	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "helm-components"}}}`)
 
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("helm-components"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "helm-components"}))
 
 	nt.T.Log("Validate resources are synced")
 	if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent"), nomostest.HasAnnotation(metadata.KustomizeOrigin, expectedBuiltinOrigin)); err != nil {
@@ -111,7 +112,7 @@ func TestHydrateHelmComponents(t *testing.T) {
 	nt.T.Log("Use a remote values.yaml file from a public repo")
 	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/helm-components-remote-values-kustomization.yaml", "./helm-components/kustomization.yaml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Render with a remote values.yaml file from a public repo")
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("helm-components"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "helm-components"}))
 	if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("Always"), nomostest.HasAnnotation(metadata.KustomizeOrigin, expectedBuiltinOrigin)); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -121,7 +122,7 @@ func TestHydrateHelmComponents(t *testing.T) {
 		nt.T.Log("Use the render-helm-chart function to render the charts")
 		nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/krm-function-helm-components-kustomization.yaml", "./helm-components/kustomization.yaml")
 		nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use the render-helm-chart function")
-		nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("helm-components"))
+		nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "helm-components"}))
 		if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent"), nomostest.HasAnnotation(metadata.KustomizeOrigin, expectedKrmFnOrigin)); err != nil {
 			nt.T.Fatal(err)
 		}
@@ -129,7 +130,7 @@ func TestHydrateHelmComponents(t *testing.T) {
 		nt.T.Log("Use the render-helm-chart function to render the charts with a remote values.yaml file")
 		nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/krm-function-helm-components-remote-values-kustomization.yaml", "./helm-components/kustomization.yaml")
 		nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use the render-helm-chart function with a remote values.yaml file from a public repo")
-		nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("helm-components"))
+		nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "helm-components"}))
 		if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("Always"), nomostest.HasAnnotation(metadata.KustomizeOrigin, expectedKrmFnOrigin)); err != nil {
 			nt.T.Fatal(err)
 		}
@@ -150,7 +151,7 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "helm-overlay"}}}`)
 
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("helm-overlay"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "helm-overlay"}))
 
 	nt.T.Log("Validate resources are synced")
 	if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{},
@@ -179,7 +180,7 @@ func TestHydrateHelmOverlay(t *testing.T) {
 		nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/helm-overlay/kustomization.yaml", "./helm-overlay/kustomization.yaml")
 		nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/krm-function-helm-overlay-kustomization.yaml", "./helm-overlay/base/kustomization.yaml")
 		nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use the render-helm-chart function")
-		nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("helm-overlay"))
+		nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "helm-overlay"}))
 
 		nt.T.Log("Make the parsing fail again by checking in a deprecated group and kind with the render-helm-chart function")
 		nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/krm-function-deprecated-GK-kustomization.yaml", "./helm-overlay/kustomization.yaml")
@@ -202,7 +203,7 @@ func TestHydrateRemoteResources(t *testing.T) {
 	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "remote-base"}}}`)
 
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("remote-base"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
 
 	expectedOrigin := "path: base/namespace.yaml\nrepo: https://github.com/config-sync-examples/kustomize-components\nref: main\n"
 	nt.T.Log("Validate resources are synced")
@@ -212,7 +213,7 @@ func TestHydrateRemoteResources(t *testing.T) {
 	nt.T.Log("Update kustomization.yaml to use a remote overlay")
 	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-overlay-kustomization.yaml", "./remote-base/kustomization.yaml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use a remote overlay")
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("remote-base"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
 
 	nt.T.Log("Validate resources are synced")
 	expectedNamespaces = []string{"tenant-b"}
@@ -221,7 +222,7 @@ func TestHydrateRemoteResources(t *testing.T) {
 	// Update kustomization.yaml to use remote resources
 	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-resources-kustomization.yaml", "./remote-base/kustomization.yaml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use remote resources")
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("remote-base"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
 
 	nt.T.Log("Validate resources are synced")
 	expectedNamespaces = []string{"tenant-a", "tenant-b", "tenant-c"}
@@ -243,7 +244,7 @@ func TestHydrateResourcesInRelativePath(t *testing.T) {
 	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "relative-path/overlays/dev"}}}`)
 
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("relative-path/overlays/dev"))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "relative-path/overlays/dev"}))
 
 	nt.T.Log("Validating resources are synced")
 	if err := nt.Validate("foo", "", &corev1.Namespace{}, nomostest.HasAnnotation(metadata.KustomizeOrigin, "path: ../../base/foo/namespace.yaml\n")); err != nil {

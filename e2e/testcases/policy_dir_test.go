@@ -21,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/status"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestMissingRepoErrorWithHierarchicalFormat(t *testing.T) {
@@ -54,7 +55,7 @@ func TestPolicyDirUnset(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	nomostest.SetPolicyDir(nt, configsync.RootSyncName, "")
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("."))
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "."}))
 }
 
 func TestInvalidPolicyDir(t *testing.T) {

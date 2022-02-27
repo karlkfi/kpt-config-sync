@@ -221,7 +221,7 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 	secretNames := getNsReconcilerSecrets(nt, bsNamespace)
 
 	// Remove RepoSync resource from Root Repository.
-	nt.RootRepos[configsync.RootSyncName].Remove(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName))
+	nt.RootRepos[configsync.RootSyncName].Remove(nomostest.StructuredNSPath(bsNamespace, configsync.RepoSyncName))
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Removing RepoSync from the Root Repository")
 	// Remove from NamespaceRepos so we don't try to check that it is syncing,
 	// as we've just deleted it.
@@ -256,7 +256,7 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 
 	nt.T.Log("Test RepoSync v1alpha1 version in central control mode")
 	rs := nomostest.RepoSyncObjectV1Alpha1(nn.Namespace, nn.Name, nt.GitProvider.SyncURL(nsRepo.RemoteRepoName))
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName), rs)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(bsNamespace, rs.Name), rs)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add RepoSync v1alpha1")
 	// Add the bookstore namespace repo back to NamespaceRepos to verify that it is synced.
 	nt.NonRootRepos[nn] = nsRepo

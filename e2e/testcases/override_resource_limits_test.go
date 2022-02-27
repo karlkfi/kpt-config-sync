@@ -190,7 +190,7 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 			},
 		},
 	}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, configsync.RepoSyncName), repoSyncBackend)
 
 	// Override the CPU/memory requests and limits of the reconciler container of ns-reconciler-frontend
 	repoSyncFrontend.Spec.Override = v1alpha1.OverrideSpec{
@@ -211,7 +211,7 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 			},
 		},
 	}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, configsync.RepoSyncName), repoSyncFrontend)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend and frontend RepoSync resource limits")
 	nt.WaitForRepoSyncs()
 
@@ -325,7 +325,7 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncBackend
 	repoSyncBackend.Spec.Override = v1alpha1.OverrideSpec{}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, configsync.RepoSyncName), repoSyncBackend)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncBackend")
 	nt.WaitForRepoSyncs()
 
@@ -376,7 +376,7 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncFrontend
 	repoSyncFrontend.Spec.Override = v1alpha1.OverrideSpec{}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, configsync.RepoSyncName), repoSyncFrontend)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncFrontend")
 	nt.WaitForRepoSyncs()
 
@@ -508,7 +508,7 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, configsync.RepoSyncName), repoSyncBackend)
 
 	// Override the CPU/memory requests and limits of the reconciler container of ns-reconciler-frontend
 	repoSyncFrontend.Spec.Override = v1beta1.OverrideSpec{
@@ -529,7 +529,7 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, configsync.RepoSyncName), repoSyncFrontend)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend and frontend RepoSync resource limits")
 	nt.WaitForRepoSyncs()
 
@@ -643,7 +643,7 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncBackend
 	repoSyncBackend.Spec.Override = v1beta1.OverrideSpec{}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, nomostest.RepoSyncFileName), repoSyncBackend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(backendNamespace, configsync.RepoSyncName), repoSyncBackend)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncBackend")
 	nt.WaitForRepoSyncs()
 
@@ -694,7 +694,7 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 
 	// Clear `spec.override` from repoSyncFrontend
 	repoSyncFrontend.Spec.Override = v1beta1.OverrideSpec{}
-	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, nomostest.RepoSyncFileName), repoSyncFrontend)
+	nt.RootRepos[configsync.RootSyncName].Add(nomostest.StructuredNSPath(frontendNamespace, configsync.RepoSyncName), repoSyncFrontend)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncFrontend")
 	nt.WaitForRepoSyncs()
 

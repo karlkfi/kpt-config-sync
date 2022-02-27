@@ -206,18 +206,21 @@ func resetSyncedRepos(nt *NT, opts *ntopts.New) {
 		nnList := nt.NonRootRepos
 		// clear the namespace resources in the namespace repo to avoid admission validation failure.
 		resetNamespaceRepos(nt)
-		// reset the root-repo to the initial state so that the namespace repos can be deleted.
-		nt.NonRootRepos = map[types.NamespacedName]*Repository{}
 		resetRootRepos(nt, opts.UpstreamURL, opts.SourceFormat)
-		nt.RootRepos = map[string]*Repository{configsync.RootSyncName: nt.RootRepos[configsync.RootSyncName]}
-		// delete the root repos in case they're set up in the delegated mode.
+
 		deleteRootRepos(nt)
-		// delete the namespace repos in case they're set up in the delegated mode.
 		deleteNamespaceRepos(nt)
 		// delete the out-of-sync namespaces in case they're set up in the delegated mode.
 		for nn := range nnList {
 			revokeRepoSyncNamespace(nt, nn.Namespace)
 		}
+		nt.NonRootRepos = map[types.NamespacedName]*Repository{}
+		for name := range nt.RootRepos {
+			if name != configsync.RootSyncName {
+				delete(nt.RootRepos, name)
+			}
+		}
+		nt.WaitForRepoSyncs()
 	} else {
 		nt.NonRootRepos = map[types.NamespacedName]*Repository{}
 		nt.RootRepos[configsync.RootSyncName] = resetRepository(nt, RootRepo, DefaultRootRepoNamespacedName, opts.UpstreamURL, opts.SourceFormat)
