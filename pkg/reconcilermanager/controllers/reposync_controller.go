@@ -85,17 +85,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	var err error
 	var rs v1beta1.RepoSync
 
-	if err = r.validateNamespaceName(req.NamespacedName.Namespace); err != nil {
-		log.Error(err, "RepoSync namespace name failed validation")
-		reposync.SetStalled(&rs, "Validation", err)
-		// We intentionally overwrite the previous error here since we do not want
-		// to return it to the controller runtime.
-		err = r.updateStatus(ctx, &rs, log)
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, err
-	}
-
-	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
+	if err = r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
 			if _, ok := r.namespaces[req.Namespace]; !ok {
@@ -112,6 +102,16 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			return controllerruntime.Result{}, cleanupErr
 		}
 		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RepoSync")
+	}
+
+	if err = r.validateNamespaceName(req.NamespacedName.Namespace); err != nil {
+		log.Error(err, "RepoSync namespace name failed validation")
+		reposync.SetStalled(&rs, "Validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		return controllerruntime.Result{}, err
 	}
 
 	r.namespaces[req.Namespace] = struct{}{}
@@ -139,18 +139,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	secretName := ReconcilerResourceName(reconcilerName, rs.Spec.SecretRef.Name)
-	if errs := validation.IsDNS1123Label(secretName); err != nil {
-		err = errors.New(strings.Join(errs, " "))
-		log.Error(err, "Resource name failed validation")
-		reposync.SetStalled(&rs, "Resource name validation", err)
-		// We intentionally overwrite the previous error here since we do not want
-		// to return it to the controller runtime.
-		err = r.updateStatus(ctx, &rs, log)
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, err
-	}
-
-	if err := r.validateNamespaceSecret(ctx, &rs); err != nil {
+	if err := r.validateNamespaceSecret(ctx, &rs, secretName); err != nil {
 		log.Error(err, "RepoSync failed Secret validation required for installation")
 		reposync.SetStalled(&rs, "Validation", err)
 		// We intentionally overwrite the previous error here since we do not want
@@ -466,11 +455,16 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1b
 }
 
 // validateNamespaceSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
-func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1beta1.RepoSync) error {
+func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1beta1.RepoSync, secretName string) error {
 	if SkipForAuth(repoSync.Spec.Auth) {
 		// There is no Secret to check for the Config object.
 		return nil
 	}
+
+	if errs := validation.IsDNS1123Label(secretName); errs != nil {
+		return errors.Errorf("The managed secret name %q is invalid: %s. To fix it, update '.spec.git.secretRef.name'", secretName, strings.Join(errs, ", "))
+	}
+
 	secret, err := validateSecretExist(ctx,
 		repoSync.Spec.SecretRef.Name,
 		repoSync.Namespace,

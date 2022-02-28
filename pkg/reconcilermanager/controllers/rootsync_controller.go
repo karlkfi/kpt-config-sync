@@ -93,6 +93,14 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	var err error
 	var rs v1beta1.RootSync
 
+	if err = r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		if apierrors.IsNotFound(err) {
+			return controllerruntime.Result{}, r.deleteClusterRoleBinding(ctx)
+		}
+		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RootSync")
+	}
+
 	if err = r.validateNamespaceName(req.NamespacedName.Namespace); err != nil {
 		log.Error(err, "RootSync failed validation")
 		rootsync.SetStalled(&rs, "Validation", err)
@@ -101,14 +109,6 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		err = r.updateStatus(ctx, &rs, log)
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, err
-	}
-
-	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		if apierrors.IsNotFound(err) {
-			return controllerruntime.Result{}, r.deleteClusterRoleBinding(ctx)
-		}
-		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RootSync")
 	}
 
 	owRefs := ownerReference(
