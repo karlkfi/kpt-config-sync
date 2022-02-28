@@ -35,9 +35,6 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/reposync"
-	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -45,6 +42,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -70,62 +68,74 @@ type ClusterClient struct {
 	ConfigManagement *util.ConfigManagementClient
 }
 
-func (c *ClusterClient) rootSync(ctx context.Context) (*v1beta1.RootSync, error) {
-	rs := &v1beta1.RootSync{}
-	// TODO(b/215740086): support listing all rootSyncs.
-	if err := c.Client.Get(ctx, rootsync.ObjectKey(configsync.RootSyncName), rs); err != nil {
-		return nil, err
-	}
-	return rs, nil
-}
-
-func (c *ClusterClient) repoSync(ctx context.Context, ns string) (*v1beta1.RepoSync, error) {
-	rs := &v1beta1.RepoSync{}
-	// TODO(b/215740086): support listing all repoSyncs in the namespace.
-	if err := c.Client.Get(ctx, reposync.ObjectKey(declared.Scope(ns), configsync.RepoSyncName), rs); err != nil {
-		return nil, err
-	}
-	return rs, nil
-}
-
-func (c *ClusterClient) resourceGroup(ctx context.Context, objectKey client.ObjectKey) (*unstructured.Unstructured, error) {
-	rg := &unstructured.Unstructured{}
-	rg.SetGroupVersionKind(live.ResourceGroupGVK)
-	if err := c.Client.Get(ctx, objectKey, rg); err != nil {
-		return nil, err
-	}
-	return rg, nil
-}
-
-func (c *ClusterClient) repoSyncs(ctx context.Context) ([]*v1beta1.RepoSync, error) {
-	rsl := &v1beta1.RepoSyncList{}
+func (c *ClusterClient) rootSyncs(ctx context.Context) ([]*v1beta1.RootSync, []types.NamespacedName, error) {
+	rsl := &v1beta1.RootSyncList{}
 	if err := c.Client.List(ctx, rsl); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	var rootSyncs []*v1beta1.RootSync
+	var rootSyncNsAndNames []types.NamespacedName
+	for _, rs := range rsl.Items {
+		// Use local copy of the iteration variable to correctly get the value in
+		// each iteration and avoid the last value getting overwritten.
+		localRS := rs
+		rootSyncs = append(rootSyncs, &localRS)
+		rootSyncNsAndNames = append(rootSyncNsAndNames, types.NamespacedName{
+			Namespace: rs.Namespace,
+			Name:      rs.Name,
+		})
+	}
+	return rootSyncs, rootSyncNsAndNames, nil
+}
+
+func (c *ClusterClient) repoSyncs(ctx context.Context, ns string) ([]*v1beta1.RepoSync, []types.NamespacedName, error) {
+	rsl := &v1beta1.RepoSyncList{}
+	if ns == "" {
+		if err := c.Client.List(ctx, rsl); err != nil {
+			return nil, nil, err
+		}
+	} else {
+		if err := c.Client.List(ctx, rsl, client.InNamespace(ns)); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	var repoSyncs []*v1beta1.RepoSync
+	var repoSyncNsAndNames []types.NamespacedName
 	for _, rs := range rsl.Items {
 		// Use local copy of the iteration variable to correctly get the value in
 		// each iteration and avoid the last value getting overwritten.
 		localRS := rs
 		repoSyncs = append(repoSyncs, &localRS)
+		repoSyncNsAndNames = append(repoSyncNsAndNames, types.NamespacedName{
+			Namespace: rs.Namespace,
+			Name:      rs.Name,
+		})
 	}
-	return repoSyncs, nil
+	return repoSyncs, repoSyncNsAndNames, nil
 }
 
-func (c *ClusterClient) resourceGroups(ctx context.Context, repoSyncs []*v1beta1.RepoSync) ([]*unstructured.Unstructured, error) {
+func (c *ClusterClient) resourceGroups(ctx context.Context, ns string, nsAndNames []types.NamespacedName) ([]*unstructured.Unstructured, error) {
 	rgl := &unstructured.UnstructuredList{}
 	rgGVK := live.ResourceGroupGVK
 	rgGVK.Kind += "List"
 	rgl.SetGroupVersionKind(rgGVK)
-	if err := c.Client.List(ctx, rgl); err != nil {
-		return nil, err
+	if ns == "" {
+		if err := c.Client.List(ctx, rgl); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := c.Client.List(ctx, rgl, client.InNamespace(ns)); err != nil {
+			return nil, err
+		}
 	}
+
 	var resourceGroups []*unstructured.Unstructured
 	for _, rg := range rgl.Items {
 		localRG := rg
 		resourceGroups = append(resourceGroups, &localRG)
 	}
-	return consistentOrder(repoSyncs, resourceGroups), nil
+	return consistentOrder(nsAndNames, resourceGroups), nil
 }
 
 // clusterStatus returns the ClusterState for the cluster this client is connected to.
@@ -233,37 +243,50 @@ func (c *ClusterClient) multiRepoClusterStatus(ctx context.Context, cs *ClusterS
 	var errs []string
 	syncingConditionSupported := c.syncingConditionSupported(ctx)
 
-	rootSync, err := c.rootSync(ctx)
+	// Get the status of all RootSyncs
+	var rootRGs []*unstructured.Unstructured
+	rootSyncs, rootSyncNsAndNames, err := c.rootSyncs(ctx)
 	if err != nil {
 		errs = append(errs, err.Error())
 	} else {
-		// TODO(b/215740086): support listing all rootSyncs.
-		rg, err := c.resourceGroup(ctx, rootsync.ObjectKey(configsync.RootSyncName))
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
-		cs.repos = append(cs.repos, rootRepoStatus(rootSync, rg, syncingConditionSupported))
-	}
-
-	var rgs []*unstructured.Unstructured
-	syncs, err := c.repoSyncs(ctx)
-	if err != nil {
-		errs = append(errs, err.Error())
-	} else {
-		rgs, err = c.resourceGroups(ctx, syncs)
+		rootRGs, err = c.resourceGroups(ctx, configsync.ControllerNamespace, rootSyncNsAndNames)
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
 
-	if len(syncs) != 0 {
+	if len(rootSyncs) != 0 {
 		var repos []*repoState
-		for i, rs := range syncs {
-			rg := rgs[i]
+		for i, rs := range rootSyncs {
+			rg := rootRGs[i]
+			repos = append(repos, rootRepoStatus(rs, rg, syncingConditionSupported))
+		}
+		sort.Slice(repos, func(i, j int) bool {
+			return repos[i].scope < repos[j].scope || (repos[i].scope == repos[j].scope && repos[i].syncName < repos[j].syncName)
+		})
+		cs.repos = append(cs.repos, repos...)
+	}
+
+	// Get the status of all RepoSyncs
+	var namespaceRGs []*unstructured.Unstructured
+	repoSyncs, repoSyncNsAndNames, err := c.repoSyncs(ctx, "")
+	if err != nil {
+		errs = append(errs, err.Error())
+	} else {
+		namespaceRGs, err = c.resourceGroups(ctx, "", repoSyncNsAndNames)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+
+	if len(repoSyncs) != 0 {
+		var repos []*repoState
+		for i, rs := range repoSyncs {
+			rg := namespaceRGs[i]
 			repos = append(repos, namespaceRepoStatus(rs, rg, syncingConditionSupported))
 		}
 		sort.Slice(repos, func(i, j int) bool {
-			return repos[i].scope < repos[j].scope
+			return repos[i].scope < repos[j].scope || (repos[i].scope == repos[j].scope && repos[i].syncName < repos[j].syncName)
 		})
 		cs.repos = append(cs.repos, repos...)
 	}
@@ -280,20 +303,39 @@ func (c *ClusterClient) multiRepoClusterStatus(ctx context.Context, cs *ClusterS
 // namespaceRepoClusterStatus populates the given ClusterState with the sync status of
 // the specified namespace repo on the ClusterClient's cluster.
 func (c *ClusterClient) namespaceRepoClusterStatus(ctx context.Context, cs *ClusterState, ns string) {
-	repoSync, err := c.repoSync(ctx, ns)
+	var errs []string
+	syncingConditionSupported := c.syncingConditionSupported(ctx)
+
+	var rgs []*unstructured.Unstructured
+	syncs, nsAndNames, err := c.repoSyncs(ctx, ns)
 	if err != nil {
-		cs.status = util.ErrorMsg
-		cs.Error = err.Error()
-		return
+		errs = append(errs, err.Error())
+	} else {
+		rgs, err = c.resourceGroups(ctx, ns, nsAndNames)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
 	}
 
-	// TODO(b/215740086): support listing all repoSyncs in the namespace.
-	rg, err := c.resourceGroup(ctx, reposync.ObjectKey(declared.Scope(ns), configsync.RepoSyncName))
-	if err != nil {
-		cs.Error = err.Error()
-		return
+	if len(syncs) != 0 {
+		var repos []*repoState
+		for i, rs := range syncs {
+			rg := rgs[i]
+			repos = append(repos, namespaceRepoStatus(rs, rg, syncingConditionSupported))
+		}
+		sort.Slice(repos, func(i, j int) bool {
+			return repos[i].scope < repos[j].scope || (repos[i].scope == repos[j].scope && repos[i].syncName < repos[j].syncName)
+		})
+		cs.repos = append(cs.repos, repos...)
 	}
-	cs.repos = append(cs.repos, namespaceRepoStatus(repoSync, rg, c.syncingConditionSupported(ctx)))
+
+	if len(errs) > 0 {
+		cs.status = util.ErrorMsg
+		cs.Error = strings.Join(errs, ", ")
+	} else if len(cs.repos) == 0 {
+		cs.status = util.UnknownMsg
+		cs.Error = "No RepoSync resources found"
+	}
 }
 
 // IsInstalled returns true if the ClusterClient is connected to a cluster where
@@ -521,20 +563,26 @@ func isReachable(ctx context.Context, clientset *apis.Clientset, cluster string)
 	return false
 }
 
-// consistentOrder sort the resourcegroups in the same order as the reposyncs by namespace.
-// The resourcegroup list contains ResourceGroup CRs from all namespaces, including the one
-// from config-management-system; The reposyncs only contains RepoSync CRs.
+// consistentOrder sort the resourcegroups in the same order as the namespace
+// and name pairs of RootSyncs or RepoSyncs.
+// The resourcegroup list contains ResourceGroup CRs in a specific namespace, or
+// from all namespaces, which will include the one from config-management-system.
+// The nsAndNames might be the namespace and name pairs of RootSyncs, RepoSyncs
+// in a specific namespace, or RepoSyncs in all namespaces.
 // For a RepoSync CR, the corresponding ResourceGroup CR may not exist in the cluster.
 // We assign it to nil in this case.
-func consistentOrder(reposyncs []*v1beta1.RepoSync, resourcegroups []*unstructured.Unstructured) []*unstructured.Unstructured {
-	indexMap := map[string]int{}
+func consistentOrder(nsAndNames []types.NamespacedName, resourcegroups []*unstructured.Unstructured) []*unstructured.Unstructured {
+	indexMap := map[types.NamespacedName]int{}
 	for i, r := range resourcegroups {
-		indexMap[r.GetNamespace()] = i
+		nn := types.NamespacedName{
+			Namespace: r.GetNamespace(),
+			Name:      r.GetName(),
+		}
+		indexMap[nn] = i
 	}
-	rgs := make([]*unstructured.Unstructured, len(reposyncs))
-	for i, rs := range reposyncs {
-		ns := rs.Namespace
-		idx, found := indexMap[ns]
+	rgs := make([]*unstructured.Unstructured, len(nsAndNames))
+	for i, nn := range nsAndNames {
+		idx, found := indexMap[nn]
 		if !found {
 			rgs[i] = nil
 		} else {

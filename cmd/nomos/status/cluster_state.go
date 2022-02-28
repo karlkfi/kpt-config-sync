@@ -71,18 +71,19 @@ func unavailableCluster(ref string) *ClusterState {
 
 // repoState represents the sync status of a single repo on a cluster.
 type repoState struct {
-	scope  string
-	git    v1beta1.Git
-	status string
-	commit string
-	errors []string
+	scope    string
+	syncName string
+	git      v1beta1.Git
+	status   string
+	commit   string
+	errors   []string
 	// errorSummary summarizes the `errors` field.
 	errorSummary *v1beta1.ErrorSummary
 	resources    []resourceState
 }
 
 func (r *repoState) printRows(writer io.Writer) {
-	fmt.Fprintf(writer, "%s%s\t%s\t\n", util.Indent, r.scope, gitString(r.git))
+	fmt.Fprintf(writer, "%s%s:%s\t%s\t\n", util.Indent, r.scope, r.syncName, gitString(r.git))
 	fmt.Fprintf(writer, "%s%s\t%s\t\n", util.Indent, r.status, r.commit)
 
 	if r.errorSummary != nil && r.errorSummary.TotalCount > 0 {
@@ -252,9 +253,10 @@ func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string
 // namespaceRepoStatus converts the given RepoSync into a repoState.
 func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
 	repostate := &repoState{
-		scope:  rs.Namespace,
-		git:    rs.Spec.Git,
-		commit: emptyCommit,
+		scope:    rs.Namespace,
+		syncName: rs.Name,
+		git:      rs.Spec.Git,
+		commit:   emptyCommit,
 	}
 
 	stalledCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncStalled)
@@ -344,9 +346,10 @@ func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, sy
 // rootRepoStatus converts the given RootSync into a repoState.
 func rootRepoStatus(rs *v1beta1.RootSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
 	repostate := &repoState{
-		scope:  "<root>",
-		git:    rs.Spec.Git,
-		commit: emptyCommit,
+		scope:    "<root>",
+		syncName: rs.Name,
+		git:      rs.Spec.Git,
+		commit:   emptyCommit,
 	}
 	stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncStalled)
 	reconcilingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncReconciling)
