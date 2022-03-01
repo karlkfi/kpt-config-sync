@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	"sigs.k8s.io/cli-utils/pkg/apis/actuation"
 	"sigs.k8s.io/cli-utils/pkg/apply/cache"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/apply/filter"
@@ -99,7 +100,7 @@ func setDestroyerDefaults(o *DestroyerOptions) {
 // Run performs the destroy step. Passes the inventory object. This
 // happens asynchronously on progress and any errors are reported
 // back on the event channel.
-func (d *Destroyer) Run(ctx context.Context, inv inventory.Info, options DestroyerOptions) <-chan event.Event {
+func (d *Destroyer) Run(ctx context.Context, invInfo inventory.Info, options DestroyerOptions) <-chan event.Event {
 	eventChannel := make(chan event.Event)
 	setDestroyerDefaults(&options)
 	go func() {
@@ -107,7 +108,7 @@ func (d *Destroyer) Run(ctx context.Context, inv inventory.Info, options Destroy
 		// Retrieve the objects to be deleted from the cluster. Second parameter is empty
 		// because no local objects returns all inventory objects for deletion.
 		emptyLocalObjs := object.UnstructuredSet{}
-		deleteObjs, err := d.pruner.GetPruneObjs(inv, emptyLocalObjs, prune.Options{
+		deleteObjs, err := d.pruner.GetPruneObjs(invInfo, emptyLocalObjs, prune.Options{
 			DryRunStrategy: options.DryRunStrategy,
 		})
 		if err != nil {
@@ -129,11 +130,27 @@ func (d *Destroyer) Run(ctx context.Context, inv inventory.Info, options Destroy
 		}
 		validator.Validate(deleteObjs)
 
+		// Build a TaskContext for passing info between tasks
+		resourceCache := cache.NewResourceCacheMap()
+		taskContext := taskrunner.NewTaskContext(eventChannel, resourceCache)
+
 		klog.V(4).Infoln("destroyer building task queue...")
 		dynamicClient, err := d.factory.DynamicClient()
 		if err != nil {
 			handleError(eventChannel, err)
 			return
+		}
+		deleteFilters := []filter.ValidationFilter{
+			filter.PreventRemoveFilter{},
+			filter.InventoryPolicyFilter{
+				Inv:       invInfo,
+				InvPolicy: options.InventoryPolicy,
+			},
+			filter.DependencyFilter{
+				TaskContext:       taskContext,
+				ActuationStrategy: actuation.ActuationStrategyDelete,
+				DryRunStrategy:    options.DryRunStrategy,
+			},
 		}
 		taskBuilder := &solver.TaskQueueBuilder{
 			Pruner:        d.pruner,
@@ -142,28 +159,23 @@ func (d *Destroyer) Run(ctx context.Context, inv inventory.Info, options Destroy
 			InfoHelper:    info.NewHelper(mapper, d.factory.UnstructuredClientForMapping),
 			Mapper:        mapper,
 			InvClient:     d.invClient,
-			Destroy:       true,
 			Collector:     vCollector,
+			PruneFilters:  deleteFilters,
 		}
 		opts := solver.Options{
+			Destroy:                true,
 			Prune:                  true,
-			PruneTimeout:           options.DeleteTimeout,
 			DryRunStrategy:         options.DryRunStrategy,
 			PrunePropagationPolicy: options.DeletePropagationPolicy,
-		}
-		deleteFilters := []filter.ValidationFilter{
-			filter.PreventRemoveFilter{},
-			filter.InventoryPolicyFilter{
-				Inv:       inv,
-				InvPolicy: options.InventoryPolicy,
-			},
+			PruneTimeout:           options.DeleteTimeout,
+			InventoryPolicy:        options.InventoryPolicy,
 		}
 
 		// Build the ordered set of tasks to execute.
 		taskQueue := taskBuilder.
-			AppendPruneWaitTasks(deleteObjs, deleteFilters, opts).
-			AppendDeleteInvTask(inv, options.DryRunStrategy).
-			Build()
+			WithPruneObjects(deleteObjs).
+			WithInventory(invInfo).
+			Build(taskContext, opts)
 
 		klog.V(4).Infof("validation errors: %d", len(vCollector.Errors))
 		klog.V(4).Infof("invalid objects: %d", len(vCollector.InvalidIds))
@@ -184,10 +196,6 @@ func (d *Destroyer) Run(ctx context.Context, inv inventory.Info, options Destroy
 			handleError(eventChannel, fmt.Errorf("invalid ValidationPolicy: %q", options.ValidationPolicy))
 			return
 		}
-
-		// Build a TaskContext for passing info between tasks
-		resourceCache := cache.NewResourceCacheMap()
-		taskContext := taskrunner.NewTaskContext(eventChannel, resourceCache)
 
 		// Register invalid objects to be retained in the inventory, if present.
 		for _, id := range vCollector.InvalidIds {

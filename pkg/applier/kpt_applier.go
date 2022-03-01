@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
+	"sigs.k8s.io/cli-utils/pkg/object/dependson"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -118,7 +119,7 @@ func NewRootApplier(c client.Client, syncName string) (*Applier, error) {
 	return a, nil
 }
 
-func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEventStats, cache map[core.ID]client.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
+func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEventStats, objsReconciled map[core.ID]struct{}, cache map[core.ID]client.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
 	id := idFrom(e.Identifier)
 	if e.Error != nil {
 		stats.errCount++
@@ -137,6 +138,10 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 	}
 
 	if e.Operation == event.Unchanged {
+		if err := handleSkipEvent(e.Resource, id, objsReconciled); err != nil {
+			stats.errCount++
+			return err
+		}
 		klog.V(7).Infof("applied [op: %v] resource %v", e.Operation, id)
 	} else {
 		klog.V(4).Infof("applied [op: %v] resource %v", e.Operation, id)
@@ -146,7 +151,43 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 	return nil
 }
 
-func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEventStats, cs *clientSet) status.Error {
+func processWaitEvent(e event.WaitEvent, objReconciled map[core.ID]struct{}) {
+	id := idFrom(e.Identifier)
+	if e.Operation == event.Reconciled {
+		objReconciled[id] = struct{}{}
+	}
+}
+
+// handleSkipEvent translates from skipped event into resource error.
+// It is only used to catch the skipped apply/prune operation due to dependencies are not ready.
+func handleSkipEvent(obj *unstructured.Unstructured, id core.ID, objsReconciled map[core.ID]struct{}) status.Error {
+	if obj == nil {
+		return nil
+	}
+	dependsOnStr := core.GetAnnotation(obj, dependson.Annotation)
+	if dependsOnStr == "" {
+		return nil
+	}
+
+	deps, err := dependson.ParseDependencySet(dependsOnStr)
+	if err != nil {
+		return ErrorForResource(err, id)
+	}
+
+	unReconciled := []core.ID{}
+	for _, dep := range deps {
+		if _, found := objsReconciled[idFrom(dep)]; !found {
+			unReconciled = append(unReconciled, idFrom(dep))
+		}
+	}
+	if len(unReconciled) > 0 {
+		klog.Errorf("dependencies of %v are not ready: %v", id, unReconciled)
+		return ErrorForResource(fmt.Errorf("dependencies are not reconciled: %v", unReconciled), id)
+	}
+	return nil
+}
+
+func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEventStats, objsReconciled map[core.ID]struct{}, cs *clientSet) status.Error {
 	if e.Error != nil {
 		id := idFrom(e.Identifier)
 		stats.errCount++
@@ -166,6 +207,7 @@ func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEven
 			}
 			klog.V(4).Infof("removed the Config Sync metadata from %v (which is a special namespace)", id)
 		}
+		// TODO: handle the skip prune events due to dependency
 	} else {
 		klog.V(4).Infof("pruned resource %v", id)
 		handleMetrics(ctx, "delete", e.Error, id.WithVersion(""))
@@ -247,11 +289,13 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 			// For every object which is not skipped to apply/prune, there will be at least two WaitEvent:
 			// one ReconcilePending WaitEvent and one Reconciled/ReconcileFailed/ReconcileTimeout WaitEvent. In addition,
 			// a reconciled object may become pending before a wait task times out.
+			// Record the objs that have been reconciled.
 			klog.V(4).Info(e.WaitEvent)
+			processWaitEvent(e.WaitEvent, stats.objsReconciled)
 		case event.ApplyType:
-			a.errs = status.Append(a.errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
+			a.errs = status.Append(a.errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, stats.objsReconciled, cache, unknownTypeResources))
 		case event.PruneType:
-			a.errs = status.Append(a.errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent, cs))
+			a.errs = status.Append(a.errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent, stats.objsReconciled, cs))
 		default:
 			klog.V(4).Infof("skipped %v event", e.Type)
 		}
@@ -317,7 +361,7 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []client.Object) (m
 	// are transient and resolve in future cycles based on partial work completed
 	// in a previous cycle (eg ignore an error about a CR so that we can apply the
 	// CRD, then a future cycle is able to apply the CR).
-	// TODO(b/169717222): Here and elsewhere, pass the MultiError as a parameter.
+	// TODO: Here and elsewhere, pass the MultiError as a parameter.
 	return a.sync(ctx, desiredResource, newCache)
 }
 

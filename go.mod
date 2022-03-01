@@ -20,7 +20,7 @@ replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.10.1
 require (
 	cloud.google.com/go/trace v1.1.0
 	contrib.go.opencensus.io/exporter/ocagent v0.7.0
-	github.com/GoogleContainerTools/kpt v1.0.0-beta.13.0.20220223190705-c0b4a0291232
+	github.com/GoogleContainerTools/kpt v1.0.0-beta.14
 	github.com/Masterminds/semver v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/logr v1.2.0
@@ -47,7 +47,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 	k8s.io/kubectl v0.23.2
 	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704
-	sigs.k8s.io/cli-utils v0.28.1
+	sigs.k8s.io/cli-utils v0.29.2
 	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/kind v0.11.1
 	sigs.k8s.io/kustomize/api v0.11.1

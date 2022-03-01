@@ -24,14 +24,18 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object"
+	"sigs.k8s.io/cli-utils/pkg/object/dependson"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -156,6 +160,17 @@ func TestSync(t *testing.T) {
 			},
 			multiErr: status.Append(ErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())), ErrorForResource(errors.New("failed apply"), idFrom(*fakeID()))),
 		},
+		{
+			name: "failed dependency during apply",
+			events: []event.Event{
+				formApplySkipEventWithDependency(deploymentID()),
+			},
+			gvks: map[schema.GroupVersionKind]struct{}{
+				kinds.Deployment(): {},
+				fakeKind():         {},
+			},
+			multiErr: status.Append(ErrorForResource(errors.New("dependencies are not reconciled: [Kind, random/random]"), idFrom(*deploymentID())), nil),
+		},
 	}
 
 	for _, tc := range testcases {
@@ -166,7 +181,11 @@ func TestSync(t *testing.T) {
 		}
 
 		var errs status.MultiError
-		applier, err := NewNamespaceApplier(nil, "test-namespace", "rs")
+		u := &unstructured.Unstructured{}
+		u.SetNamespace("test-namespace")
+		u.SetName("rs")
+		fakeClient := testingfake.NewClient(t, runtime.NewScheme(), u)
+		applier, err := NewNamespaceApplier(fakeClient, "test-namespace", "rs")
 		if err != nil {
 			errs = Error(err)
 		} else {
@@ -255,6 +274,20 @@ func formApplyEvent(id *object.ObjMetadata, err error) event.Event {
 	return e
 }
 
+func formApplySkipEventWithDependency(id *object.ObjMetadata) event.Event {
+	u := &unstructured.Unstructured{}
+	u.SetAnnotations(map[string]string{dependson.Annotation: "/namespaces/random/Kind/random"})
+	e := event.Event{
+		Type: event.ApplyType,
+		ApplyEvent: event.ApplyEvent{
+			Operation:  event.Unchanged,
+			Identifier: *id,
+			Resource:   u,
+		},
+	}
+	return e
+}
+
 func formPruneEvent(op event.PruneEventOperation, id *object.ObjMetadata, err error) event.Event {
 	e := event.Event{
 		Type: event.PruneType,
@@ -267,4 +300,26 @@ func formPruneEvent(op event.PruneEventOperation, id *object.ObjMetadata, err er
 		e.PruneEvent.Identifier = *id
 	}
 	return e
+}
+
+func formWaitEvent(op event.WaitEventOperation, id *object.ObjMetadata) event.Event {
+	e := event.Event{
+		Type: event.WaitType,
+		WaitEvent: event.WaitEvent{
+			Operation: op,
+		},
+	}
+	if id != nil {
+		e.WaitEvent.Identifier = *id
+	}
+	return e
+}
+
+func TestProcessWaitEvent(t *testing.T) {
+	status := newApplyStats()
+	processWaitEvent(formWaitEvent(event.ReconcileFailed, deploymentID()).WaitEvent, status.objsReconciled)
+	processWaitEvent(formWaitEvent(event.Reconciled, fakeID()).WaitEvent, status.objsReconciled)
+	if len(status.objsReconciled) != 1 {
+		t.Fatalf("expected %d object to be recocniled but got %d", 1, len(status.objsReconciled))
+	}
 }

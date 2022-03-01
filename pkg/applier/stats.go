@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/core"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 )
 
@@ -111,6 +112,7 @@ type applyStats struct {
 	disableObjs disabledObjStats
 	// errorTypeEvents tracks the number of ErrorType events
 	errorTypeEvents uint64
+	objsReconciled  map[core.ID]struct{}
 }
 
 func (s applyStats) string() string {
@@ -142,5 +144,6 @@ func newApplyStats() applyStats {
 		pruneEvent: pruneEventStats{
 			eventByOp: map[event.PruneEventOperation]uint64{},
 		},
+		objsReconciled: map[core.ID]struct{}{},
 	}
 }

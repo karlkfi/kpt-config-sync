@@ -92,7 +92,6 @@ func TestSyncOrdering(t *testing.T) {
 	// There are 2 configmaps in the namespace at this point: cm1, cm2.
 	// The dependency graph is:
 	//   * cm2 depends on cm1
-
 	nt.T.Log("A new test: verify that an object can declare dependency on an existing object (cm1 and cm3 both are in the Git repo, cm3 depends on cm1. cm1 already exists on the cluster, cm3 does not.)")
 	nt.T.Log("Add cm3, which depends on an existing object, cm1")
 	// cm3 depends on cm1
@@ -175,10 +174,6 @@ func TestSyncOrdering(t *testing.T) {
 	//   * cm3 depends on cm1
 
 	nt.T.Log("A new test: verify that an object can be removed without affecting its dependency (cm3 depends on cm1, and both cm3 and cm1 exist in the Git repo and on the cluster.)")
-	nt.RootRepos[configsync.RootSyncName].Add("acme/cm3.yaml", fake.ConfigMapObject(core.Name(cm3Name), core.Namespace(namespaceName)))
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove the depends on annotation in cm3")
-	nt.WaitForRepoSyncs()
-
 	nt.T.Log("Remove cm3")
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm3.yaml")
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove cm3")
@@ -202,10 +197,6 @@ func TestSyncOrdering(t *testing.T) {
 	//   * cm2 depends on cm1
 
 	nt.T.Log("A new test: verify that an object and its dependency can be removed together (cm1 and cm2 both exist in the Git repo and on the cluster. cm2 depends on cm1.)")
-	nt.RootRepos[configsync.RootSyncName].Add("acme/cm1.yaml", fake.ConfigMapObject(core.Name(cm1Name), core.Namespace(namespaceName)))
-	nt.RootRepos[configsync.RootSyncName].Add("acme/cm2.yaml", fake.ConfigMapObject(core.Name(cm2Name), core.Namespace(namespaceName)))
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove the depends on annotation in cm1 and cm2")
-	nt.WaitForRepoSyncs()
 	nt.T.Log("Remove cm1 and cm2")
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm1.yaml")
 	nt.RootRepos[configsync.RootSyncName].Remove("acme/cm2.yaml")
@@ -472,46 +463,102 @@ func TestSyncOrdering(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	nt.T.Log("add pod1 and pod2, pod1's image is not valid, pod2 depends on pod1")
+	nt.T.Log("add pod3 and pod4, pod3's image is not valid, pod4 depends on pod3")
 	invalidImageContainer := container
 	invalidImageContainer.Image = "does-not-exist"
-	nt.RootRepos[configsync.RootSyncName].Add("acme/pod1.yaml", fake.PodObject(pod1Name, []corev1.Container{invalidImageContainer}, core.Namespace(namespaceName)))
-	nt.RootRepos[configsync.RootSyncName].Add("acme/pod2.yaml", fake.PodObject(pod2Name, []corev1.Container{container},
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod3.yaml", fake.PodObject("pod3", []corev1.Container{invalidImageContainer}, core.Namespace(namespaceName)))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod4.yaml", fake.PodObject("pod4", []corev1.Container{container},
 		core.Namespace(namespaceName),
-		core.Annotation(dependson.Annotation, "/namespaces/bookstore/Pod/pod1")))
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add pod1 and pod2 (pod2 depends on pod1 and pod1 won't be reconciled)")
-	// TODO(b/216842598): After update to cli-utils 0.28.0, we should change
-	// it to nt.WaitForRootSyncSyncError().
-	nt.WaitForRepoSyncs()
+		core.Annotation(dependson.Annotation, "/namespaces/bookstore/Pod/pod3")))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add pod3 and pod4 (pod4 depends on pod3 and pod3 won't be reconciled)")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "dependencies are not reconciled", false)
 
-	_, err = nomostest.Retry(nt.DefaultWaitTimeout, func() error {
-		pod1 = &corev1.Pod{}
-		pod2 = &corev1.Pod{}
-		err := nt.Validate(pod1Name, namespaceName,
-			pod1, isPodNotReady)
+	_, err = nomostest.Retry(20, func() error {
+		pod3 := &corev1.Pod{}
+		pod4 := &corev1.Pod{}
+		err := nt.Validate("pod3", namespaceName,
+			pod3, isPodNotReady)
 		if err != nil {
 			return err
 		}
-		return nt.Validate(pod2Name, namespaceName,
-			pod2, isPodReady)
+		return nt.ValidateNotFound("pod4", namespaceName, pod4)
+	})
+
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	nt.T.Log("cleanup")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod3.yaml")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod4.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove pod3 and pod4")
+	nt.WaitForRepoSyncs()
+
+	// TestCase: pod6 depends on pod5; both are managed by ConfigSync.
+	// Both exist in the repo and in the cluster.
+	// Delete pod5 from the repo.
+	// pod5 shouldn't be pruned in the cluster since pod6 depends on it.
+	nt.T.Log("add pod5 and pod6, pod6 depends on pod5. Delete pod5 from the repo. pruning pod5 should be skipped.")
+	nt.T.Logf("Add Pod5 and Pod6")
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod5.yaml", fake.PodObject("pod5", []corev1.Container{container}, core.Namespace(namespaceName)))
+	nt.RootRepos[configsync.RootSyncName].Add("acme/pod6.yaml", fake.PodObject("pod6", []corev1.Container{container},
+		core.Namespace(namespaceName),
+		core.Annotation(dependson.Annotation, "/namespaces/bookstore/Pod/pod5")))
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add pod5 and pod6")
+	nt.WaitForRepoSyncs()
+
+	_, err = nomostest.Retry(20, func() error {
+		pod5 := &corev1.Pod{}
+		pod6 := &corev1.Pod{}
+		err := nt.Validate("pod5", namespaceName,
+			pod5, isPodReady)
+		if err != nil {
+			return err
+		}
+		return nt.Validate("pod6", namespaceName,
+			pod6, isPodReady)
 	})
 
 	if err != nil {
 		nt.T.Fatal(err)
 	}
 
-	// TODO(b/216842598): After update to cli-utils 0.28.0, the expected behavior
-	// should be changed to that pod2 apply is skipped.
-	nt.T.Logf("Verify tha pod2 is created after pod1 is created")
-	if pod2.CreationTimestamp.Before(&pod1.CreationTimestamp) {
-		nt.T.Fatalf("an object (%s) should be created after its dependency (%s)", core.GKNN(pod2), core.GKNN(pod1))
+	nt.T.Logf("Remove pod5 from the repo")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod5.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove pod5")
+	nt.WaitForRootSyncSyncError(configsync.RootSyncName, applier.ApplierErrorCode, "external dependency", false)
+
+	_, err = nomostest.Retry(20, func() error {
+		pod5 := &corev1.Pod{}
+		pod6 := &corev1.Pod{}
+		err := nt.Validate("pod5", namespaceName, pod5)
+		if err != nil {
+			return err
+		}
+		return nt.Validate("pod6", namespaceName, pod6)
+	})
+
+	if err != nil {
+		nt.T.Fatal(err)
 	}
 
-	nt.T.Logf("Remove Pod1 and Pod2")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod1.yaml")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod2.yaml")
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove pod1 and pod2")
+	nt.T.Logf("Remove Pod6")
+	nt.RootRepos[configsync.RootSyncName].Remove("acme/pod6.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove pod6")
 	nt.WaitForRepoSyncs()
+
+	_, err = nomostest.Retry(20, func() error {
+		pod5 := &corev1.Pod{}
+		pod6 := &corev1.Pod{}
+		err := nt.ValidateNotFound("pod5", namespaceName, pod5)
+		if err != nil {
+			return err
+		}
+		return nt.ValidateNotFound("pod6", namespaceName, pod6)
+	})
+
+	if err != nil {
+		nt.T.Fatal(err)
+	}
 }
 
 func isPodReady(o client.Object) error {

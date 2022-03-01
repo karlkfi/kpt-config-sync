@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/cli-utils/pkg/apis/actuation"
 	"sigs.k8s.io/cli-utils/pkg/apply/cache"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/apply/filter"
@@ -125,27 +126,12 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.Info, objects objec
 		}
 		klog.V(4).Infof("calculated %d apply objs; %d prune objs", len(applyObjs), len(pruneObjs))
 
+		// Build a TaskContext for passing info between tasks
+		resourceCache := cache.NewResourceCacheMap()
+		taskContext := taskrunner.NewTaskContext(eventChannel, resourceCache)
+
 		// Fetch the queue (channel) of tasks that should be executed.
 		klog.V(4).Infoln("applier building task queue...")
-		taskBuilder := &solver.TaskQueueBuilder{
-			Pruner:        a.pruner,
-			DynamicClient: a.client,
-			OpenAPIGetter: a.openAPIGetter,
-			InfoHelper:    a.infoHelper,
-			Mapper:        a.mapper,
-			InvClient:     a.invClient,
-			Destroy:       false,
-			Collector:     vCollector,
-		}
-		opts := solver.Options{
-			ServerSideOptions:      options.ServerSideOptions,
-			ReconcileTimeout:       options.ReconcileTimeout,
-			Prune:                  !options.NoPrune,
-			DryRunStrategy:         options.DryRunStrategy,
-			PrunePropagationPolicy: options.PrunePropagationPolicy,
-			PruneTimeout:           options.PruneTimeout,
-			InventoryPolicy:        options.InventoryPolicy,
-		}
 		// Build list of apply validation filters.
 		applyFilters := []filter.ValidationFilter{
 			filter.InventoryPolicyApplyFilter{
@@ -154,8 +140,12 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.Info, objects objec
 				Inv:       invInfo,
 				InvPolicy: options.InventoryPolicy,
 			},
+			filter.DependencyFilter{
+				TaskContext:       taskContext,
+				ActuationStrategy: actuation.ActuationStrategyApply,
+				DryRunStrategy:    options.DryRunStrategy,
+			},
 		}
-
 		// Build list of prune validation filters.
 		pruneFilters := []filter.ValidationFilter{
 			filter.PreventRemoveFilter{},
@@ -166,9 +156,13 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.Info, objects objec
 			filter.LocalNamespacesFilter{
 				LocalNamespaces: localNamespaces(invInfo, object.UnstructuredSetToObjMetadataSet(objects)),
 			},
+			filter.DependencyFilter{
+				TaskContext:       taskContext,
+				ActuationStrategy: actuation.ActuationStrategyDelete,
+				DryRunStrategy:    options.DryRunStrategy,
+			},
 		}
 		// Build list of apply mutators.
-		resourceCache := cache.NewResourceCacheMap()
 		applyMutators := []mutator.Interface{
 			&mutator.ApplyTimeMutator{
 				Client:        a.client,
@@ -176,14 +170,35 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.Info, objects objec
 				ResourceCache: resourceCache,
 			},
 		}
+		taskBuilder := &solver.TaskQueueBuilder{
+			Pruner:        a.pruner,
+			DynamicClient: a.client,
+			OpenAPIGetter: a.openAPIGetter,
+			InfoHelper:    a.infoHelper,
+			Mapper:        a.mapper,
+			InvClient:     a.invClient,
+			Collector:     vCollector,
+			ApplyFilters:  applyFilters,
+			ApplyMutators: applyMutators,
+			PruneFilters:  pruneFilters,
+		}
+		opts := solver.Options{
+			ServerSideOptions:      options.ServerSideOptions,
+			ReconcileTimeout:       options.ReconcileTimeout,
+			Destroy:                false,
+			Prune:                  !options.NoPrune,
+			DryRunStrategy:         options.DryRunStrategy,
+			PrunePropagationPolicy: options.PrunePropagationPolicy,
+			PruneTimeout:           options.PruneTimeout,
+			InventoryPolicy:        options.InventoryPolicy,
+		}
 
 		// Build the ordered set of tasks to execute.
 		taskQueue := taskBuilder.
-			AppendInvAddTask(invInfo, applyObjs, options.DryRunStrategy).
-			AppendApplyWaitTasks(applyObjs, applyFilters, applyMutators, opts).
-			AppendPruneWaitTasks(pruneObjs, pruneFilters, opts).
-			AppendInvSetTask(invInfo, options.DryRunStrategy).
-			Build()
+			WithApplyObjects(applyObjs).
+			WithPruneObjects(pruneObjs).
+			WithInventory(invInfo).
+			Build(taskContext, opts)
 
 		klog.V(4).Infof("validation errors: %d", len(vCollector.Errors))
 		klog.V(4).Infof("invalid objects: %d", len(vCollector.InvalidIds))
@@ -204,9 +219,6 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.Info, objects objec
 			handleError(eventChannel, fmt.Errorf("invalid ValidationPolicy: %q", options.ValidationPolicy))
 			return
 		}
-
-		// Build a TaskContext for passing info between tasks
-		taskContext := taskrunner.NewTaskContext(eventChannel, resourceCache)
 
 		// Register invalid objects to be retained in the inventory, if present.
 		for _, id := range vCollector.InvalidIds {
