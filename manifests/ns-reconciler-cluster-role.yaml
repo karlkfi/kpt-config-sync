@@ -29,6 +29,9 @@ rules:
 - apiGroups: ["kpt.dev"]
   resources: ["resourcegroups"]
   verbs: ["*"]
+- apiGroups: ["kpt.dev"]
+  resources: ["resourcegroups/status"]
+  verbs: ["*"]
 - apiGroups:
   - policy
   resources:
