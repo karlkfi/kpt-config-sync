@@ -51,7 +51,7 @@ spec:
             memory: 50Mi
           limits:
             cpu: 200m
-            memory: 100Mi
+            memory: 200Mi
         volumeMounts:
         - name: configs
           mountPath: /deployment.yaml
