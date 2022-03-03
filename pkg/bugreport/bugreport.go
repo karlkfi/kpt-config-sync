@@ -152,8 +152,6 @@ func (b *BugReporter) EnabledServices() map[Product]bool {
 		// We can safely ignore errors here, because if this request doesn't succeed,
 		// Policy Controller is not enabled
 		enabled[PolicyController], _, _ = unstructured.NestedBool(b.cm.Object, "spec", "policyController", "enabled")
-		// Same for KCC
-		enabled[KCC], _, _ = unstructured.NestedBool(b.cm.Object, "spec", "configConnector", "enabled")
 		// Same for Config Sync, though here the "disabled" condition is if enableMultiRepo is true or if the git
 		// config is "empty", which involves looking for an empty proxy config
 		configSyncEnabled := false
@@ -200,7 +198,6 @@ func (b *BugReporter) FetchLogSources(ctx context.Context) []Readable {
 	nsLabels := map[string]string{"configmanagement.gke.io/configmanagement": "config-management"}
 	productAndLabels := map[Product]map[string]string{
 		PolicyController:     nsLabels,
-		KCC:                  nsLabels,
 		ResourceGroup:        nsLabels,
 		ConfigSyncMonitoring: nil,
 		ConfigSync:           nil,

@@ -30,8 +30,6 @@ const (
 	ConfigSync = Product("Config Sync")
 	// ConfigSyncMonitoring controller
 	ConfigSyncMonitoring = Product("Config Sync Monitoring")
-	// KCC AKA CNRM
-	KCC = Product("KCC")
 	// ResourceGroup controller
 	ResourceGroup = Product("Resource Group")
 )
@@ -45,7 +43,6 @@ const (
 var (
 	productNamespaces = map[Product]string{
 		PolicyController:     policycontroller.NamespaceSystem,
-		KCC:                  "cnrm-system",
 		ConfigSync:           configmanagement.ControllerNamespace,
 		ResourceGroup:        RGControllerNamespace,
 		ConfigSyncMonitoring: metrics.MonitoringNamespace,
