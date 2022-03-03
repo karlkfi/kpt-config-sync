@@ -169,3 +169,14 @@ func TestRemoveFrom(t *testing.T) {
 		})
 	}
 }
+
+func TestGetObjectSize(t *testing.T) {
+	u := newInventoryUnstructured("inv-1", "test")
+	size, err := getObjectSize(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size > 1000 {
+		t.Fatalf("An empty inventory object shouldn't have a large size: %d", size)
+	}
+}

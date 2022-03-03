@@ -36,3 +36,9 @@ func Error(err error) status.Error {
 func ErrorForResource(err error, id core.ID) status.Error {
 	return applierErrorBuilder.Wrap(fmt.Errorf("failed to apply %v: %w", id, err)).Build()
 }
+
+func largeResourceGroupError(err error, id core.ID) status.Error {
+	e := fmt.Errorf("too many declared resources causing %v failed"+
+		"to be applied: %s. To fix, split the resources into multiple repositories.", id, err)
+	return applierErrorBuilder.Wrap(e).Build()
+}

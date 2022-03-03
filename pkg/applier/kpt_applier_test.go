@@ -16,9 +16,12 @@ package applier
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
@@ -64,6 +67,13 @@ func (a *fakeApplier) Run(_ context.Context, _ inventory.Info, _ object.Unstruct
 
 func TestSync(t *testing.T) {
 	resources, cache := prepareResources()
+	uid := core.ID{
+		GroupKind: live.ResourceGroupGVK.GroupKind(),
+		ObjectKey: client.ObjectKey{
+			Name:      "rs",
+			Namespace: "test-namespace",
+		},
+	}
 
 	testcases := []struct {
 		name     string
@@ -92,7 +102,18 @@ func TestSync(t *testing.T) {
 				formApplyEvent(fakeID(), inventory.NewInventoryOverlapError(errors.New("conflict"))),
 				formApplyEvent(nil, nil),
 			},
-			multiErr: KptManagementConflictError(resources[0]),
+			multiErr: KptManagementConflictError(resources[1]),
+			gvks: map[schema.GroupVersionKind]struct{}{
+				kinds.Deployment(): {},
+				fakeKind():         {},
+			},
+		},
+		{
+			name: "inventory object is too large",
+			events: []event.Event{
+				formErrorEvent("etcdserver: request is too large"),
+			},
+			multiErr: largeResourceGroupError(fmt.Errorf("etcdserver: request is too large"), uid),
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 				fakeKind():         {},
@@ -158,7 +179,7 @@ func TestSync(t *testing.T) {
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 			},
-			multiErr: status.Append(ErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())), ErrorForResource(errors.New("failed apply"), idFrom(*fakeID()))),
+			multiErr: status.Append(ErrorForResource(errors.New("unknown type"), idFrom(*fakeID())), ErrorForResource(errors.New("failed apply"), idFrom(*deploymentID()))),
 		},
 		{
 			name: "failed dependency during apply",
@@ -174,17 +195,18 @@ func TestSync(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		applierFunc := func(c client.Client) (*clientSet, error) {
-			return &clientSet{
-				kptApplier: newFakeApplier(tc.initErr, tc.events),
-			}, tc.initErr
-		}
-
-		var errs status.MultiError
 		u := &unstructured.Unstructured{}
 		u.SetNamespace("test-namespace")
 		u.SetName("rs")
 		fakeClient := testingfake.NewClient(t, runtime.NewScheme(), u)
+		applierFunc := func(c client.Client) (*clientSet, error) {
+			return &clientSet{
+				kptApplier: newFakeApplier(tc.initErr, tc.events),
+				client:     fakeClient,
+			}, tc.initErr
+		}
+
+		var errs status.MultiError
 		applier, err := NewNamespaceApplier(fakeClient, "test-namespace", "rs")
 		if err != nil {
 			errs = Error(err)
@@ -210,7 +232,7 @@ func TestSync(t *testing.T) {
 			} else {
 				for i, actual := range actualErrs {
 					expected := expectedErrs[i]
-					if actual.Error() != expected.Error() && reflect.TypeOf(expected) != reflect.TypeOf(actual) {
+					if !strings.Contains(actual.Error(), expected.Error()) || reflect.TypeOf(expected) != reflect.TypeOf(actual) {
 						t.Errorf("%s: expected error %v but got %v", tc.name, expected, actual)
 					}
 				}
@@ -311,6 +333,16 @@ func formWaitEvent(op event.WaitEventOperation, id *object.ObjMetadata) event.Ev
 	}
 	if id != nil {
 		e.WaitEvent.Identifier = *id
+	}
+	return e
+}
+
+func formErrorEvent(s string) event.Event {
+	e := event.Event{
+		Type: event.ErrorType,
+		ErrorEvent: event.ErrorEvent{
+			Err: fmt.Errorf("%s", s),
+		},
 	}
 	return e
 }

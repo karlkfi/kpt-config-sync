@@ -15,6 +15,9 @@
 package applier
 
 import (
+	"encoding/json"
+
+	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
@@ -70,6 +73,16 @@ func idFrom(identifier object.ObjMetadata) core.ID {
 	}
 }
 
+func idFromInventory(rg *live.InventoryResourceGroup) core.ID {
+	return core.ID{
+		GroupKind: live.ResourceGroupGVK.GroupKind(),
+		ObjectKey: client.ObjectKey{
+			Name:      rg.Name(),
+			Namespace: rg.Namespace(),
+		},
+	}
+}
+
 func removeFrom(all []object.ObjMetadata, toRemove []client.Object) []object.ObjMetadata {
 	m := map[object.ObjMetadata]bool{}
 	for _, a := range all {
@@ -89,4 +102,12 @@ func removeFrom(all []object.ObjMetadata, toRemove []client.Object) []object.Obj
 		results = append(results, key)
 	}
 	return results
+}
+
+func getObjectSize(u *unstructured.Unstructured) (int, error) {
+	data, err := json.Marshal(u)
+	if err != nil {
+		return 0, err
+	}
+	return len(data), nil
 }

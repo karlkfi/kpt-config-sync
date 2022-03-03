@@ -23,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
+	nomosutil "github.com/google/nomos/pkg/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -94,6 +95,9 @@ func (cs *clientSet) handleDisabledObjects(ctx context.Context, rg *live.Invento
 	var disabledCount uint64
 	err := cs.removeFromInventory(rg, objs)
 	if err != nil {
+		if nomosutil.IsRequestTooLargeError(err) {
+			return disabledCount, largeResourceGroupError(err, idFromInventory(rg))
+		}
 		return disabledCount, Error(err)
 	}
 	var errs status.MultiError

@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"github.com/google/nomos/pkg/util"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
@@ -43,6 +44,16 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object/dependson"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var (
+	// maxRequestBytesStr defines the max request bytes on the etcd server.
+	// It is defined in https://github.com/etcd-io/etcd/blob/release-3.4/embed/config.go#L56
+	maxRequestBytesStr = "1.5M"
+
+	// maxRequestBytes defines the max request bytes on the etcd server.
+	// It is defined in https://github.com/etcd-io/etcd/blob/release-3.4/embed/config.go#L56
+	maxRequestBytes = int64(1.5 * 1024 * 1024)
 )
 
 // Applier declares the Applier component in the Multi Repo Reconciler Process.
@@ -62,6 +73,10 @@ type Applier struct {
 	errs status.MultiError
 	// syncing indicates whether the applier is syncing.
 	syncing bool
+	// name and namespace of the RootSync|RepoSync object
+	// for the current applier.
+	syncName      string
+	syncNamespace string
 	// mux is an Applier-level mutext to prevent concurrent Apply() and Refresh()
 	mux sync.Mutex
 }
@@ -96,6 +111,8 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName str
 		client:        c,
 		clientSetFunc: newClientSet,
 		policy:        inventory.PolicyAdoptIfNoInventory,
+		syncName:      syncName,
+		syncNamespace: string(namespace),
 	}
 	klog.V(4).Infof("Applier %s/%s is initialized", namespace, syncName)
 	return a, nil
@@ -225,12 +242,31 @@ func handleMetrics(ctx context.Context, operation string, err error, gvk schema.
 	m.RecordApplyOperation(ctx, operation, m.StatusTagKey(err), gvk)
 }
 
+// checkInventoryObjectSize checks the inventory object size limit.
+// If it is close to the size limit 1M, log a warning.
+func (a *Applier) checkInventoryObjectSize(ctx context.Context, c client.Client) {
+	u := newInventoryUnstructured(a.syncName, a.syncNamespace)
+	err := c.Get(ctx, client.ObjectKey{Namespace: a.syncNamespace, Name: a.syncName}, u)
+	if err == nil {
+		size, err := getObjectSize(u)
+		if err != nil {
+			klog.Warningf("Failed to marshal ResourceGroup %s/%s to get its size: %s", a.syncNamespace, a.syncName, err)
+		}
+		if int64(size) > maxRequestBytes/2 {
+			klog.Warningf("ResourceGroup %s/%s is close to the maximum object size limit (size: %d, max: %s). "+
+				"There are too many resources being synced than Config Sync can handle! Please split your repo into smaller repos "+
+				"to avoid future failure.", a.syncNamespace, a.syncName, size, maxRequestBytesStr)
+		}
+	}
+}
+
 // sync triggers a kpt live apply library call to apply a set of resources.
 func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core.ID]client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	cs, err := a.clientSetFunc(a.client)
 	if err != nil {
 		return nil, Error(err)
 	}
+	a.checkInventoryObjectSize(ctx, cs.client)
 
 	stats := newApplyStats()
 	// disabledObjs are objects for which the management are disabled
@@ -281,7 +317,11 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		case event.ActionGroupType:
 			klog.Info(e.ActionGroupEvent)
 		case event.ErrorType:
-			a.errs = status.Append(a.errs, Error(e.ErrorEvent.Err))
+			if util.IsRequestTooLargeError(e.ErrorEvent.Err) {
+				a.errs = status.Append(a.errs, largeResourceGroupError(e.ErrorEvent.Err, idFromInventory(a.inventory)))
+			} else {
+				a.errs = status.Append(a.errs, Error(e.ErrorEvent.Err))
+			}
 			stats.errorTypeEvents++
 		case event.WaitType:
 			// Log WaitEvent at the verbose level of 4 due to the number of WaitEvent.
