@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/id"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cli-utils/pkg/multierror"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -95,7 +96,7 @@ var registered = map[string]bool{
 func format(err Error) string {
 	var sb strings.Builder
 	sb.WriteString(prefix(knv(err.Code())))
-	sb.WriteString(err.Body())
+	sb.WriteString(formatCyclicDepErr(err.Body()))
 	sb.WriteString("\n\n")
 	sb.WriteString(url(err.Code()))
 	return sb.String()
@@ -109,6 +110,19 @@ func formatBody(message, separator, context string) string {
 		sb.WriteString(context)
 	}
 	return sb.String()
+}
+
+// formatCyclicDepErr ensures that we strip newlines and replace them with
+// ";" to ensure readability while maintaining ease for log parsing.
+func formatCyclicDepErr(message string) string {
+	if !strings.Contains(message, "cyclic dependency:") {
+		return message
+	}
+
+	msgSplit := strings.Split(message, "\n"+multierror.Prefix)
+
+	return fmt.Sprintf("%s %s", msgSplit[0], strings.Join(msgSplit[1:], "; "))
+
 }
 
 // PathError defines a status error associated with one or more path-identifiable locations in the
