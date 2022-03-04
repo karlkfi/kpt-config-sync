@@ -20,7 +20,6 @@ import (
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	nomosutil "github.com/google/nomos/pkg/util"
@@ -162,15 +161,6 @@ func (cs *clientSet) disableObject(ctx context.Context, obj client.Object) error
 		updated := metadata.RemoveConfigSyncMetadata(u)
 		if !updated {
 			return nil
-		}
-		// APIService is handled specially by client-side apply due to
-		// https://github.com/kubernetes/kubernetes/issues/89264
-		if u.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
-			err = updateLabelsAndAnnotations(u, u.GetLabels(), u.GetAnnotations())
-			if err != nil {
-				return err
-			}
-			return cs.resouceClient.update(ctx, meta, u, nil)
 		}
 		u.SetManagedFields(nil)
 		return cs.client.Patch(ctx, u, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership)
