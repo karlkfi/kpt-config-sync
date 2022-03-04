@@ -458,7 +458,7 @@ func TestConflictingDefinitions_NamespaceToNamespace(t *testing.T) {
 		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
 		// available on GKE.
 		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
-			err = nt.ValidateMultiRepoMetrics(nsReconcilerName1, 8, metrics.ResourceCreated("Role"))
+			err = nt.ValidateMultiRepoMetrics(nsReconcilerName1, 9, metrics.ResourceCreated("Role"))
 		} else {
 			err = nt.ValidateMultiRepoMetrics(nsReconcilerName1, 7, metrics.ResourceCreated("Role"))
 		}
