@@ -171,7 +171,7 @@ func TestRemoveFrom(t *testing.T) {
 }
 
 func TestGetObjectSize(t *testing.T) {
-	u := newInventoryUnstructured("inv-1", "test")
+	u := newInventoryUnstructured("inv-1", "test", "disabled")
 	size, err := getObjectSize(u)
 	if err != nil {
 		t.Fatal(err)

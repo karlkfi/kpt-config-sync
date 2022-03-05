@@ -50,7 +50,9 @@ type clientSet struct {
 }
 
 // newClientSet creates a clientSet object.
-func newClientSet(c client.Client) (*clientSet, error) {
+func newClientSet(c client.Client, statusMode string) (*clientSet, error) {
+	// TODO: pass statusMode to NewClient function
+	// after cli-utils library is updated.
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(kubeConfigFlags)
 	f := util.NewFactory(matchVersionKubeConfigFlags)

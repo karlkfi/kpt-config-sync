@@ -65,7 +65,7 @@ type Applier struct {
 	// clientSetFunc is the function to create kpt clientSet.
 	// Use this as a function so that the unit testing can mock
 	// the clientSet.
-	clientSetFunc func(client.Client) (*clientSet, error)
+	clientSetFunc func(client.Client, string) (*clientSet, error)
 	// client get and updates RepoSync and its status.
 	client client.Client
 	// errs tracks all the errors the applier encounters.
@@ -79,6 +79,9 @@ type Applier struct {
 	syncNamespace string
 	// mux is an Applier-level mutext to prevent concurrent Apply() and Refresh()
 	mux sync.Mutex
+	// statusMode controls if the applier injects the acutation status into the
+	// ResourceGroup object
+	statusMode string
 }
 
 // Interface is a fake-able subset of the interface Applier implements.
@@ -99,8 +102,8 @@ var _ Interface = &Applier{}
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
-func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName string) (*Applier, error) {
-	u := newInventoryUnstructured(syncName, string(namespace))
+func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName string, statusMode string) (*Applier, error) {
+	u := newInventoryUnstructured(syncName, string(namespace), statusMode)
 	inv, ok := live.WrapInventoryObj(u).(*live.InventoryResourceGroup)
 	if !ok {
 		return nil, errors.New("failed to create an ResourceGroup object")
@@ -113,14 +116,15 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName str
 		policy:        inventory.PolicyAdoptIfNoInventory,
 		syncName:      syncName,
 		syncNamespace: string(namespace),
+		statusMode:    statusMode,
 	}
 	klog.V(4).Infof("Applier %s/%s is initialized", namespace, syncName)
 	return a, nil
 }
 
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
-func NewRootApplier(c client.Client, syncName string) (*Applier, error) {
-	u := newInventoryUnstructured(syncName, configmanagement.ControllerNamespace)
+func NewRootApplier(c client.Client, syncName string, statusMode string) (*Applier, error) {
+	u := newInventoryUnstructured(syncName, configmanagement.ControllerNamespace, statusMode)
 	inv, ok := live.WrapInventoryObj(u).(*live.InventoryResourceGroup)
 	if !ok {
 		return nil, errors.New("failed to create an ResourceGroup object")
@@ -131,6 +135,7 @@ func NewRootApplier(c client.Client, syncName string) (*Applier, error) {
 		client:        c,
 		clientSetFunc: newClientSet,
 		policy:        inventory.PolicyAdoptAll,
+		statusMode:    statusMode,
 	}
 	klog.V(4).Infof("Root applier %s is initialized and synced with the API server", syncName)
 	return a, nil
@@ -245,7 +250,7 @@ func handleMetrics(ctx context.Context, operation string, err error, gvk schema.
 // checkInventoryObjectSize checks the inventory object size limit.
 // If it is close to the size limit 1M, log a warning.
 func (a *Applier) checkInventoryObjectSize(ctx context.Context, c client.Client) {
-	u := newInventoryUnstructured(a.syncName, a.syncNamespace)
+	u := newInventoryUnstructured(a.syncName, a.syncNamespace, a.statusMode)
 	err := c.Get(ctx, client.ObjectKey{Namespace: a.syncNamespace, Name: a.syncName}, u)
 	if err == nil {
 		size, err := getObjectSize(u)
@@ -262,7 +267,7 @@ func (a *Applier) checkInventoryObjectSize(ctx context.Context, c client.Client)
 
 // sync triggers a kpt live apply library call to apply a set of resources.
 func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core.ID]client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
-	cs, err := a.clientSetFunc(a.client)
+	cs, err := a.clientSetFunc(a.client, a.statusMode)
 	if err != nil {
 		return nil, Error(err)
 	}
@@ -406,13 +411,14 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []client.Object) (m
 }
 
 // newInventoryUnstructured creates an inventory object as an unstructured.
-func newInventoryUnstructured(name, namespace string) *unstructured.Unstructured {
+func newInventoryUnstructured(name, namespace, statusMode string) *unstructured.Unstructured {
 	id := InventoryID(name, namespace)
 	u := resourcegroup.Unstructured(name, namespace, id)
 	core.SetLabel(u, metadata.ManagedByKey, metadata.ManagedByValue)
 	core.SetLabel(u, metadata.SyncNamespaceLabel, namespace)
 	core.SetLabel(u, metadata.SyncNameLabel, name)
 	core.SetAnnotation(u, metadata.ResourceManagementKey, metadata.ResourceManagementEnabled)
+	core.SetAnnotation(u, StatusModeKey, statusMode)
 	return u
 }
 

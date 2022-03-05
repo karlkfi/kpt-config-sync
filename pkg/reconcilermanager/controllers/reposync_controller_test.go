@@ -73,17 +73,17 @@ const (
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "f78728fc222ddf41a755df96c1a6708c"
+	nsAnnotation = "c33c3f7e89ad78bd5548af1f50702d05"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "b956816112b01e4f09139a8aa0c7a158"
+	nsUpdatedAnnotation = "b2779c35334037aeae922b27e4cfbc51"
 
-	nsUpdatedAnnotationOverrideGitSyncDepth     = "57e9e805fc7b8433368a8007d6c66cfc"
-	nsUpdatedAnnotationOverrideGitSyncDepthZero = "1b3e57004ca65924c99136e349963997"
+	nsUpdatedAnnotationOverrideGitSyncDepth     = "1aae0daaa2d61faf8469d3d56b0713d5"
+	nsUpdatedAnnotationOverrideGitSyncDepthZero = "b7f12fcd43cc9eef90bdf3ffbcafe3d2"
 
-	nsUpdatedAnnotationNoSSLVerify = "c4bb62c2a484b6aca064493efefe9263"
+	nsUpdatedAnnotationNoSSLVerify = "103fa2984e5019629cb02e2572c7cf0e"
 
-	nsAnnotationGCENode = "fd8889c6bdfa64e4c45249da9d0a1cc9"
-	nsAnnotationNone    = "bfc6701fad5bcb7b04a7a16f0bd1ddcf"
+	nsAnnotationGCENode = "425bb27d8538836fca606dad8b2beb58"
+	nsAnnotationNone    = "42d3a1361aaf357d77d24ee6db221efa"
 )
 
 // Set in init.
@@ -1368,7 +1368,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment2 := repoSyncDeployment(
 		nsReconcilerName2,
-		setAnnotations(deploymentAnnotation("e873eab42a987877b111e1bfe62a7d48")),
+		setAnnotations(deploymentAnnotation("06485378dc3058ce377036df0574cee3")),
 		setServiceAccountName(nsReconcilerName2),
 		gceNodeMutator(nsReconcilerName2),
 	)
@@ -1422,7 +1422,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment3 := repoSyncDeployment(
 		nsReconcilerName3,
-		setAnnotations(deploymentAnnotation("d0f08f589e7c59d169165f5c7721e7a1")),
+		setAnnotations(deploymentAnnotation("5951706fa000c7fc5bba29f98280ebb2")),
 		setServiceAccountName(nsReconcilerName3),
 		gceNodeMutator(nsReconcilerName3),
 	)
@@ -1479,7 +1479,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment4 := repoSyncDeployment(
 		nsReconcilerName4,
-		setAnnotations(deploymentAnnotation("269ef1cad67dc3e9d3ce2644bb714e5d")),
+		setAnnotations(deploymentAnnotation("8de4b4662387dd79c01cf75ad7a39a32")),
 		setServiceAccountName(nsReconcilerName4),
 		secretMutator(nsReconcilerName4, nsReconcilerName4+"-"+reposyncCookie),
 		envVarMutator("HTTPS_PROXY", nsReconcilerName4+"-"+reposyncCookie, "https_proxy"),
@@ -1536,7 +1536,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment5 := repoSyncDeployment(
 		nsReconcilerName5,
-		setAnnotations(deploymentAnnotation("f5038ac462d1ea5f4af8b4c7f0b1e64d")),
+		setAnnotations(deploymentAnnotation("2265b443025502ba538a9633258cb3fa")),
 		setServiceAccountName(nsReconcilerName5),
 		secretMutator(nsReconcilerName5, nsReconcilerName5+"-"+secretName),
 		envVarMutator("HTTPS_PROXY", nsReconcilerName5+"-"+secretName, "https_proxy"),
@@ -1617,7 +1617,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment2 = repoSyncDeployment(
 		nsReconcilerName2,
-		setAnnotations(deploymentAnnotation("e29ef13dbdbdf1d6f9b9aec22e6176c0")),
+		setAnnotations(deploymentAnnotation("4fd3386e1ca0813c879ecc1b24f9738b")),
 		setServiceAccountName(nsReconcilerName2),
 		gceNodeMutator(nsReconcilerName2),
 	)
@@ -1648,7 +1648,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment3 = repoSyncDeployment(
 		nsReconcilerName3,
-		setAnnotations(deploymentAnnotation("a984da7a9e0ed7002c8d2ce24b87a485")),
+		setAnnotations(deploymentAnnotation("358184357933f54202f2586c1f811756")),
 		setServiceAccountName(nsReconcilerName3),
 		gceNodeMutator(nsReconcilerName3),
 	)
@@ -2047,7 +2047,7 @@ func reconcilerConfigMap(scope declared.Scope, syncName, reconcilerName string, 
 	cm := configMapWithData(
 		configsync.ControllerNamespace,
 		ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler),
-		reconcilerData(testCluster, syncName, reconcilerName, scope, git, pollingPeriod),
+		reconcilerData(testCluster, syncName, reconcilerName, scope, git, pollingPeriod, ""),
 		core.Label(metadata.SyncNamespaceLabel, label[metadata.SyncNamespaceLabel]),
 		core.Label(metadata.SyncNameLabel, label[metadata.SyncNameLabel]),
 	)

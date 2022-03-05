@@ -58,6 +58,10 @@ const (
 	// Reconciler is a common building block for many resource names associated
 	// with reconciling resources.
 	Reconciler = "reconciler"
+
+	// StatusMode is to control if the kpt applier needs to inject the actuation data
+	// into the ResourceGroup object.
+	StatusMode = "STATUS_MODE"
 )
 
 const (

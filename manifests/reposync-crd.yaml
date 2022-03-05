@@ -198,6 +198,14 @@ spec:
                           x-kubernetes-int-or-string: true
                       type: object
                     type: array
+                  statusMode:
+                    default: enabled
+                    description: statusMode controls whether the actuation status
+                      such as apply failed or not should be embedded into the ResourceGroup
+                      object. Must be "enabled" or "disabled". If set to "enabled",
+                      it increases the size of the ResourceGroup object.
+                    pattern: ^(enabled|disabled|)$
+                    type: string
                 type: object
               sourceFormat:
                 description: "SourceFormat specifies how the repository is formatted.
@@ -899,6 +907,14 @@ spec:
                           x-kubernetes-int-or-string: true
                       type: object
                     type: array
+                  statusMode:
+                    default: enabled
+                    description: statusMode controls whether the actuation status
+                      such as apply failed or not should be embedded into the ResourceGroup
+                      object. Must be "enabled" or "disabled". If set to "enabled",
+                      it increases the size of the ResourceGroup object.
+                    pattern: ^(enabled|disabled|)$
+                    type: string
                 type: object
               sourceFormat:
                 description: "sourceFormat specifies how the repository is formatted.

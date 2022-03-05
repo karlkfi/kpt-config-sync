@@ -81,6 +81,10 @@ var (
 	sourceFormat = flag.String(flags.sourceFormat, os.Getenv(filesystem.SourceFormatKey),
 		"The format of the repository.")
 
+	// Enable the applier to inject actuation status data into the ResourceGroup object
+	statusMode = flag.String(flags.statusMode, os.Getenv(reconcilermanager.StatusMode),
+		"When the value is enabled or empty, the applier injects actuation status data into the ResourceGroup object")
+
 	debug = flag.Bool("debug", false,
 		"Enable debug mode, panicking in many scenarios where normally an InternalError would be logged. "+
 			"Do not use in production.")
@@ -92,12 +96,14 @@ var flags = struct {
 	hydratedRootDir string
 	clusterName     string
 	sourceFormat    string
+	statusMode      string
 }{
 	repoRootDir:     "repo-root",
 	gitDir:          "git-dir",
 	hydratedRootDir: "hydrated-root",
 	clusterName:     "cluster-name",
 	sourceFormat:    reconcilermanager.SourceFormat,
+	statusMode:      "status-mode",
 }
 
 func main() {
@@ -170,6 +176,7 @@ func main() {
 		DiscoveryClient:            dc,
 		SyncName:                   *syncName,
 		ReconcilerName:             *reconcilerName,
+		StatusMode:                 *statusMode,
 	}
 
 	if declared.Scope(*scope) == declared.RootReconciler {

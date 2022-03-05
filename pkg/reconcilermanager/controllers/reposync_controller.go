@@ -439,7 +439,7 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1b
 		},
 		{
 			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler),
-			data:   reconcilerData(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String()),
+			data:   reconcilerData(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode),
 		},
 	}
 }

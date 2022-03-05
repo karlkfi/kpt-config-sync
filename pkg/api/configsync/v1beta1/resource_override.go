@@ -31,6 +31,16 @@ type OverrideSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	GitSyncDepth *int64 `json:"gitSyncDepth,omitempty"`
+
+	// statusMode controls whether the actuation status
+	// such as apply failed or not should be embedded into the ResourceGroup object.
+	// Must be "enabled" or "disabled".
+	// If set to "enabled", it increases the size of the ResourceGroup object.
+	//
+	// +kubebuilder:default:=enabled
+	// +kubebuilder:validation:Pattern=^(enabled|disabled|)$
+	// +optional
+	StatusMode string `json:"statusMode,omitempty"`
 }
 
 // ContainerResourcesSpec allows to override the resource requirements for a container

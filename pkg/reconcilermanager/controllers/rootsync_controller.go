@@ -332,7 +332,7 @@ func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1b
 		},
 		{
 			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler),
-			data:   reconcilerData(r.clusterName, rs.Name, reconcilerName, declared.RootReconciler, &rs.Spec.Git, r.reconcilerPollingPeriod.String()),
+			data:   reconcilerData(r.clusterName, rs.Name, reconcilerName, declared.RootReconciler, &rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode),
 		},
 	}
 }

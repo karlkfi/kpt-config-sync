@@ -88,6 +88,8 @@ type Options struct {
 	GitRepo string
 	// PolicyDir is the relative path to the policies within the Git repository.
 	PolicyDir cmpath.Relative
+	// StatusMode controls the kpt applier to inject the actuation status data or not
+	StatusMode string
 	// DiscoveryClient is used to read types and schemas from the API server.
 	DiscoveryClient discovery.DiscoveryInterface
 	// RootOptions is the set of options to fill in if this is configuring the
@@ -144,9 +146,9 @@ func Run(opts Options) {
 
 	var a *applier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a, err = applier.NewRootApplier(cl, opts.SyncName)
+		a, err = applier.NewRootApplier(cl, opts.SyncName, opts.StatusMode)
 	} else {
-		a, err = applier.NewNamespaceApplier(cl, opts.ReconcilerScope, opts.SyncName)
+		a, err = applier.NewNamespaceApplier(cl, opts.ReconcilerScope, opts.SyncName, opts.StatusMode)
 	}
 	if err != nil {
 		klog.Fatalf("failed to create the applier: %v", err)

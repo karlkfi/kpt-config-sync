@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -43,7 +44,7 @@ func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, reconcilerName,
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod string) map[string]string {
+func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod, statusMode string) map[string]string {
 	result := make(map[string]string)
 	result[reconcilermanager.ClusterNameKey] = clusterName
 	result[reconcilermanager.ScopeKey] = string(reconcilerScope)
@@ -51,6 +52,10 @@ func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScop
 	result[reconcilermanager.ReconcilerNameKey] = reconcilerName
 	result[reconcilermanager.PolicyDirKey] = gitConfig.Dir
 	result[reconcilermanager.GitRepoKey] = gitConfig.Repo
+	if statusMode == "" {
+		statusMode = applier.StatusEnabled
+	}
+	result[reconcilermanager.StatusMode] = statusMode
 
 	// Add Filesystem Polling Period.
 	result[reconcilermanager.ReconcilerPollingPeriod] = pollPeriod
