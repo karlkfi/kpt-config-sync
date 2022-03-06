@@ -51,13 +51,19 @@ type clientSet struct {
 
 // newClientSet creates a clientSet object.
 func newClientSet(c client.Client, statusMode string) (*clientSet, error) {
-	// TODO: pass statusMode to NewClient function
-	// after cli-utils library is updated.
+	var statusPolicy inventory.StatusPolicy
+	if statusMode == StatusEnabled {
+		klog.Infof("Enabled status reporting")
+		statusPolicy = inventory.StatusPolicyAll
+	} else {
+		klog.Infof("Disabled status reporting")
+		statusPolicy = inventory.StatusPolicyNone
+	}
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(kubeConfigFlags)
 	f := util.NewFactory(matchVersionKubeConfigFlags)
 
-	invClient, err := inventory.NewClient(f, live.WrapInventoryObj, live.InvToUnstructuredFunc)
+	invClient, err := inventory.NewClient(f, live.WrapInventoryObj, live.InvToUnstructuredFunc, statusPolicy)
 	if err != nil {
 		return nil, err
 	}

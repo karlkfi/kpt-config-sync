@@ -54,6 +54,7 @@ type ClusterClient struct {
 	mapper                meta.RESTMapper
 	InventoryFactoryFunc  StorageFactoryFunc
 	invToUnstructuredFunc ToUnstructuredFunc
+	statusPolicy          StatusPolicy
 }
 
 var _ Client = &ClusterClient{}
@@ -62,7 +63,9 @@ var _ Client = &ClusterClient{}
 // Client interface or an error.
 func NewClient(factory cmdutil.Factory,
 	invFunc StorageFactoryFunc,
-	invToUnstructuredFunc ToUnstructuredFunc) (*ClusterClient, error) {
+	invToUnstructuredFunc ToUnstructuredFunc,
+	statusPolicy StatusPolicy,
+) (*ClusterClient, error) {
 	dc, err := factory.DynamicClient()
 	if err != nil {
 		return nil, err
@@ -81,6 +84,7 @@ func NewClient(factory cmdutil.Factory,
 		mapper:                mapper,
 		InventoryFactoryFunc:  invFunc,
 		invToUnstructuredFunc: invToUnstructuredFunc,
+		statusPolicy:          statusPolicy,
 	}
 	return &clusterClient, nil
 }
@@ -101,7 +105,10 @@ func (cic *ClusterClient) Merge(localInv Info, objs object.ObjMetadataSet, dryRu
 	}
 	if clusterInv == nil {
 		// Wrap inventory object and store the inventory in it.
-		status := getObjStatus(nil, objs)
+		var status []actuation.ObjectStatus
+		if cic.statusPolicy == StatusPolicyAll {
+			status = getObjStatus(nil, objs)
+		}
 		inv := cic.InventoryFactoryFunc(invObj)
 		if err := inv.Store(objs, status); err != nil {
 			return nil, err
@@ -128,7 +135,10 @@ func (cic *ClusterClient) Merge(localInv Info, objs object.ObjMetadataSet, dryRu
 		}
 		pruneIds = clusterObjs.Diff(objs)
 		unionObjs := clusterObjs.Union(objs)
-		status := getObjStatus(pruneIds, unionObjs)
+		var status []actuation.ObjectStatus
+		if cic.statusPolicy == StatusPolicyAll {
+			status = getObjStatus(pruneIds, unionObjs)
+		}
 		klog.V(4).Infof("num objects to prune: %d", len(pruneIds))
 		klog.V(4).Infof("num merged objects to store in inventory: %d", len(unionObjs))
 		wrappedInv := cic.InventoryFactoryFunc(clusterInv)
@@ -199,6 +209,9 @@ func (cic *ClusterClient) Replace(localInv Info, objs object.ObjMetadataSet, sta
 // replaceInventory stores the passed objects into the passed inventory object.
 func (cic *ClusterClient) replaceInventory(inv *unstructured.Unstructured, objs object.ObjMetadataSet,
 	status []actuation.ObjectStatus) (*unstructured.Unstructured, error) {
+	if cic.statusPolicy == StatusPolicyNone {
+		status = nil
+	}
 	wrappedInv := cic.InventoryFactoryFunc(inv)
 	if err := wrappedInv.Store(objs, status); err != nil {
 		return nil, err
@@ -451,6 +464,10 @@ func (cic *ClusterClient) getMapping(obj *unstructured.Unstructured) (*meta.REST
 }
 
 func (cic *ClusterClient) updateStatus(obj *unstructured.Unstructured, dryRun common.DryRunStrategy) error {
+	if cic.statusPolicy != StatusPolicyAll {
+		klog.V(4).Infof("inventory status update skipped (StatusPolicy: %s)", cic.statusPolicy)
+		return nil
+	}
 	if dryRun.ClientOrServerDryRun() {
 		klog.V(4).Infof("dry-run update inventory status: not updated")
 		return nil

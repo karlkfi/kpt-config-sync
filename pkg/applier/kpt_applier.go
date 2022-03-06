@@ -104,6 +104,13 @@ var _ Interface = &Applier{}
 // the API server.
 func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName string, statusMode string) (*Applier, error) {
 	u := newInventoryUnstructured(syncName, string(namespace), statusMode)
+	// If the ResourceGroup object exists, annotate the status mode on the
+	// existing object.
+	if err := annotateStatusMode(context.TODO(), c, u, statusMode); err != nil {
+		klog.Errorf("failed to annotate the ResourceGroup object with the status mode %s", statusMode)
+		return nil, err
+	}
+	klog.Infof("successfully annotate the ResourceGroup object with the status mode %s", statusMode)
 	inv, ok := live.WrapInventoryObj(u).(*live.InventoryResourceGroup)
 	if !ok {
 		return nil, errors.New("failed to create an ResourceGroup object")
@@ -125,6 +132,13 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName str
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
 func NewRootApplier(c client.Client, syncName string, statusMode string) (*Applier, error) {
 	u := newInventoryUnstructured(syncName, configmanagement.ControllerNamespace, statusMode)
+	// If the ResourceGroup object exists, annotate the status mode on the
+	// existing object.
+	if err := annotateStatusMode(context.TODO(), c, u, statusMode); err != nil {
+		klog.Errorf("failed to annotate the ResourceGroup object with the status mode %s", statusMode)
+		return nil, err
+	}
+	klog.Infof("successfully annotate the ResourceGroup object with the status mode %s", statusMode)
 	inv, ok := live.WrapInventoryObj(u).(*live.InventoryResourceGroup)
 	if !ok {
 		return nil, errors.New("failed to create an ResourceGroup object")

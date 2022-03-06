@@ -304,3 +304,49 @@ func AllResourcesAreCurrent() Predicate {
 		return nil
 	}
 }
+
+// HasStatus checks that the ResourceGroup object
+// has a non empty status field.
+func HasStatus() Predicate {
+	return func(o client.Object) error {
+		hasStatus, err := hasStatus(o)
+		if err != nil {
+			return err
+		}
+		if hasStatus {
+			return nil
+		}
+		return fmt.Errorf("not found status in %v", o)
+	}
+}
+
+// NoStatus checks that the ResourceGroup object
+// has an empty status field.
+func NoStatus() Predicate {
+	return func(o client.Object) error {
+		hasStatus, err := hasStatus(o)
+		if err != nil {
+			return err
+		}
+		if hasStatus {
+			return fmt.Errorf("found non empty status in %v", o)
+		}
+		return nil
+	}
+}
+
+func hasStatus(o client.Object) (bool, error) {
+	u, ok := o.(*unstructured.Unstructured)
+	if !ok {
+		return false, WrongTypeErr(u, &unstructured.Unstructured{})
+	}
+	status, found, err := unstructured.NestedMap(u.Object, "status")
+	if err != nil {
+		return false, err
+	}
+	if !found || len(status) <= 1 {
+		// By default, it contains the field .status.observedGeneration: 0.
+		return false, nil
+	}
+	return true, nil
+}

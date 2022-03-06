@@ -22,6 +22,8 @@ import (
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	"golang.org/x/net/context"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -110,4 +112,21 @@ func getObjectSize(u *unstructured.Unstructured) (int, error) {
 		return 0, err
 	}
 	return len(data), nil
+}
+
+func annotateStatusMode(ctx context.Context, c client.Client, u *unstructured.Unstructured, statusMode string) error {
+	err := c.Get(ctx, client.ObjectKey{Name: u.GetName(), Namespace: u.GetNamespace()}, u)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	annotations := u.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[StatusModeKey] = statusMode
+	u.SetAnnotations(annotations)
+	return c.Update(ctx, u)
 }

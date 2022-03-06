@@ -24,6 +24,7 @@ spec:
     resources:
     - containerName: "reconciler"
       memoryLimit: 1500Mi
+    statusMode: disabled
   git:
     repo: https://github.com/config-sync-examples/crontab-crs
     branch: main
