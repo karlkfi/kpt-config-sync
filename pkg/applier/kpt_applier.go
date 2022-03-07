@@ -36,6 +36,7 @@ import (
 	"github.com/google/nomos/pkg/util"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
@@ -65,9 +66,11 @@ type Applier struct {
 	// clientSetFunc is the function to create kpt clientSet.
 	// Use this as a function so that the unit testing can mock
 	// the clientSet.
-	clientSetFunc func(client.Client, string) (*clientSet, error)
+	clientSetFunc func(client.Client, *rest.Config, string) (*clientSet, error)
 	// client get and updates RepoSync and its status.
 	client client.Client
+	// clientConfig for creating clients
+	clientConfig *rest.Config
 	// errs tracks all the errors the applier encounters.
 	// This field is cleared at the start of the `Applier.Apply` method
 	errs status.MultiError
@@ -102,7 +105,7 @@ var _ Interface = &Applier{}
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
-func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName string, statusMode string) (*Applier, error) {
+func NewNamespaceApplier(c client.Client, cfg *rest.Config, namespace declared.Scope, syncName string, statusMode string) (*Applier, error) {
 	u := newInventoryUnstructured(syncName, string(namespace), statusMode)
 	// If the ResourceGroup object exists, annotate the status mode on the
 	// existing object.
@@ -119,6 +122,7 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName str
 	a := &Applier{
 		inventory:     inv,
 		client:        c,
+		clientConfig:  cfg,
 		clientSetFunc: newClientSet,
 		policy:        inventory.PolicyAdoptIfNoInventory,
 		syncName:      syncName,
@@ -130,7 +134,7 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope, syncName str
 }
 
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
-func NewRootApplier(c client.Client, syncName string, statusMode string) (*Applier, error) {
+func NewRootApplier(c client.Client, cfg *rest.Config, syncName, statusMode string) (*Applier, error) {
 	u := newInventoryUnstructured(syncName, configmanagement.ControllerNamespace, statusMode)
 	// If the ResourceGroup object exists, annotate the status mode on the
 	// existing object.
@@ -147,6 +151,7 @@ func NewRootApplier(c client.Client, syncName string, statusMode string) (*Appli
 	a := &Applier{
 		inventory:     inv,
 		client:        c,
+		clientConfig:  cfg,
 		clientSetFunc: newClientSet,
 		policy:        inventory.PolicyAdoptAll,
 		statusMode:    statusMode,
@@ -281,7 +286,7 @@ func (a *Applier) checkInventoryObjectSize(ctx context.Context, c client.Client)
 
 // sync triggers a kpt live apply library call to apply a set of resources.
 func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core.ID]client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
-	cs, err := a.clientSetFunc(a.client, a.statusMode)
+	cs, err := a.clientSetFunc(a.client, a.clientConfig, a.statusMode)
 	if err != nil {
 		return nil, Error(err)
 	}
@@ -320,10 +325,10 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		// Leaving ReconcileTimeout and PruneTimeout unset may cause a WaitTask to wait forever.
 		// ReconcileTimeout defines the timeout for a wait task after an apply task.
 		// ReconcileTimeout is a task-level setting instead of an object-level setting.
-		ReconcileTimeout: time.Minute,
+		ReconcileTimeout: 5 * time.Minute,
 		// PruneTimeout defines the timeout for a wait task after a prune task.
 		// PruneTimeout is a task-level setting instead of an object-level setting.
-		PruneTimeout: time.Minute,
+		PruneTimeout: 5 * time.Minute,
 	}
 
 	events := cs.apply(ctx, a.inventory, resources, options)
@@ -336,6 +341,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		case event.ActionGroupType:
 			klog.Info(e.ActionGroupEvent)
 		case event.ErrorType:
+			klog.V(4).Info(e.ErrorEvent)
 			if util.IsRequestTooLargeError(e.ErrorEvent.Err) {
 				a.errs = status.Append(a.errs, largeResourceGroupError(e.ErrorEvent.Err, idFromInventory(a.inventory)))
 			} else {
@@ -352,8 +358,25 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 			klog.V(4).Info(e.WaitEvent)
 			processWaitEvent(e.WaitEvent, stats.objsReconciled)
 		case event.ApplyType:
+			logEvent := event.ApplyEvent{
+				GroupName:  e.ApplyEvent.GroupName,
+				Identifier: e.ApplyEvent.Identifier,
+				Operation:  e.ApplyEvent.Operation,
+				// nil Resource to reduce log noise
+				Error: e.ApplyEvent.Error,
+			}
+			klog.V(4).Info(logEvent)
 			a.errs = status.Append(a.errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, stats.objsReconciled, cache, unknownTypeResources))
 		case event.PruneType:
+			logEvent := event.PruneEvent{
+				GroupName:  e.PruneEvent.GroupName,
+				Identifier: e.PruneEvent.Identifier,
+				Operation:  e.PruneEvent.Operation,
+				// nil Resource to reduce log noise
+				Reason: e.PruneEvent.Reason,
+				Error:  e.PruneEvent.Error,
+			}
+			klog.V(4).Info(logEvent)
 			a.errs = status.Append(a.errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent, stats.objsReconciled, cs))
 		default:
 			klog.V(4).Infof("skipped %v event", e.Type)

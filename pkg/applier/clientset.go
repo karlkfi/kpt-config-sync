@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/cli-utils/pkg/apply"
@@ -50,7 +51,15 @@ type clientSet struct {
 }
 
 // newClientSet creates a clientSet object.
-func newClientSet(c client.Client, statusMode string) (*clientSet, error) {
+func newClientSet(c client.Client, cfg *rest.Config, statusMode string) (*clientSet, error) {
+	cfgPtrCopy := cfg
+	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+	kubeConfigFlags.WrapConfigFn = func(_ *rest.Config) *rest.Config {
+		return cfgPtrCopy
+	}
+	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(kubeConfigFlags)
+	f := util.NewFactory(matchVersionKubeConfigFlags)
+
 	var statusPolicy inventory.StatusPolicy
 	if statusMode == StatusEnabled {
 		klog.Infof("Enabled status reporting")
@@ -59,14 +68,11 @@ func newClientSet(c client.Client, statusMode string) (*clientSet, error) {
 		klog.Infof("Disabled status reporting")
 		statusPolicy = inventory.StatusPolicyNone
 	}
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
-	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(kubeConfigFlags)
-	f := util.NewFactory(matchVersionKubeConfigFlags)
-
 	invClient, err := inventory.NewClient(f, live.WrapInventoryObj, live.InvToUnstructuredFunc, statusPolicy)
 	if err != nil {
 		return nil, err
 	}
+
 	builder := apply.NewApplierBuilder()
 	applier, err := builder.WithInventoryClient(invClient).WithFactory(f).Build()
 	if err != nil {

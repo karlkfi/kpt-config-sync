@@ -75,7 +75,8 @@ func TestStressCRD(t *testing.T) {
 	labelKey := "StressTestName"
 	labelValue := "TestStressCRD"
 	for i := 1; i <= 1000; i++ {
-		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/ns-%d.yaml", i), fake.NamespaceObject(fmt.Sprintf("foo%d", i)))
+		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/ns-%d.yaml", i), fake.NamespaceObject(
+			fmt.Sprintf("foo%d", i), core.Label(labelKey, labelValue)))
 		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/cm-%d.yaml", i), fake.ConfigMapObject(
 			core.Name("cm1"), core.Namespace(fmt.Sprintf("foo%d", i)), core.Label(labelKey, labelValue)))
 
@@ -86,16 +87,24 @@ func TestStressCRD(t *testing.T) {
 		nt.RootRepos[configsync.RootSyncName].Add(fmt.Sprintf("acme/crontab-cr-%d.yaml", i), cr)
 	}
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add configs (one CRD and 1000 Namespaces (every namespace has one ConfigMap and one CR)")
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(10 * time.Minute))
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(30 * time.Minute))
 
 	nt.T.Logf("Verify that the CronTab CRD is installed on the cluster")
 	if err := nt.Validate(crdName, "", fake.CustomResourceDefinitionV1Object()); err != nil {
 		nt.T.Fatal(err)
 	}
 
+	nt.T.Logf("Verify that there are exactly 1000 Namespaces managed by Config Sync on the cluster")
+	nsList := &corev1.NamespaceList{}
+	if err := nt.Client.List(nt.Context, nsList, client.MatchingLabels{metadata.ManagedByKey: metadata.ManagedByValue, labelKey: labelValue}); err != nil {
+		nt.T.Error(err)
+	}
+	if len(nsList.Items) != 1000 {
+		nt.T.Errorf("The cluster should include 1000 Namespaces managed by Config Sync and having the `%s: %s` label exactly, found %v instead", labelKey, labelValue, len(nsList.Items))
+	}
+
 	nt.T.Logf("Verify that there are exactly 1000 ConfigMaps managed by Config Sync on the cluster")
 	cmList := &corev1.ConfigMapList{}
-
 	if err := nt.Client.List(nt.Context, cmList, client.MatchingLabels{metadata.ManagedByKey: metadata.ManagedByValue, labelKey: labelValue}); err != nil {
 		nt.T.Error(err)
 	}
@@ -110,7 +119,7 @@ func TestStressCRD(t *testing.T) {
 		nt.T.Error(err)
 	}
 	if len(crList.Items) != 1000 {
-		nt.T.Errorf("The cluster should include 1000 ConfigMaps managed by Config Sync exactly, found %v instead", len(crList.Items))
+		nt.T.Errorf("The cluster should include 1000 CronTab managed by Config Sync exactly, found %v instead", len(crList.Items))
 	}
 }
 

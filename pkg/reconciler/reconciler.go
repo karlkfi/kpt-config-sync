@@ -146,9 +146,9 @@ func Run(opts Options) {
 
 	var a *applier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a, err = applier.NewRootApplier(cl, opts.SyncName, opts.StatusMode)
+		a, err = applier.NewRootApplier(cl, cfg, opts.SyncName, opts.StatusMode)
 	} else {
-		a, err = applier.NewNamespaceApplier(cl, opts.ReconcilerScope, opts.SyncName, opts.StatusMode)
+		a, err = applier.NewNamespaceApplier(cl, cfg, opts.ReconcilerScope, opts.SyncName, opts.StatusMode)
 	}
 	if err != nil {
 		klog.Fatalf("failed to create the applier: %v", err)

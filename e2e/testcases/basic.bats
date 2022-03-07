@@ -107,12 +107,19 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 }
 
 @test "${FILE_NAME}: Sync deployment and replicaset" {
+  # Test the ability to fix a mistake: overlapping replicaset and deployment.
+  # Readiness behavior is undefined for this race condition.
+  # One or both of the Deployment and ReplicaSet may become unhealthy.
+  # But regardless, the user should be able to correct the situation.
   debug::log "Add a deployment and corresponding replicaset"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
   git::add ${YAML_DIR}/replicaset-helloworld.yaml acme/namespaces/dir/replicaset.yaml
   git::commit
-  wait::for -t 120 -- nomos::repo_synced
+  # This sync may block until reconcile timeout is reached,
+  # because ReplicaSet or Deployment may never reconcile.
+  # So this wait timeout must be longer than the reconcile timeout (5m).
+  wait::for -t 600 -- nomos::repo_synced
 
   debug::log "check that the deployment and replicaset were created"
   wait::for -t 60 -- kubectl get deployment hello-world -n dir
@@ -121,7 +128,10 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   debug::log "Remove the deployment"
   git::rm acme/namespaces/dir/deployment.yaml
   git::commit
-  wait::for -t 120 -- nomos::repo_synced
+  # This sync may block until reconcile timeout is reached,
+  # because the ReplicaSet is re-applied before deleting the Deployment.
+  # So this wait timeout must be longer than the reconcile timeout (5m).
+  wait::for -t 600 -- nomos::repo_synced
 
   debug::log "check that the deployment was removed and replicaset remains"
   wait::for -f -t 60 -- kubectl get deployment hello-world -n dir

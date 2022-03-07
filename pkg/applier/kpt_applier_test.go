@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
@@ -199,7 +200,8 @@ func TestSync(t *testing.T) {
 		u.SetNamespace("test-namespace")
 		u.SetName("rs")
 		fakeClient := testingfake.NewClient(t, runtime.NewScheme(), u)
-		applierFunc := func(c client.Client, _ string) (*clientSet, error) {
+		cfg := &rest.Config{} // unused by test applier
+		applierFunc := func(c client.Client, _ *rest.Config, _ string) (*clientSet, error) {
 			return &clientSet{
 				kptApplier: newFakeApplier(tc.initErr, tc.events),
 				client:     fakeClient,
@@ -207,7 +209,7 @@ func TestSync(t *testing.T) {
 		}
 
 		var errs status.MultiError
-		applier, err := NewNamespaceApplier(fakeClient, "test-namespace", "rs", "")
+		applier, err := NewNamespaceApplier(fakeClient, cfg, "test-namespace", "rs", "")
 		if err != nil {
 			errs = Error(err)
 		} else {
