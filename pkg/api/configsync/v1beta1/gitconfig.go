@@ -22,23 +22,23 @@ import (
 // Git contains the configs which specify how to connect to and read from a Git
 // repository.
 type Git struct {
-	// Repo is the git repository URL to sync from. Required.
+	// repo is the git repository URL to sync from. Required.
 	Repo string `json:"repo"`
 
-	// Branch is the git branch to checkout. Default: "master".
+	// branch is the git branch to checkout. Default: "master".
 	// +optional
 	Branch string `json:"branch,omitempty"`
 
-	// Revision is the git revision (tag, ref or commit) to fetch. Default: "HEAD".
+	// revision is the git revision (tag, ref or commit) to fetch. Default: "HEAD".
 	// +optional
 	Revision string `json:"revision,omitempty"`
 
-	// Dir is the absolute path of the directory that contains
+	// dir is the absolute path of the directory that contains
 	// the local policy.  Default: the root directory of the repo.
 	// +optional
 	Dir string `json:"dir,omitempty"`
 
-	// Period is the time duration between consecutive syncs. Default: 15s.
+	// period is the time duration between consecutive syncs. Default: 15s.
 	// Note to developers that customers specify this value using
 	// string (https://golang.org/pkg/time/#Duration.String) like "3s"
 	// in their Custom Resource YAML. However, time.Duration is at a nanosecond
@@ -47,14 +47,14 @@ type Git struct {
 	// +optional
 	Period metav1.Duration `json:"period,omitempty"`
 
-	// Auth is the type of secret configured for access to the Git repo.
+	// auth is the type of secret configured for access to the Git repo.
 	// Must be one of ssh, cookiefile, gcenode, token, or none. Required.
 	// The validation of this is case-sensitive. Required.
 	//
 	// +kubebuilder:validation:Pattern=^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$
 	Auth string `json:"auth"`
 
-	// GCPServiceAccountEmail specifies the GCP service account used to annotate
+	// gcpServiceAccountEmail specifies the GCP service account used to annotate
 	// the RootSync/RepoSync controller Kubernetes Service Account.
 	// Note: The field is used when secretType: gcpServiceAccount.
 	GCPServiceAccountEmail string `json:"gcpServiceAccountEmail,omitempty"`
@@ -68,7 +68,7 @@ type Git struct {
 	// +optional
 	Proxy string `json:"proxy,omitempty"`
 
-	// SecretRef is the secret used to connect to the Git source of truth.
+	// secretRef is the secret used to connect to the Git source of truth.
 	// +optional
 	SecretRef SecretReference `json:"secretRef,omitempty"`
 
@@ -81,7 +81,7 @@ type Git struct {
 // SecretReference contains the reference to the secret used to connect to
 // Git source of truth.
 type SecretReference struct {
-	// Name represents the secret name.
+	// name represents the secret name.
 	// +optional
 	Name string `json:"name,omitempty"`
 }

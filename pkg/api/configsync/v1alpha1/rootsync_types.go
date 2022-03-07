@@ -48,7 +48,7 @@ type RootSyncSpec struct {
 type RootSyncStatus struct {
 	SyncStatus `json:",inline"`
 
-	// Conditions represents the latest available observations of the RootSync's
+	// conditions represents the latest available observations of the RootSync's
 	// current state.
 	// +optional
 	Conditions []RootSyncCondition `json:"conditions,omitempty"`
@@ -87,9 +87,9 @@ const (
 
 // RootSyncCondition describes the state of a RootSync at a certain point.
 type RootSyncCondition struct {
-	// Type of RootSync condition.
+	// type of RootSync condition.
 	Type RootSyncConditionType `json:"type"`
-	// Status of the condition, one of True, False, Unknown.
+	// status of the condition, one of True, False, Unknown.
 	Status metav1.ConditionStatus `json:"status"`
 	// The last time this condition was updated.
 	// +nullable
@@ -105,10 +105,10 @@ type RootSyncCondition struct {
 	// A human readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
-	// Commit is the hash of the commit in the source of truth.
+	// commit is the hash of the commit in the source of truth.
 	// +optional
 	Commit string `json:"commit,omitempty"`
-	// Errors is a list of errors that occurred in the process.
+	// errors is a list of errors that occurred in the process.
 	// This field is used to track errors when the condition type is Reconciling or Stalled.
 	// When the condition type is Syncing, the `errorSourceRefs` field is used instead to
 	// avoid duplicating errors between `status.conditions` and `status.rendering|source|sync`.

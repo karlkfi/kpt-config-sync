@@ -71,25 +71,25 @@ spec:
             description: RootSyncSpec defines the desired state of RootSync
             properties:
               git:
-                description: Git contains configuration specific to importing policies
+                description: git contains configuration specific to importing policies
                   from a Git repo.
                 properties:
                   auth:
-                    description: Auth is the type of secret configured for access
+                    description: auth is the type of secret configured for access
                       to the Git repo. Must be one of ssh, cookiefile, gcenode, token,
                       or none. Required. The validation of this is case-sensitive.
                       Required.
                     pattern: ^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$
                     type: string
                   branch:
-                    description: 'Branch is the git branch to checkout. Default: "master".'
+                    description: 'branch is the git branch to checkout. Default: "master".'
                     type: string
                   dir:
-                    description: 'Dir is the absolute path of the directory that contains
+                    description: 'dir is the absolute path of the directory that contains
                       the local policy.  Default: the root directory of the repo.'
                     type: string
                   gcpServiceAccountEmail:
-                    description: 'GCPServiceAccountEmail specifies the GCP service
+                    description: 'gcpServiceAccountEmail specifies the GCP service
                       account used to annotate the RootSync/RepoSync controller Kubernetes
                       Service Account. Note: The field is used when spec.git.auth:
                       gcpserviceaccount.'
@@ -100,7 +100,7 @@ spec:
                       is set to true, it tells Git to skip the SSL certificate verification.'
                     type: boolean
                   period:
-                    description: 'Period is the time duration between consecutive
+                    description: 'period is the time duration between consecutive
                       syncs. Default: 15s. Note to developers that customers specify
                       this value using string (https://golang.org/pkg/time/#Duration.String)
                       like "3s" in their Custom Resource YAML. However, time.Duration
@@ -120,18 +120,18 @@ spec:
                       Optional.
                     type: string
                   repo:
-                    description: Repo is the git repository URL to sync from. Required.
+                    description: repo is the git repository URL to sync from. Required.
                     type: string
                   revision:
-                    description: 'Revision is the git revision (tag, ref or commit)
+                    description: 'revision is the git revision (tag, ref or commit)
                       to fetch. Default: "HEAD".'
                     type: string
                   secretRef:
-                    description: SecretRef is the secret used to connect to the Git
+                    description: secretRef is the secret used to connect to the Git
                       source of truth.
                     properties:
                       name:
-                        description: Name represents the secret name.
+                        description: name represents the secret name.
                         type: string
                     type: object
                 required:
@@ -208,7 +208,7 @@ spec:
                     type: string
                 type: object
               sourceFormat:
-                description: "SourceFormat specifies how the repository is formatted.
+                description: "sourceFormat specifies how the repository is formatted.
                   See documentation for specifics of what these options do. \n Must
                   be one of hierarchy, unstructured. Optional. Set to hierarchy if
                   not specified. \n The validation of this is case-sensitive."
@@ -219,14 +219,14 @@ spec:
             description: RootSyncStatus defines the observed state of RootSync
             properties:
               conditions:
-                description: Conditions represents the latest available observations
+                description: conditions represents the latest available observations
                   of the RootSync's current state.
                 items:
                   description: RootSyncCondition describes the state of a RootSync
                     at a certain point.
                   properties:
                     commit:
-                      description: Commit is the hash of the commit in the source
+                      description: commit is the hash of the commit in the source
                         of truth.
                       type: string
                     errorSourceRefs:
@@ -259,7 +259,7 @@ spec:
                           type: boolean
                       type: object
                     errors:
-                      description: Errors is a list of errors that occurred in the
+                      description: errors is a list of errors that occurred in the
                         process. This field is used to track errors when the condition
                         type is Reconciling or Stalled. When the condition type is
                         Syncing, the `errorSourceRefs` field is used instead to avoid
@@ -269,21 +269,21 @@ spec:
                           while parsing, applying, or remediating a resource.
                         properties:
                           code:
-                            description: Code is the error code of this particular
+                            description: code is the error code of this particular
                               error.  Error codes are numeric strings, like "1012".
                             type: string
                           errorMessage:
-                            description: ErrorMessage describes the error that occurred.
+                            description: errorMessage describes the error that occurred.
                             type: string
                           errorResources:
-                            description: Resources describes the resources associated
+                            description: errorResources describes the resources associated
                               with this error, if any.
                             items:
                               description: ResourceRef contains the identification
                                 bits of a single managed resource.
                               properties:
                                 gvk:
-                                  description: GVK is the GroupVersionKind of the
+                                  description: gvk is the GroupVersionKind of the
                                     affected K8S resource. This field may be empty
                                     for errors that are not associated with a specific
                                     resource.
@@ -300,18 +300,18 @@ spec:
                                   - version
                                   type: object
                                 name:
-                                  description: Name is the name of the affected K8S
+                                  description: name is the name of the affected K8S
                                     resource. This field may be empty for errors that
                                     are not associated with a specific resource.
                                   type: string
                                 namespace:
-                                  description: Namespace is the namespace of the affected
+                                  description: namespace is the namespace of the affected
                                     K8S resource. This field may be empty for errors
                                     that are associated with a cluster-scoped resource
                                     or not associated with a specific resource.
                                   type: string
                                 sourcePath:
-                                  description: SourcePath is the repo-relative slash
+                                  description: sourcePath is the repo-relative slash
                                     path to where the config is defined. This field
                                     may be empty for errors that are not associated
                                     with a specific config file.
@@ -342,10 +342,10 @@ spec:
                       description: The reason for the condition's last transition.
                       type: string
                     status:
-                      description: Status of the condition, one of True, False, Unknown.
+                      description: status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of RootSync condition.
+                      description: type of RootSync condition.
                       type: string
                   required:
                   - status
@@ -353,25 +353,25 @@ spec:
                   type: object
                 type: array
               lastSyncedCommit:
-                description: LastSyncedCommit describes the most recent commit hash
+                description: lastSyncedCommit describes the most recent commit hash
                   that is successfully synced.
                 type: string
               observedGeneration:
-                description: ObservedGeneration is the most recent generation observed
+                description: observedGeneration is the most recent generation observed
                   for the sync resource. It corresponds to the it's generation, which
                   is updated on mutation by the API Server.
                 format: int64
                 type: integer
               reconciler:
-                description: Reconciler is the name of the reconciler process which
+                description: reconciler is the name of the reconciler process which
                   corresponds to the sync resource.
                 type: string
               rendering:
-                description: Rendering contains fields describing the status of rendering
+                description: rendering contains fields describing the status of rendering
                   resources from the source of truth.
                 properties:
                   commit:
-                    description: Commit is the hash of the commit in the source of
+                    description: commit is the hash of the commit in the source of
                       truth that is rendered.
                     type: string
                   errorSummary:
@@ -395,28 +395,28 @@ spec:
                         type: boolean
                     type: object
                   errors:
-                    description: Errors is a list of any errors that occurred while
+                    description: errors is a list of any errors that occurred while
                       rendering the source of truth.
                     items:
                       description: ConfigSyncError represents an error that occurs
                         while parsing, applying, or remediating a resource.
                       properties:
                         code:
-                          description: Code is the error code of this particular error.  Error
+                          description: code is the error code of this particular error.  Error
                             codes are numeric strings, like "1012".
                           type: string
                         errorMessage:
-                          description: ErrorMessage describes the error that occurred.
+                          description: errorMessage describes the error that occurred.
                           type: string
                         errorResources:
-                          description: Resources describes the resources associated
+                          description: errorResources describes the resources associated
                             with this error, if any.
                           items:
                             description: ResourceRef contains the identification bits
                               of a single managed resource.
                             properties:
                               gvk:
-                                description: GVK is the GroupVersionKind of the affected
+                                description: gvk is the GroupVersionKind of the affected
                                   K8S resource. This field may be empty for errors
                                   that are not associated with a specific resource.
                                 properties:
@@ -432,18 +432,18 @@ spec:
                                 - version
                                 type: object
                               name:
-                                description: Name is the name of the affected K8S
+                                description: name is the name of the affected K8S
                                   resource. This field may be empty for errors that
                                   are not associated with a specific resource.
                                 type: string
                               namespace:
-                                description: Namespace is the namespace of the affected
+                                description: namespace is the namespace of the affected
                                   K8S resource. This field may be empty for errors
                                   that are associated with a cluster-scoped resource
                                   or not associated with a specific resource.
                                 type: string
                               sourcePath:
-                                description: SourcePath is the repo-relative slash
+                                description: sourcePath is the repo-relative slash
                                   path to where the config is defined. This field
                                   may be empty for errors that are not associated
                                   with a specific config file.
@@ -456,22 +456,22 @@ spec:
                       type: object
                     type: array
                   gitStatus:
-                    description: Git contains fields describing the status of a Git
-                      source of truth.
+                    description: gitStatus contains fields describing the status of
+                      a Git source of truth.
                     properties:
                       branch:
-                        description: Branch is the git branch being fetched
+                        description: branch is the git branch being fetched
                         type: string
                       dir:
-                        description: 'Dir is the path within the Git repository that
+                        description: 'dir is the path within the Git repository that
                           represents the top level of the repo to sync. Default: the
                           root directory of the repository'
                         type: string
                       repo:
-                        description: Repo is the git repository URL being synced from.
+                        description: repo is the git repository URL being synced from.
                         type: string
                       revision:
-                        description: Revision is the git revision (tag, ref, or commit)
+                        description: revision is the git revision (tag, ref, or commit)
                           being fetched.
                         type: string
                     required:
@@ -481,7 +481,7 @@ spec:
                     - revision
                     type: object
                   lastUpdate:
-                    description: LastUpdate is the timestamp of when this status was
+                    description: lastUpdate is the timestamp of when this status was
                       last updated by a reconciler.
                     format: date-time
                     nullable: true
@@ -492,11 +492,11 @@ spec:
                     type: string
                 type: object
               source:
-                description: Source contains fields describing the status of a *Sync's
+                description: source contains fields describing the status of a *Sync's
                   source of truth.
                 properties:
                   commit:
-                    description: Commit is the hash of the most recent commit seen
+                    description: commit is the hash of the most recent commit seen
                       in the source of truth.
                     type: string
                   errorSummary:
@@ -520,28 +520,28 @@ spec:
                         type: boolean
                     type: object
                   errors:
-                    description: Errors is a list of any errors that occurred while
+                    description: errors is a list of any errors that occurred while
                       reading from the source of truth.
                     items:
                       description: ConfigSyncError represents an error that occurs
                         while parsing, applying, or remediating a resource.
                       properties:
                         code:
-                          description: Code is the error code of this particular error.  Error
+                          description: code is the error code of this particular error.  Error
                             codes are numeric strings, like "1012".
                           type: string
                         errorMessage:
-                          description: ErrorMessage describes the error that occurred.
+                          description: errorMessage describes the error that occurred.
                           type: string
                         errorResources:
-                          description: Resources describes the resources associated
+                          description: errorResources describes the resources associated
                             with this error, if any.
                           items:
                             description: ResourceRef contains the identification bits
                               of a single managed resource.
                             properties:
                               gvk:
-                                description: GVK is the GroupVersionKind of the affected
+                                description: gvk is the GroupVersionKind of the affected
                                   K8S resource. This field may be empty for errors
                                   that are not associated with a specific resource.
                                 properties:
@@ -557,18 +557,18 @@ spec:
                                 - version
                                 type: object
                               name:
-                                description: Name is the name of the affected K8S
+                                description: name is the name of the affected K8S
                                   resource. This field may be empty for errors that
                                   are not associated with a specific resource.
                                 type: string
                               namespace:
-                                description: Namespace is the namespace of the affected
+                                description: namespace is the namespace of the affected
                                   K8S resource. This field may be empty for errors
                                   that are associated with a cluster-scoped resource
                                   or not associated with a specific resource.
                                 type: string
                               sourcePath:
-                                description: SourcePath is the repo-relative slash
+                                description: sourcePath is the repo-relative slash
                                   path to where the config is defined. This field
                                   may be empty for errors that are not associated
                                   with a specific config file.
@@ -581,22 +581,22 @@ spec:
                       type: object
                     type: array
                   gitStatus:
-                    description: Git contains fields describing the status of a Git
-                      source of truth.
+                    description: gitStatus contains fields describing the status of
+                      a Git source of truth.
                     properties:
                       branch:
-                        description: Branch is the git branch being fetched
+                        description: branch is the git branch being fetched
                         type: string
                       dir:
-                        description: 'Dir is the path within the Git repository that
+                        description: 'dir is the path within the Git repository that
                           represents the top level of the repo to sync. Default: the
                           root directory of the repository'
                         type: string
                       repo:
-                        description: Repo is the git repository URL being synced from.
+                        description: repo is the git repository URL being synced from.
                         type: string
                       revision:
-                        description: Revision is the git revision (tag, ref, or commit)
+                        description: revision is the git revision (tag, ref, or commit)
                           being fetched.
                         type: string
                     required:
@@ -606,18 +606,18 @@ spec:
                     - revision
                     type: object
                   lastUpdate:
-                    description: LastUpdate is the timestamp of when this status was
+                    description: lastUpdate is the timestamp of when this status was
                       last updated by a reconciler.
                     format: date-time
                     nullable: true
                     type: string
                 type: object
               sync:
-                description: Sync contains fields describing the status of syncing
+                description: sync contains fields describing the status of syncing
                   resources from the source of truth to the cluster.
                 properties:
                   commit:
-                    description: Commit is the hash of the most recent commit that
+                    description: commit is the hash of the most recent commit that
                       was synced to the cluster. This value is updated even when a
                       commit is only partially synced due to an  error.
                     type: string
@@ -642,28 +642,28 @@ spec:
                         type: boolean
                     type: object
                   errors:
-                    description: Errors is a list of any errors that occurred while
+                    description: errors is a list of any errors that occurred while
                       applying the resources from the change indicated by Commit.
                     items:
                       description: ConfigSyncError represents an error that occurs
                         while parsing, applying, or remediating a resource.
                       properties:
                         code:
-                          description: Code is the error code of this particular error.  Error
+                          description: code is the error code of this particular error.  Error
                             codes are numeric strings, like "1012".
                           type: string
                         errorMessage:
-                          description: ErrorMessage describes the error that occurred.
+                          description: errorMessage describes the error that occurred.
                           type: string
                         errorResources:
-                          description: Resources describes the resources associated
+                          description: errorResources describes the resources associated
                             with this error, if any.
                           items:
                             description: ResourceRef contains the identification bits
                               of a single managed resource.
                             properties:
                               gvk:
-                                description: GVK is the GroupVersionKind of the affected
+                                description: gvk is the GroupVersionKind of the affected
                                   K8S resource. This field may be empty for errors
                                   that are not associated with a specific resource.
                                 properties:
@@ -679,18 +679,18 @@ spec:
                                 - version
                                 type: object
                               name:
-                                description: Name is the name of the affected K8S
+                                description: name is the name of the affected K8S
                                   resource. This field may be empty for errors that
                                   are not associated with a specific resource.
                                 type: string
                               namespace:
-                                description: Namespace is the namespace of the affected
+                                description: namespace is the namespace of the affected
                                   K8S resource. This field may be empty for errors
                                   that are associated with a cluster-scoped resource
                                   or not associated with a specific resource.
                                 type: string
                               sourcePath:
-                                description: SourcePath is the repo-relative slash
+                                description: sourcePath is the repo-relative slash
                                   path to where the config is defined. This field
                                   may be empty for errors that are not associated
                                   with a specific config file.
@@ -703,22 +703,22 @@ spec:
                       type: object
                     type: array
                   gitStatus:
-                    description: Git contains fields describing the status of a Git
-                      source of truth.
+                    description: gitStatus contains fields describing the status of
+                      a Git source of truth.
                     properties:
                       branch:
-                        description: Branch is the git branch being fetched
+                        description: branch is the git branch being fetched
                         type: string
                       dir:
-                        description: 'Dir is the path within the Git repository that
+                        description: 'dir is the path within the Git repository that
                           represents the top level of the repo to sync. Default: the
                           root directory of the repository'
                         type: string
                       repo:
-                        description: Repo is the git repository URL being synced from.
+                        description: repo is the git repository URL being synced from.
                         type: string
                       revision:
-                        description: Revision is the git revision (tag, ref, or commit)
+                        description: revision is the git revision (tag, ref, or commit)
                           being fetched.
                         type: string
                     required:
@@ -728,7 +728,7 @@ spec:
                     - revision
                     type: object
                   lastUpdate:
-                    description: LastUpdate is the timestamp of when this status was
+                    description: lastUpdate is the timestamp of when this status was
                       last updated by a reconciler.
                     format: date-time
                     nullable: true
@@ -784,21 +784,21 @@ spec:
                   from a Git repo.
                 properties:
                   auth:
-                    description: Auth is the type of secret configured for access
+                    description: auth is the type of secret configured for access
                       to the Git repo. Must be one of ssh, cookiefile, gcenode, token,
                       or none. Required. The validation of this is case-sensitive.
                       Required.
                     pattern: ^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$
                     type: string
                   branch:
-                    description: 'Branch is the git branch to checkout. Default: "master".'
+                    description: 'branch is the git branch to checkout. Default: "master".'
                     type: string
                   dir:
-                    description: 'Dir is the absolute path of the directory that contains
+                    description: 'dir is the absolute path of the directory that contains
                       the local policy.  Default: the root directory of the repo.'
                     type: string
                   gcpServiceAccountEmail:
-                    description: 'GCPServiceAccountEmail specifies the GCP service
+                    description: 'gcpServiceAccountEmail specifies the GCP service
                       account used to annotate the RootSync/RepoSync controller Kubernetes
                       Service Account. Note: The field is used when secretType: gcpServiceAccount.'
                     type: string
@@ -808,7 +808,7 @@ spec:
                       is set to true, it tells Git to skip the SSL certificate verification.'
                     type: boolean
                   period:
-                    description: 'Period is the time duration between consecutive
+                    description: 'period is the time duration between consecutive
                       syncs. Default: 15s. Note to developers that customers specify
                       this value using string (https://golang.org/pkg/time/#Duration.String)
                       like "3s" in their Custom Resource YAML. However, time.Duration
@@ -828,18 +828,18 @@ spec:
                       Optional.
                     type: string
                   repo:
-                    description: Repo is the git repository URL to sync from. Required.
+                    description: repo is the git repository URL to sync from. Required.
                     type: string
                   revision:
-                    description: 'Revision is the git revision (tag, ref or commit)
+                    description: 'revision is the git revision (tag, ref or commit)
                       to fetch. Default: "HEAD".'
                     type: string
                   secretRef:
-                    description: SecretRef is the secret used to connect to the Git
+                    description: secretRef is the secret used to connect to the Git
                       source of truth.
                     properties:
                       name:
-                        description: Name represents the secret name.
+                        description: name represents the secret name.
                         type: string
                     type: object
                 required:
@@ -927,7 +927,7 @@ spec:
             description: RootSyncStatus defines the observed state of RootSync
             properties:
               conditions:
-                description: Conditions represents the latest available observations
+                description: conditions represents the latest available observations
                   of the RootSync's current state.
                 items:
                   description: RootSyncCondition describes the state of a RootSync
@@ -967,7 +967,7 @@ spec:
                           type: boolean
                       type: object
                     errors:
-                      description: Errors is a list of errors that occurred in the
+                      description: errors is a list of errors that occurred in the
                         process. This field is used to track errors when the condition
                         type is Reconciling or Stalled. When the condition type is
                         Syncing, the `errorSourceRefs` field is used instead to avoid
@@ -977,21 +977,21 @@ spec:
                           while parsing, applying, or remediating a resource.
                         properties:
                           code:
-                            description: Code is the error code of this particular
+                            description: code is the error code of this particular
                               error.  Error codes are numeric strings, like "1012".
                             type: string
                           errorMessage:
-                            description: ErrorMessage describes the error that occurred.
+                            description: errorMessage describes the error that occurred.
                             type: string
                           errorResources:
-                            description: Resources describes the resources associated
+                            description: errorResources describes the resources associated
                               with this error, if any.
                             items:
                               description: ResourceRef contains the identification
                                 bits of a single managed resource.
                               properties:
                                 gvk:
-                                  description: GVK is the GroupVersionKind of the
+                                  description: gvk is the GroupVersionKind of the
                                     affected K8S resource. This field may be empty
                                     for errors that are not associated with a specific
                                     resource.
@@ -1008,18 +1008,18 @@ spec:
                                   - version
                                   type: object
                                 name:
-                                  description: Name is the name of the affected K8S
+                                  description: name is the name of the affected K8S
                                     resource. This field may be empty for errors that
                                     are not associated with a specific resource.
                                   type: string
                                 namespace:
-                                  description: Namespace is the namespace of the affected
+                                  description: namespace is the namespace of the affected
                                     K8S resource. This field may be empty for errors
                                     that are associated with a cluster-scoped resource
                                     or not associated with a specific resource.
                                   type: string
                                 sourcePath:
-                                  description: SourcePath is the repo-relative slash
+                                  description: sourcePath is the repo-relative slash
                                     path to where the config is defined. This field
                                     may be empty for errors that are not associated
                                     with a specific config file.
@@ -1050,10 +1050,10 @@ spec:
                       description: The reason for the condition's last transition.
                       type: string
                     status:
-                      description: Status of the condition, one of True, False, Unknown.
+                      description: status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of RootSync condition.
+                      description: type of RootSync condition.
                       type: string
                   required:
                   - status
@@ -1061,25 +1061,25 @@ spec:
                   type: object
                 type: array
               lastSyncedCommit:
-                description: LastSyncedCommit describes the most recent commit hash
+                description: lastSyncedCommit describes the most recent commit hash
                   that is successfully synced.
                 type: string
               observedGeneration:
-                description: ObservedGeneration is the most recent generation observed
+                description: observedGeneration is the most recent generation observed
                   for the sync resource. It corresponds to the it's generation, which
                   is updated on mutation by the API Server.
                 format: int64
                 type: integer
               reconciler:
-                description: Reconciler is the name of the reconciler process which
+                description: reconciler is the name of the reconciler process which
                   corresponds to the sync resource.
                 type: string
               rendering:
-                description: Rendering contains fields describing the status of rendering
+                description: rendering contains fields describing the status of rendering
                   resources from the source of truth.
                 properties:
                   commit:
-                    description: Commit is the hash of the commit in the source of
+                    description: commit is the hash of the commit in the source of
                       truth that is rendered.
                     type: string
                   errorSummary:
@@ -1103,28 +1103,28 @@ spec:
                         type: boolean
                     type: object
                   errors:
-                    description: Errors is a list of any errors that occurred while
+                    description: errors is a list of any errors that occurred while
                       rendering the source of truth.
                     items:
                       description: ConfigSyncError represents an error that occurs
                         while parsing, applying, or remediating a resource.
                       properties:
                         code:
-                          description: Code is the error code of this particular error.  Error
+                          description: code is the error code of this particular error.  Error
                             codes are numeric strings, like "1012".
                           type: string
                         errorMessage:
-                          description: ErrorMessage describes the error that occurred.
+                          description: errorMessage describes the error that occurred.
                           type: string
                         errorResources:
-                          description: Resources describes the resources associated
+                          description: errorResources describes the resources associated
                             with this error, if any.
                           items:
                             description: ResourceRef contains the identification bits
                               of a single managed resource.
                             properties:
                               gvk:
-                                description: GVK is the GroupVersionKind of the affected
+                                description: gvk is the GroupVersionKind of the affected
                                   K8S resource. This field may be empty for errors
                                   that are not associated with a specific resource.
                                 properties:
@@ -1140,18 +1140,18 @@ spec:
                                 - version
                                 type: object
                               name:
-                                description: Name is the name of the affected K8S
+                                description: name is the name of the affected K8S
                                   resource. This field may be empty for errors that
                                   are not associated with a specific resource.
                                 type: string
                               namespace:
-                                description: Namespace is the namespace of the affected
+                                description: namespace is the namespace of the affected
                                   K8S resource. This field may be empty for errors
                                   that are associated with a cluster-scoped resource
                                   or not associated with a specific resource.
                                 type: string
                               sourcePath:
-                                description: SourcePath is the repo-relative slash
+                                description: sourcePath is the repo-relative slash
                                   path to where the config is defined. This field
                                   may be empty for errors that are not associated
                                   with a specific config file.
@@ -1164,22 +1164,22 @@ spec:
                       type: object
                     type: array
                   gitStatus:
-                    description: Git contains fields describing the status of a Git
-                      source of truth.
+                    description: gitStatus contains fields describing the status of
+                      a Git source of truth.
                     properties:
                       branch:
-                        description: Branch is the git branch being fetched
+                        description: branch is the git branch being fetched
                         type: string
                       dir:
-                        description: 'Dir is the path within the Git repository that
+                        description: 'dir is the path within the Git repository that
                           represents the top level of the repo to sync. Default: the
                           root directory of the repository'
                         type: string
                       repo:
-                        description: Repo is the git repository URL being synced from.
+                        description: repo is the git repository URL being synced from.
                         type: string
                       revision:
-                        description: Revision is the git revision (tag, ref, or commit)
+                        description: revision is the git revision (tag, ref, or commit)
                           being fetched.
                         type: string
                     required:
@@ -1189,7 +1189,7 @@ spec:
                     - revision
                     type: object
                   lastUpdate:
-                    description: LastUpdate is the timestamp of when this status was
+                    description: lastUpdate is the timestamp of when this status was
                       last updated by a reconciler.
                     format: date-time
                     nullable: true
@@ -1200,11 +1200,11 @@ spec:
                     type: string
                 type: object
               source:
-                description: Source contains fields describing the status of a *Sync's
+                description: source contains fields describing the status of a *Sync's
                   source of truth.
                 properties:
                   commit:
-                    description: Commit is the hash of the most recent commit seen
+                    description: commit is the hash of the most recent commit seen
                       in the source of truth.
                     type: string
                   errorSummary:
@@ -1228,28 +1228,28 @@ spec:
                         type: boolean
                     type: object
                   errors:
-                    description: Errors is a list of any errors that occurred while
+                    description: errors is a list of any errors that occurred while
                       reading from the source of truth.
                     items:
                       description: ConfigSyncError represents an error that occurs
                         while parsing, applying, or remediating a resource.
                       properties:
                         code:
-                          description: Code is the error code of this particular error.  Error
+                          description: code is the error code of this particular error.  Error
                             codes are numeric strings, like "1012".
                           type: string
                         errorMessage:
-                          description: ErrorMessage describes the error that occurred.
+                          description: errorMessage describes the error that occurred.
                           type: string
                         errorResources:
-                          description: Resources describes the resources associated
+                          description: errorResources describes the resources associated
                             with this error, if any.
                           items:
                             description: ResourceRef contains the identification bits
                               of a single managed resource.
                             properties:
                               gvk:
-                                description: GVK is the GroupVersionKind of the affected
+                                description: gvk is the GroupVersionKind of the affected
                                   K8S resource. This field may be empty for errors
                                   that are not associated with a specific resource.
                                 properties:
@@ -1265,18 +1265,18 @@ spec:
                                 - version
                                 type: object
                               name:
-                                description: Name is the name of the affected K8S
+                                description: name is the name of the affected K8S
                                   resource. This field may be empty for errors that
                                   are not associated with a specific resource.
                                 type: string
                               namespace:
-                                description: Namespace is the namespace of the affected
+                                description: namespace is the namespace of the affected
                                   K8S resource. This field may be empty for errors
                                   that are associated with a cluster-scoped resource
                                   or not associated with a specific resource.
                                 type: string
                               sourcePath:
-                                description: SourcePath is the repo-relative slash
+                                description: sourcePath is the repo-relative slash
                                   path to where the config is defined. This field
                                   may be empty for errors that are not associated
                                   with a specific config file.
@@ -1289,22 +1289,22 @@ spec:
                       type: object
                     type: array
                   gitStatus:
-                    description: Git contains fields describing the status of a Git
-                      source of truth.
+                    description: gitStatus contains fields describing the status of
+                      a Git source of truth.
                     properties:
                       branch:
-                        description: Branch is the git branch being fetched
+                        description: branch is the git branch being fetched
                         type: string
                       dir:
-                        description: 'Dir is the path within the Git repository that
+                        description: 'dir is the path within the Git repository that
                           represents the top level of the repo to sync. Default: the
                           root directory of the repository'
                         type: string
                       repo:
-                        description: Repo is the git repository URL being synced from.
+                        description: repo is the git repository URL being synced from.
                         type: string
                       revision:
-                        description: Revision is the git revision (tag, ref, or commit)
+                        description: revision is the git revision (tag, ref, or commit)
                           being fetched.
                         type: string
                     required:
@@ -1314,18 +1314,18 @@ spec:
                     - revision
                     type: object
                   lastUpdate:
-                    description: LastUpdate is the timestamp of when this status was
+                    description: lastUpdate is the timestamp of when this status was
                       last updated by a reconciler.
                     format: date-time
                     nullable: true
                     type: string
                 type: object
               sync:
-                description: Sync contains fields describing the status of syncing
+                description: sync contains fields describing the status of syncing
                   resources from the source of truth to the cluster.
                 properties:
                   commit:
-                    description: Commit is the hash of the most recent commit that
+                    description: commit is the hash of the most recent commit that
                       was synced to the cluster. This value is updated even when a
                       commit is only partially synced due to an  error.
                     type: string
@@ -1350,28 +1350,28 @@ spec:
                         type: boolean
                     type: object
                   errors:
-                    description: Errors is a list of any errors that occurred while
+                    description: errors is a list of any errors that occurred while
                       applying the resources from the change indicated by Commit.
                     items:
                       description: ConfigSyncError represents an error that occurs
                         while parsing, applying, or remediating a resource.
                       properties:
                         code:
-                          description: Code is the error code of this particular error.  Error
+                          description: code is the error code of this particular error.  Error
                             codes are numeric strings, like "1012".
                           type: string
                         errorMessage:
-                          description: ErrorMessage describes the error that occurred.
+                          description: errorMessage describes the error that occurred.
                           type: string
                         errorResources:
-                          description: Resources describes the resources associated
+                          description: errorResources describes the resources associated
                             with this error, if any.
                           items:
                             description: ResourceRef contains the identification bits
                               of a single managed resource.
                             properties:
                               gvk:
-                                description: GVK is the GroupVersionKind of the affected
+                                description: gvk is the GroupVersionKind of the affected
                                   K8S resource. This field may be empty for errors
                                   that are not associated with a specific resource.
                                 properties:
@@ -1387,18 +1387,18 @@ spec:
                                 - version
                                 type: object
                               name:
-                                description: Name is the name of the affected K8S
+                                description: name is the name of the affected K8S
                                   resource. This field may be empty for errors that
                                   are not associated with a specific resource.
                                 type: string
                               namespace:
-                                description: Namespace is the namespace of the affected
+                                description: namespace is the namespace of the affected
                                   K8S resource. This field may be empty for errors
                                   that are associated with a cluster-scoped resource
                                   or not associated with a specific resource.
                                 type: string
                               sourcePath:
-                                description: SourcePath is the repo-relative slash
+                                description: sourcePath is the repo-relative slash
                                   path to where the config is defined. This field
                                   may be empty for errors that are not associated
                                   with a specific config file.
@@ -1411,22 +1411,22 @@ spec:
                       type: object
                     type: array
                   gitStatus:
-                    description: Git contains fields describing the status of a Git
-                      source of truth.
+                    description: gitStatus contains fields describing the status of
+                      a Git source of truth.
                     properties:
                       branch:
-                        description: Branch is the git branch being fetched
+                        description: branch is the git branch being fetched
                         type: string
                       dir:
-                        description: 'Dir is the path within the Git repository that
+                        description: 'dir is the path within the Git repository that
                           represents the top level of the repo to sync. Default: the
                           root directory of the repository'
                         type: string
                       repo:
-                        description: Repo is the git repository URL being synced from.
+                        description: repo is the git repository URL being synced from.
                         type: string
                       revision:
-                        description: Revision is the git revision (tag, ref, or commit)
+                        description: revision is the git revision (tag, ref, or commit)
                           being fetched.
                         type: string
                     required:
@@ -1436,7 +1436,7 @@ spec:
                     - revision
                     type: object
                   lastUpdate:
-                    description: LastUpdate is the timestamp of when this status was
+                    description: lastUpdate is the timestamp of when this status was
                       last updated by a reconciler.
                     format: date-time
                     nullable: true
