@@ -270,9 +270,6 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Watches(&source.Kind{Type: &appsv1.Deployment{}},
 			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
-			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Watches(&source.Kind{Type: &corev1.ServiceAccount{}},
 			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
@@ -386,13 +383,6 @@ func (r *RepoSyncReconciler) mapObjectToRepoSync(obj client.Object) []reconcile.
 	for _, rs := range allRepoSyncs.Items {
 		reconcilerName := reconciler.NsReconcilerName(rs.GetNamespace(), rs.GetName())
 		switch obj.(type) {
-		case *corev1.ConfigMap:
-			suffix := strings.TrimPrefix(obj.GetName(), reconcilerName+"-")
-			if suffix == reconcilermanager.GitSync ||
-				suffix == reconcilermanager.HydrationController ||
-				suffix == reconcilermanager.Reconciler {
-				return requeueRepoSyncRequest(obj, &rs)
-			}
 		case *rbacv1.RoleBinding:
 			if obj.GetName() == nsRoleBindingName {
 				requests = append(requests, reconcile.Request{
