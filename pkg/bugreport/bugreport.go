@@ -53,6 +53,7 @@ import (
 	corev1Client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 type coreClient interface {
@@ -584,6 +585,15 @@ func (b *BugReporter) appendPrettyJSON(rd []Readable, pathName string, object in
 		rd = append(rd, Readable{
 			ReadCloser: ioutil.NopCloser(bytes.NewReader(data)),
 			Name:       pathName,
+		})
+	}
+	// also write to yaml for easier manual readability
+	if data, err := yaml.Marshal(object); err != nil {
+		b.ErrorList = append(b.ErrorList, fmt.Errorf("invalid yaml response from resources %s: %v", pathName, err))
+	} else {
+		rd = append(rd, Readable{
+			ReadCloser: ioutil.NopCloser(bytes.NewReader(data)),
+			Name:       fmt.Sprintf("%s_yaml", pathName),
 		})
 	}
 	return rd
