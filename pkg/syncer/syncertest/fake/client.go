@@ -266,6 +266,15 @@ func (c *Client) Delete(_ context.Context, obj client.Object, opts ...client.Del
 	if !found {
 		return newNotFound(id)
 	}
+
+	// Delete objects whose ownerRef is the current obj.
+	for _, o := range c.Objects {
+		for _, ownerRef := range o.GetOwnerReferences() {
+			if ownerRef.Name == id.Name && ownerRef.Kind == id.Kind {
+				delete(c.Objects, core.IDOf(o))
+			}
+		}
+	}
 	delete(c.Objects, id)
 
 	return nil

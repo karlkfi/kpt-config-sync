@@ -89,7 +89,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
 			if _, ok := r.namespaces[req.Namespace]; !ok {
-				log.Error(err, "The RepoSync reconciler does not manage a RepoSync object for the namespace", "namespace", req.Namespace)
+				log.Error(err, "The RepoSync reconciler does not manage a RepoSync object for the namespace", "namespace", req.Namespace, "name", req.Name)
 				// return `controllerruntime.Result{}, nil` here to make sure the request will not be requeued.
 				return controllerruntime.Result{}, nil
 			}

@@ -258,7 +258,6 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1beta1.RootSync{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.ConfigMap{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}},
 			handler.EnqueueRequestsFromMapFunc(r.mapSecretToRootSyncs),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).

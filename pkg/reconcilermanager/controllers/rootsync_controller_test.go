@@ -1580,6 +1580,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	if err := validateClusterRoleBinding(crb, fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, rootReconcilerName, rs1.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs2); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1592,6 +1593,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	if err := validateClusterRoleBinding(crb, fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, rootReconcilerName2, rs2.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs3); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1604,6 +1606,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	if err := validateClusterRoleBinding(crb, fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, rootReconcilerName3, rs3.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs4); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1616,6 +1619,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	if err := validateClusterRoleBinding(crb, fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, rootReconcilerName4, rs4.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs5); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1624,9 +1628,10 @@ func TestMultipleRootSyncs(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 	// Verify the ClusterRoleBinding of the root-reconciler is deleted
-	if err := validateResourceDeleted(crb, fakeClient); err != nil {
+	if err := validateResourceDeleted(core.IDOf(crb), fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, rootReconcilerName5, rs5.Spec.Git.SecretRef.Name)
 }
 
 func TestMapSecretToRootSyncs(t *testing.T) {

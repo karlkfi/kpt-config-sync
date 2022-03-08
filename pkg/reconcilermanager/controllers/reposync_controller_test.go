@@ -1670,6 +1670,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	if err := validateRoleBindings(wantRoleBindings, fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, nsReconcilerName, rs1.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs2); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1682,6 +1683,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	if err := validateRoleBindings(wantRoleBindings, fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, nsReconcilerName2, rs2.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs3); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1690,10 +1692,11 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 	// roleBinding2 is deleted because there are no more RepoSyncs in the namespace.
-	if err := validateResourceDeleted(roleBinding2, fakeClient); err != nil {
+	if err := validateResourceDeleted(core.IDOf(roleBinding2), fakeClient); err != nil {
 		t.Error(err)
 	}
 	delete(wantRoleBindings, core.IDOf(roleBinding2))
+	validateGeneratedResourcesDeleted(t, fakeClient, nsReconcilerName3, rs3.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs4); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1706,6 +1709,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	if err := validateRoleBindings(wantRoleBindings, fakeClient); err != nil {
 		t.Error(err)
 	}
+	validateGeneratedResourcesDeleted(t, fakeClient, nsReconcilerName4, rs4.Spec.Git.SecretRef.Name)
 
 	if err := fakeClient.Delete(ctx, rs5); err != nil {
 		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
@@ -1714,8 +1718,44 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 	// Verify the RoleBinding is deleted after all RepoSyncs are deleted in the namespace.
-	if err := validateResourceDeleted(roleBinding1, fakeClient); err != nil {
+	if err := validateResourceDeleted(core.IDOf(roleBinding1), fakeClient); err != nil {
 		t.Error(err)
+	}
+	validateGeneratedResourcesDeleted(t, fakeClient, nsReconcilerName5, rs5.Spec.Git.SecretRef.Name)
+}
+
+func validateGeneratedResourcesDeleted(t *testing.T, fakeClient *syncerFake.Client, reconcilerName, secretRefName string) {
+	// Verify deployment is deleted.
+	deployment := fake.DeploymentObject(core.Namespace(configsync.ControllerNamespace), core.Name(reconcilerName))
+	if err := validateResourceDeleted(core.IDOf(deployment), fakeClient); err != nil {
+		t.Error(err)
+	}
+
+	// Verify configmaps are deleted.
+	configMapSuffixes := []string{
+		reconcilermanager.GitSync,
+		reconcilermanager.HydrationController,
+		reconcilermanager.Reconciler,
+	}
+	for _, suffix := range configMapSuffixes {
+		name := ReconcilerResourceName(reconcilerName, suffix)
+		cm := fake.ConfigMapObject(core.Namespace(configsync.ControllerNamespace), core.Name(name))
+		if err := validateResourceDeleted(core.IDOf(cm), fakeClient); err != nil {
+			t.Error(err)
+		}
+	}
+
+	// Verify service account is deleted.
+	serviceAccount := fake.ServiceAccountObject(reconcilerName, core.Namespace(configsync.ControllerNamespace))
+	if err := validateResourceDeleted(core.IDOf(serviceAccount), fakeClient); err != nil {
+		t.Error(err)
+	}
+	// Verify the copied secret is deleted for RepoSync.
+	if strings.HasPrefix(reconcilerName, reconciler.NsReconcilerPrefix) {
+		s := fake.SecretObject(ReconcilerResourceName(reconcilerName, secretRefName), core.Namespace(configsync.ControllerNamespace))
+		if err := validateResourceDeleted(core.IDOf(s), fakeClient); err != nil {
+			t.Error(err)
+		}
 	}
 }
 
@@ -2215,9 +2255,9 @@ func validateDeployments(wants map[core.ID]*appsv1.Deployment, fakeClient *synce
 	return nil
 }
 
-func validateResourceDeleted(resource client.Object, fakeClient *syncerFake.Client) error {
-	if _, found := fakeClient.Objects[core.IDOf(resource)]; found {
-		return errors.Errorf("resource %s still exists", core.IDOf(resource))
+func validateResourceDeleted(resourceID core.ID, fakeClient *syncerFake.Client) error {
+	if _, found := fakeClient.Objects[resourceID]; found {
+		return errors.Errorf("resource %s still exists", resourceID)
 	}
 	return nil
 }
