@@ -18,9 +18,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/status"
 )
 
 const (

@@ -19,17 +19,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/nomos/cmd/nomos/bugreport"
-	"github.com/google/nomos/cmd/nomos/hydrate"
-	"github.com/google/nomos/cmd/nomos/initialize"
-	"github.com/google/nomos/cmd/nomos/migrate"
-	"github.com/google/nomos/cmd/nomos/status"
-	"github.com/google/nomos/cmd/nomos/version"
-	"github.com/google/nomos/cmd/nomos/vet"
-	"github.com/google/nomos/pkg/api/configmanagement"
-	pkgversion "github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/cmd/nomos/bugreport"
+	"kpt.dev/configsync/cmd/nomos/hydrate"
+	"kpt.dev/configsync/cmd/nomos/initialize"
+	"kpt.dev/configsync/cmd/nomos/migrate"
+	"kpt.dev/configsync/cmd/nomos/status"
+	"kpt.dev/configsync/cmd/nomos/version"
+	"kpt.dev/configsync/cmd/nomos/vet"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	pkgversion "kpt.dev/configsync/pkg/version"
 )
 
 var (

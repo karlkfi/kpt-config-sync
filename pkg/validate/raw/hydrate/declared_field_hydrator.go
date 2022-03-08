@@ -17,16 +17,16 @@ package hydrate
 import (
 	"errors"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
 )
 

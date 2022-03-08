@@ -15,14 +15,14 @@
 package objects
 
 import (
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/customresources"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/status"
-	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/customresources"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/status"
+	utildiscovery "kpt.dev/configsync/pkg/util/discovery"
 )
 
 // RawVisitor is a function that validates or hydrates Raw objects.

@@ -17,7 +17,7 @@ package gitproviders
 import (
 	"fmt"
 
-	"github.com/google/nomos/e2e"
+	"kpt.dev/configsync/e2e"
 )
 
 // LocalProvider refers to the test git-server running on the same test cluster.

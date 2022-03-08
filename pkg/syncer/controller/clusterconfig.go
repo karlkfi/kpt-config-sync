@@ -15,17 +15,17 @@
 package controller
 
 import (
-	"github.com/google/nomos/pkg/syncer/metrics"
+	"kpt.dev/configsync/pkg/syncer/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/decode"
-	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	syncerclient "kpt.dev/configsync/pkg/syncer/client"
+	"kpt.dev/configsync/pkg/syncer/decode"
+	genericreconcile "kpt.dev/configsync/pkg/syncer/reconcile"
 	k8scontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

@@ -18,12 +18,12 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/bugreport"
-	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/bugreport"
+	"kpt.dev/configsync/pkg/client/restconfig"
 )
 
 // Cmd retrieves readers for all relevant nomos container logs and cluster state commands and writes them to a zip file

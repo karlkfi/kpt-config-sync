@@ -14,7 +14,7 @@
 
 package configuration
 
-import "github.com/google/nomos/pkg/api/configsync"
+import "kpt.dev/configsync/pkg/api/configsync"
 
 // ShortName is the short name of the ValidatingWebhookConfiguration for the
 // Admission Controller.

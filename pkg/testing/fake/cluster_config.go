@@ -15,9 +15,9 @@
 package fake
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
 )
 
 // ClusterConfigMutator mutates a ClusterConfig.

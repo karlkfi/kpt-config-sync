@@ -17,8 +17,8 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/reconciler"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/reconciler"
 )
 
 // ReconcilerResourceName returns resource name in the format <reconciler-name>-<resource-name>.

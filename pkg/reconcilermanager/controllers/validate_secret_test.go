@@ -19,10 +19,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
-	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"kpt.dev/configsync/pkg/core"
+	syncerFake "kpt.dev/configsync/pkg/syncer/syncertest/fake"
 )
 
 func TestValidateSecretExist(t *testing.T) {

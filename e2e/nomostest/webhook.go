@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/webhook/configuration"
 )
 
 // WaitForWebhookReadiness waits up to 3 minutes for the wehbook becomes ready.

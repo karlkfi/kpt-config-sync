@@ -17,9 +17,9 @@ package fake
 import (
 	"fmt"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/status"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // Errors returns a MultiError consisting of fake errors. For use in unit tests

@@ -15,9 +15,9 @@
 package nonhierarchical
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

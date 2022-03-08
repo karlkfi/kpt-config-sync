@@ -17,14 +17,14 @@ package configuration
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/util/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

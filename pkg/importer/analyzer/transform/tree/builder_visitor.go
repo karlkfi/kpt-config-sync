@@ -17,10 +17,10 @@ package tree
 import (
 	"sort"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kinds"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast/node"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/kinds"
 )
 
 // Builder populates the nodes in the hierarchy tree with their corresponding objects.

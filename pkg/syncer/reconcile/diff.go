@@ -17,15 +17,15 @@ package reconcile
 import (
 	"context"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/differ"
 )
 
 // HandleDiff updates objects on the cluster based on the difference between actual and declared resources.

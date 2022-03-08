@@ -15,7 +15,7 @@
 package reposync
 
 import (
-	"github.com/google/nomos/pkg/declared"
+	"kpt.dev/configsync/pkg/declared"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

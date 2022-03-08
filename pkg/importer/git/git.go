@@ -23,8 +23,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/pkg/errors"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
 )
 
 const (

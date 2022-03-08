@@ -21,11 +21,11 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/google/nomos/e2e/nomostest/gitproviders"
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"kpt.dev/configsync/e2e/nomostest/gitproviders"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/reconcilermanager/controllers"
 )
 
 const gitServerSecret = "ssh-pub"

@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/davecgh/go-spew/spew"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 )
 
 func TestDecodeResources(t *testing.T) {

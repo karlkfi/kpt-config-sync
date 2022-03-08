@@ -17,7 +17,7 @@ package reconciler
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/api/configsync"
 )
 
 const (

@@ -17,12 +17,12 @@ package webhook
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	csmetadata "github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/testing/fake"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	csmetadata "kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

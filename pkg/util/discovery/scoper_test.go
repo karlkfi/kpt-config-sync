@@ -18,11 +18,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
 )
 
 func TestScoper_GetScope(t *testing.T) {

@@ -15,15 +15,15 @@
 package objects
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
-	"github.com/google/nomos/pkg/importer/analyzer/validation"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/api/configmanagement/v1/repo"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast/node"
+	"kpt.dev/configsync/pkg/importer/analyzer/transform/tree"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // TreeVisitor is a function that validates or hydrates Raw objects.

@@ -15,11 +15,11 @@
 package differ
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/lifecycle"
-	"github.com/google/nomos/pkg/metadata"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/lifecycle"
+	"kpt.dev/configsync/pkg/metadata"
 )
 
 // NamespaceDiff represents a diff between a Namespace config and the one on the cluster.

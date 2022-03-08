@@ -15,12 +15,12 @@
 package hydrate
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/reader"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/transform/selectors"
+	"kpt.dev/configsync/pkg/importer/filesystem"
+	"kpt.dev/configsync/pkg/importer/reader"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate"
 )
 
 const (

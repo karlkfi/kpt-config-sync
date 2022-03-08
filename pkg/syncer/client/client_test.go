@@ -18,15 +18,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/status"
-	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	syncertestfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/status"
+	syncerclient "kpt.dev/configsync/pkg/syncer/client"
+	syncertestfake "kpt.dev/configsync/pkg/syncer/syncertest/fake"
+	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

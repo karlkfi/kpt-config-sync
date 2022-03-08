@@ -21,15 +21,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configsync"
 	corev1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/pkg/api/configsync"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/testing/fake"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 // This file includes tests for drift correction and drift prevention.

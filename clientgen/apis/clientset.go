@@ -5,9 +5,9 @@ package apis
 import (
 	"fmt"
 
-	configmanagementv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
-	configsyncv1alpha1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1alpha1"
-	configsyncv1beta1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1beta1"
+	configmanagementv1 "kpt.dev/configsync/clientgen/apis/typed/configmanagement/v1"
+	configsyncv1alpha1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1alpha1"
+	configsyncv1beta1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

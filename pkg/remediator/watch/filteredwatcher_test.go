@@ -19,14 +19,14 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/diff/difftest"
-	"github.com/google/nomos/pkg/remediator/queue"
-	"github.com/google/nomos/pkg/syncer/syncertest"
-	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/diff/difftest"
+	"kpt.dev/configsync/pkg/remediator/queue"
+	"kpt.dev/configsync/pkg/syncer/syncertest"
+	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

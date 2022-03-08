@@ -19,16 +19,16 @@ package diff
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/lifecycle"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
-	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/lifecycle"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/differ"
+	"kpt.dev/configsync/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

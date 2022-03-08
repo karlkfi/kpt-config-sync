@@ -15,8 +15,8 @@
 package system
 
 import (
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/repo"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/util/repo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

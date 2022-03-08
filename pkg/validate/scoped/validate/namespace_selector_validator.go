@@ -15,10 +15,10 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

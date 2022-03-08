@@ -20,9 +20,9 @@ import (
 	"path"
 	"testing"
 
-	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
-	"github.com/google/nomos/pkg/importer/reader"
-	"github.com/google/nomos/pkg/status"
+	ft "kpt.dev/configsync/pkg/importer/filesystem/filesystemtest"
+	"kpt.dev/configsync/pkg/importer/reader"
+	"kpt.dev/configsync/pkg/status"
 )
 
 func TestFileReader_Read_NotExist(t *testing.T) {

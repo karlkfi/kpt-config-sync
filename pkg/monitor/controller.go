@@ -16,13 +16,13 @@
 package monitor
 
 import (
-	"github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/pkg/monitor/clusterconfig"
-	"github.com/google/nomos/pkg/monitor/namespaceconfig"
-	"github.com/google/nomos/pkg/monitor/state"
-	"github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
+	"kpt.dev/configsync/clientgen/apis/scheme"
+	"kpt.dev/configsync/pkg/monitor/clusterconfig"
+	"kpt.dev/configsync/pkg/monitor/namespaceconfig"
+	"kpt.dev/configsync/pkg/monitor/state"
+	"kpt.dev/configsync/pkg/syncer/client"
+	"kpt.dev/configsync/pkg/util/repo"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 

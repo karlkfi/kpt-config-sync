@@ -19,11 +19,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestChangeCustomResourceDefinitionSchema(t *testing.T) {

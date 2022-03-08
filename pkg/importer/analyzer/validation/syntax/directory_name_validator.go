@@ -15,9 +15,9 @@
 package syntax
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // InvalidDirectoryNameErrorCode is the error code for InvalidDirectoryNameError

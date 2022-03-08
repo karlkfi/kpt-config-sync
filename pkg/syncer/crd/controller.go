@@ -15,16 +15,16 @@
 package crd
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/decode"
-	"github.com/google/nomos/pkg/syncer/metrics"
-	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/pkg/errors"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	syncerclient "kpt.dev/configsync/pkg/syncer/client"
+	"kpt.dev/configsync/pkg/syncer/decode"
+	"kpt.dev/configsync/pkg/syncer/metrics"
+	syncerreconcile "kpt.dev/configsync/pkg/syncer/reconcile"
+	"kpt.dev/configsync/pkg/syncer/sync"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	k8scontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

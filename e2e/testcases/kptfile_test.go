@@ -17,10 +17,10 @@ package e2e
 import (
 	"testing"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/testing/fake"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/metrics"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestIgnoreKptfiles(t *testing.T) {

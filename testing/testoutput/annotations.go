@@ -15,8 +15,8 @@
 package testoutput
 
 import (
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/metadata"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/metadata"
 )
 
 // Source annotates the object as being declared in a specific source file.

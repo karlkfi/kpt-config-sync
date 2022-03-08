@@ -18,12 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/parse"
-	"github.com/google/nomos/pkg/reposync"
-	"github.com/google/nomos/pkg/rootsync"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/parse"
+	"kpt.dev/configsync/pkg/reposync"
+	"kpt.dev/configsync/pkg/rootsync"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

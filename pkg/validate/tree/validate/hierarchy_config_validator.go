@@ -15,14 +15,14 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/hierarchyconfig"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
 )
 
 // HierarchyConfig verifies that all HierarchyConfig objects specify valid

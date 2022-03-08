@@ -15,12 +15,12 @@
 package parse
 
 import (
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

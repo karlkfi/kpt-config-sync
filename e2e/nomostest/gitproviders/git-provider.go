@@ -15,8 +15,8 @@
 package gitproviders
 
 import (
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest/testing"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest/testing"
 )
 
 const (

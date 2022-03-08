@@ -21,14 +21,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/nomos/pkg/hydrate"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kmetrics"
-	"github.com/google/nomos/pkg/profiler"
-	"github.com/google/nomos/pkg/reconcilermanager"
-	"github.com/google/nomos/pkg/util/log"
 	"k8s.io/klog/klogr"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/hydrate"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/kmetrics"
+	"kpt.dev/configsync/pkg/profiler"
+	"kpt.dev/configsync/pkg/reconcilermanager"
+	"kpt.dev/configsync/pkg/util/log"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

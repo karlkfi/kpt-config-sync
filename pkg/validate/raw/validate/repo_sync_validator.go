@@ -15,11 +15,11 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/api/configsync/v1alpha1"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/yaml"
 )
 

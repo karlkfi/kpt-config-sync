@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	scheme "github.com/google/nomos/clientgen/apis/scheme"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	scheme "kpt.dev/configsync/clientgen/apis/scheme"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

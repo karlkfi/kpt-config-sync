@@ -19,7 +19,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/nomos/pkg/testing/openapitest"
 	openapiv2 "github.com/googleapis/gnostic/openapiv2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,6 +26,7 @@ import (
 	"k8s.io/kube-openapi/pkg/schemaconv"
 	"k8s.io/kube-openapi/pkg/util/proto"
 	"k8s.io/kubectl/pkg/util/openapi"
+	"kpt.dev/configsync/pkg/testing/openapitest"
 	"sigs.k8s.io/structured-merge-diff/v4/typed"
 )
 
@@ -139,13 +139,13 @@ func pathToTestFile() string {
 	}
 
 	// All of our code sits in subdirectories (pkg, cmd, etc) under this path:
-	// github.com/google/nomos/...
+	// kpt.dev/configsync/...
 	// Some unit tests run from pkg and some from cmd, so we climb up from the
-	// working directory to "google", and then specify back down to the file. We
+	// working directory to "kpt.dev", and then specify back down to the file. We
 	// can't use "nomos" because that directory name is repeated in:
-	// github.com/google/nomos/cmd/nomos
-	for filepath.Base(path) != "google" {
+	// kpt.dev/configsync/cmd/nomos
+	for filepath.Base(path) != "kpt.dev" {
 		path = filepath.Dir(path)
 	}
-	return filepath.Join(path, "nomos", "pkg", "testing", "openapitest", "openapi_v2.txt")
+	return filepath.Join(path, "configsync", "pkg", "testing", "openapitest", "openapi_v2.txt")
 }

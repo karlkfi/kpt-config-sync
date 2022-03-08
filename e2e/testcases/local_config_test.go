@@ -17,13 +17,13 @@ package e2e
 import (
 	"testing"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/syncer/syncertest"
-	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/syncer/syncertest"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestLocalConfig(t *testing.T) {

@@ -15,7 +15,7 @@
 package ntopts
 
 import (
-	"github.com/google/nomos/pkg/importer/filesystem"
+	"kpt.dev/configsync/pkg/importer/filesystem"
 )
 
 // Nomos configures options for installing Nomos on the test cluster.

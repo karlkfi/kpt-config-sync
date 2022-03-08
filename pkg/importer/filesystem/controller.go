@@ -19,16 +19,16 @@ import (
 	"path"
 	"time"
 
-	"github.com/google/nomos/pkg/importer/reader"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
+	"kpt.dev/configsync/pkg/importer/reader"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/google/nomos/pkg/syncer/decode"
+	"kpt.dev/configsync/pkg/syncer/decode"
 
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
@@ -38,10 +38,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/metrics"
-	utildiscovery "github.com/google/nomos/pkg/util/discovery"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	syncerclient "kpt.dev/configsync/pkg/syncer/client"
+	"kpt.dev/configsync/pkg/syncer/metrics"
+	utildiscovery "kpt.dev/configsync/pkg/util/discovery"
 )
 
 const (

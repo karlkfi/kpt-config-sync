@@ -17,11 +17,11 @@ package webhook
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer"
-	"github.com/google/nomos/pkg/reconciler"
 	authenticationv1 "k8s.io/api/authentication/v1"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer"
+	"kpt.dev/configsync/pkg/reconciler"
 )
 
 const (

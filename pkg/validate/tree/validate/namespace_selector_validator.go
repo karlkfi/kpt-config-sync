@@ -17,13 +17,13 @@ package validate
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/transform/selectors"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/syntax"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

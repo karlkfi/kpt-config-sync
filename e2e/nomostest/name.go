@@ -21,8 +21,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/nomos/e2e/nomostest/testing"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"kpt.dev/configsync/e2e/nomostest/testing"
 )
 
 // re splits strings at word boundaries. Test names always begin with "Test",

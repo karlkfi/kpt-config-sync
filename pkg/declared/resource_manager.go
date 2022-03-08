@@ -17,7 +17,7 @@ package declared
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/api/configsync"
 )
 
 const delimiter = "_"

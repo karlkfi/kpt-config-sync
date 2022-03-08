@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
 )
 
 func toCmpath(t *testing.T, files []string) []cmpath.Absolute {

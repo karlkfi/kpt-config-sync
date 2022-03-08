@@ -15,10 +15,10 @@
 package declared
 
 import (
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // deletesAllNamespaces is a sanity check that ensures we don't accidentally

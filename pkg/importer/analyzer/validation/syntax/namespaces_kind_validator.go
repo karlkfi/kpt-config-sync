@@ -15,8 +15,8 @@
 package syntax
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/api/configmanagement/v1/repo"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

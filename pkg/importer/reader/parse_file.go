@@ -21,14 +21,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/metadata"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/importer"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/metadata"
 )
 
 // yamlWhitespace records the two valid YAML whitespace characters.

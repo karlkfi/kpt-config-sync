@@ -20,15 +20,15 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/decode"
-	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/testing/testoutput"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/clientgen/apis/scheme"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/decode"
+	"kpt.dev/configsync/pkg/testing/fake"
+	"kpt.dev/configsync/testing/testoutput"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

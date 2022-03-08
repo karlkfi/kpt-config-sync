@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 )
 
 // ClusterState maintains the status of imports and syncs at the cluster level and exports them as

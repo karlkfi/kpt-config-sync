@@ -18,17 +18,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/remediator"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/clusterconfig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/applier"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer/filesystem"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/remediator"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/util/clusterconfig"
 )
 
 // updater mutates the most-recently-seen versions of objects stored in memory.

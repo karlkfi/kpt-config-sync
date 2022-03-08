@@ -20,16 +20,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/metrics"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

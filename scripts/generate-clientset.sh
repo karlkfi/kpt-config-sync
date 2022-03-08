@@ -37,7 +37,7 @@ NOMOS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 # the first and last values from GOPATH.
 GOBASE="${GOPATH//:.*/}"
 GOWORK="${GOPATH//.*:/}"
-REPO="github.com/google/nomos"
+REPO="kpt.dev/configsync"
 
 # Comma separted list of APIs to generate for clientset.
 INPUT_BASE="${REPO}/pkg/api"

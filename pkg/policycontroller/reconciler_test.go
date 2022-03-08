@@ -19,12 +19,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/nomos/pkg/policycontroller/constraint"
-	"github.com/google/nomos/pkg/util/watch"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"kpt.dev/configsync/pkg/policycontroller/constraint"
+	"kpt.dev/configsync/pkg/util/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )

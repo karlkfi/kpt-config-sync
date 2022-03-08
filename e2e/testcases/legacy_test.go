@@ -25,11 +25,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	nomostesting "github.com/google/nomos/e2e/nomostest/testing"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	nomostesting "kpt.dev/configsync/e2e/nomostest/testing"
 
-	"github.com/google/nomos/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest"
 )
 
 type BatsTest struct {

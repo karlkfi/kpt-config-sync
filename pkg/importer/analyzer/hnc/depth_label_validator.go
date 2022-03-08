@@ -21,8 +21,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

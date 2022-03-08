@@ -18,8 +18,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"k8s.io/cli-runtime/pkg/printers"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
 )
 
 // WriteObject writes a FileObject to a file using the provided ResourcePrinter.

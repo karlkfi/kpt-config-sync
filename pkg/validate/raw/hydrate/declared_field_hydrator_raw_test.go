@@ -17,11 +17,11 @@ package hydrate
 import (
 	"testing"
 
-	"github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/validate/objects"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/clientgen/apis/scheme"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/validate/objects"
 )
 
 func TestRawYAML(t *testing.T) {

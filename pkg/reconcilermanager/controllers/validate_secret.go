@@ -18,10 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"kpt.dev/configsync/pkg/api/configsync"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

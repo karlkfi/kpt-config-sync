@@ -21,9 +21,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest/testing"
-	"github.com/google/nomos/pkg/reconcilermanager"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest/testing"
+	"kpt.dev/configsync/pkg/reconcilermanager"
 )
 
 // RegistryName is the name of the local Docker registry.

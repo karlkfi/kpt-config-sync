@@ -21,13 +21,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/cmd/nomos/util"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/reposync"
-	"github.com/google/nomos/pkg/rootsync"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/cmd/nomos/util"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/reposync"
+	"kpt.dev/configsync/pkg/rootsync"
 )
 
 const (

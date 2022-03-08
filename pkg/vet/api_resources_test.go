@@ -17,11 +17,11 @@ package vet
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/util/discovery"
 )
 
 func TestAddLines(t *testing.T) {

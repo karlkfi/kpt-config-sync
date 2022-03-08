@@ -19,11 +19,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/testing/fake"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestAdoptClientSideAppliedResource(t *testing.T) {

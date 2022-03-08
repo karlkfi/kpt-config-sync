@@ -21,11 +21,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest/docker"
-	"github.com/google/nomos/e2e/nomostest/testing"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest/docker"
+	"kpt.dev/configsync/e2e/nomostest/testing"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/kind/pkg/cluster"
 )

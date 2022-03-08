@@ -20,9 +20,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest/testing"
-	"github.com/google/nomos/pkg/client/restconfig"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest/testing"
+	"kpt.dev/configsync/pkg/client/restconfig"
 )
 
 // GKECluster tells the test to use the GKE cluster pointed to by the config flags.

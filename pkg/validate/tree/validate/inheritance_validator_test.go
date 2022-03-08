@@ -18,13 +18,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast/node"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/semantic"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/testing/fake"
+	"kpt.dev/configsync/pkg/validate/objects"
 )
 
 func TestInheritance(t *testing.T) {

@@ -20,13 +20,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/transform/selectors"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/testing/fake"
+	"kpt.dev/configsync/pkg/validate/objects"
 )
 
 const (

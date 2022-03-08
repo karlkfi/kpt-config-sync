@@ -15,8 +15,8 @@
 package filesystem
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/api/configmanagement/v1/repo"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
 )
 
 func isHierarchyFile(root cmpath.Absolute, file cmpath.Absolute) bool {

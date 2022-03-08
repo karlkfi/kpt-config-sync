@@ -46,7 +46,7 @@ for PLATFORM in "${PLATFORMS[@]}"; do
   echo "Building nomos for ${PLATFORM}"
   env GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED="0" go install \
       -installsuffix "static" \
-      -ldflags "-X github.com/google/nomos/pkg/version.VERSION=${VERSION}" \
+      -ldflags "-X kpt.dev/configsync/pkg/version.VERSION=${VERSION}" \
       ./cmd/nomos
 
   # When go builds for native architecture, it puts output in $GOPATH/bin

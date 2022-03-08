@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/metrics"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/metrics"
 )
 
 // GitConfig constants.

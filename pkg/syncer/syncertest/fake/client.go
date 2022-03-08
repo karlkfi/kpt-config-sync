@@ -22,12 +22,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	configsyncv1beta1 "github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -40,6 +34,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	configsyncv1beta1 "kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/syncer/reconcile"
+	"kpt.dev/configsync/pkg/util/clusterconfig"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

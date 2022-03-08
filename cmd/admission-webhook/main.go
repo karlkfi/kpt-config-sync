@@ -18,11 +18,11 @@ import (
 	"flag"
 	"os"
 
-	"github.com/google/nomos/pkg/profiler"
-	"github.com/google/nomos/pkg/util/log"
-	"github.com/google/nomos/pkg/webhook"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	"k8s.io/klog/klogr"
+	"kpt.dev/configsync/pkg/profiler"
+	"kpt.dev/configsync/pkg/util/log"
+	"kpt.dev/configsync/pkg/webhook"
+	"kpt.dev/configsync/pkg/webhook/configuration"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )

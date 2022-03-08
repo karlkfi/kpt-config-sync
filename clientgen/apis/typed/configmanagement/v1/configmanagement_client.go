@@ -3,8 +3,8 @@
 package v1
 
 import (
-	"github.com/google/nomos/clientgen/apis/scheme"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/clientgen/apis/scheme"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	rest "k8s.io/client-go/rest"
 )
 

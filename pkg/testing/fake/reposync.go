@@ -15,11 +15,11 @@
 package fake
 
 import (
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kpt.dev/configsync/pkg/api/configsync/v1alpha1"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
 )
 
 // RepoSyncObjectV1Alpha1 initializes a RepoSync with version v1alpha1.

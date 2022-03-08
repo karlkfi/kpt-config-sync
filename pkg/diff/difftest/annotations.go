@@ -15,9 +15,9 @@
 package difftest
 
 import (
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/metadata"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/metadata"
 )
 
 // ManagedBy adds the annotation that a resource is managed by a particular reconciler.

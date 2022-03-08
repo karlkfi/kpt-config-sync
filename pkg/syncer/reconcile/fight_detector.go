@@ -19,10 +19,10 @@ import (
 	"math"
 	"time"
 
-	m "github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	m "kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

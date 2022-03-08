@@ -29,10 +29,10 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	"github.com/google/nomos/cmd/nomos/flags"
-	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/version"
+	"kpt.dev/configsync/cmd/nomos/flags"
+	"kpt.dev/configsync/cmd/nomos/util"
+	"kpt.dev/configsync/pkg/client/restconfig"
+	"kpt.dev/configsync/pkg/version"
 )
 
 func init() {

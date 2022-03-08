@@ -17,8 +17,8 @@ package filesystem_test
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/filesystem"
-	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
+	"kpt.dev/configsync/pkg/importer/filesystem"
+	ft "kpt.dev/configsync/pkg/importer/filesystem/filesystemtest"
 )
 
 func TestWalkDirectory(t *testing.T) {

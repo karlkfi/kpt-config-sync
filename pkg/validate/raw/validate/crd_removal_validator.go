@@ -15,12 +15,12 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/importer/customresources"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/importer/customresources"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
 )
 
 // RemovedCRDs verifies that the Raw objects do not remove any CRDs that still

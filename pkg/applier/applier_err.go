@@ -17,8 +17,8 @@ package applier
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // ApplierErrorCode is the error code for apply failures.

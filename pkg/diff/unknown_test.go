@@ -17,7 +17,7 @@ package diff
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/testing/fake"
+	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

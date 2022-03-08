@@ -14,7 +14,7 @@
 
 package hydrate
 
-import "github.com/google/nomos/pkg/status"
+import "kpt.dev/configsync/pkg/status"
 
 // HydrationError is a wrapper of the error in the hydration process with the error code.
 type HydrationError interface {

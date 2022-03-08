@@ -15,9 +15,9 @@
 package semantic
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast/node"
+	"kpt.dev/configsync/pkg/importer/id"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // UnsyncableResourcesErrorCode is the error code for UnsyncableResourcesError

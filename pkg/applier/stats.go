@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/core"
+	"kpt.dev/configsync/pkg/core"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 )
 

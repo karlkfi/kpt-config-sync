@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/nomos/e2e"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
+	"kpt.dev/configsync/e2e"
 )
 
 const (

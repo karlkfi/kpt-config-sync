@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	"github.com/google/nomos/clientgen/apis/scheme"
-	v1alpha1 "github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"kpt.dev/configsync/clientgen/apis/scheme"
+	v1alpha1 "kpt.dev/configsync/pkg/api/configsync/v1alpha1"
 	rest "k8s.io/client-go/rest"
 )
 

@@ -17,14 +17,14 @@ package validate
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/syncertest"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/syncertest"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestValidManagementAnnotation(t *testing.T) {

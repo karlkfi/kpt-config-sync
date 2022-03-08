@@ -19,14 +19,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/hydrate"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/status"
-	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/hydrate"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/status"
+	webhookconfiguration "kpt.dev/configsync/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

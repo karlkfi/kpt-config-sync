@@ -3,8 +3,8 @@
 package configmanagement
 
 import (
-	v1 "github.com/google/nomos/clientgen/informer/configmanagement/v1"
-	internalinterfaces "github.com/google/nomos/clientgen/informer/internalinterfaces"
+	v1 "kpt.dev/configsync/clientgen/informer/configmanagement/v1"
+	internalinterfaces "kpt.dev/configsync/clientgen/informer/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

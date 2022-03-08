@@ -20,10 +20,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/util/discovery"
 )
 
 // APIResourcesPath is the path from policyDir to the cached API Resources.

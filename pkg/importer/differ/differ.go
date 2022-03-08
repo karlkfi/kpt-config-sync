@@ -19,15 +19,15 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/status"
-	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/decode"
-	"github.com/google/nomos/pkg/util/compare"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/status"
+	syncerclient "kpt.dev/configsync/pkg/syncer/client"
+	"kpt.dev/configsync/pkg/syncer/decode"
+	"kpt.dev/configsync/pkg/util/compare"
+	"kpt.dev/configsync/pkg/util/namespaceconfig"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

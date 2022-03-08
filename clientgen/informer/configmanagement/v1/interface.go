@@ -3,7 +3,7 @@
 package v1
 
 import (
-	internalinterfaces "github.com/google/nomos/clientgen/informer/internalinterfaces"
+	internalinterfaces "kpt.dev/configsync/clientgen/informer/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

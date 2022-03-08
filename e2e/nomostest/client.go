@@ -17,12 +17,6 @@ package nomostest
 import (
 	"strings"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/e2e/nomostest/testing"
-	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	configsyncv1alpha1 "github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	configsyncv1beta1 "github.com/google/nomos/pkg/api/configsync/v1beta1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +28,12 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	"kpt.dev/configsync/e2e/nomostest/testing"
+	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	configsyncv1alpha1 "kpt.dev/configsync/pkg/api/configsync/v1alpha1"
+	configsyncv1beta1 "kpt.dev/configsync/pkg/api/configsync/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

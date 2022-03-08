@@ -15,10 +15,10 @@
 package scoped
 
 import (
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
-	"github.com/google/nomos/pkg/validate/scoped/hydrate"
-	"github.com/google/nomos/pkg/validate/scoped/validate"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/validate/scoped/hydrate"
+	"kpt.dev/configsync/pkg/validate/scoped/validate"
 )
 
 // Hierarchical performs the second round of validation and hydration for a

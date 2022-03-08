@@ -17,8 +17,8 @@ package reconcile
 import (
 	"time"
 
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // fightLogger is used to log errors about fights from fightDetector at most

@@ -15,12 +15,12 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // Namespace verifies that the given FileObject has a valid namespace according

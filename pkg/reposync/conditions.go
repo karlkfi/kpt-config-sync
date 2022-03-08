@@ -15,8 +15,8 @@
 package reposync
 
 import (
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
 )
 
 // Local alias to enable unit test mocking.

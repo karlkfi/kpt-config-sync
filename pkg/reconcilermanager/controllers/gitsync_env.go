@@ -15,8 +15,8 @@
 package controllers
 
 import (
-	"github.com/google/nomos/pkg/api/configsync"
 	corev1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/pkg/api/configsync"
 )
 
 const (

@@ -15,10 +15,10 @@
 package raw
 
 import (
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
-	"github.com/google/nomos/pkg/validate/raw/hydrate"
-	"github.com/google/nomos/pkg/validate/raw/validate"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/validate/raw/hydrate"
+	"kpt.dev/configsync/pkg/validate/raw/validate"
 )
 
 // Hierarchical performs initial validation and hydration for a structured

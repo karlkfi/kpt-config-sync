@@ -65,7 +65,7 @@ RUN go get -u github.com/jstemmer/go-junit-report
 COPY . .
 
 # Make sure the nomos command is available for tests.
-RUN go install github.com/google/nomos/cmd/nomos
+RUN go install kpt.dev/configsync/cmd/nomos
 
 # We want bats to be in PATH rather than having to alias it.
 COPY third_party/bats-core/bin/bats /bin

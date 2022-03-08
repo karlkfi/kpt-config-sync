@@ -14,7 +14,7 @@
 
 package applier
 
-import "github.com/google/nomos/pkg/api/configsync"
+import "kpt.dev/configsync/pkg/api/configsync"
 
 const (
 	// StatusEnabled is used to allow kpt applier to inject the actuation status

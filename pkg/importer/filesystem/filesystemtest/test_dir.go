@@ -20,8 +20,8 @@ import (
 	"path"
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/reader"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/importer/reader"
 )
 
 // FileContentMap specifies files that should be created as part of a parser

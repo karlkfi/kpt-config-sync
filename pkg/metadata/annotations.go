@@ -15,8 +15,8 @@
 package metadata
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/api/configsync"
 	"sigs.k8s.io/kustomize/kyaml/kio/filters"
 )
 

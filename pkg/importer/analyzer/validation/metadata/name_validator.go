@@ -15,9 +15,9 @@
 package metadata
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/api/configmanagement/v1/repo"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast/node"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

@@ -18,10 +18,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func auth(authType string) func(*v1beta1.RepoSync) {

@@ -16,9 +16,9 @@
 package meta
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/crd"
-	"github.com/google/nomos/pkg/syncer/sync"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/syncer/crd"
+	"kpt.dev/configsync/pkg/syncer/sync"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )

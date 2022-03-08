@@ -15,10 +15,10 @@
 package diff
 
 import (
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/syncer/differ"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/syncer/differ"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

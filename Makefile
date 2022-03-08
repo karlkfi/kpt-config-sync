@@ -18,7 +18,7 @@
 
 ##### CONFIG #####
 
-REPO := github.com/google/nomos
+REPO := kpt.dev/configsync
 
 # List of dirs containing go code owned by Nomos
 NOMOS_CODE_DIRS := pkg cmd e2e

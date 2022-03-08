@@ -18,16 +18,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync"
-	ocmetrics "github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/reconciler"
-	"github.com/google/nomos/pkg/reconcilermanager"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers"
-	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/api/configsync"
+	ocmetrics "kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/reconciler"
+	"kpt.dev/configsync/pkg/reconcilermanager"
+	"kpt.dev/configsync/pkg/reconcilermanager/controllers"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestNoSSLVerifyV1Alpha1(t *testing.T) {

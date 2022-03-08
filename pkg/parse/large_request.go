@@ -15,7 +15,7 @@
 package parse
 
 import (
-	"github.com/google/nomos/pkg/util"
+	"kpt.dev/configsync/pkg/util"
 )
 
 const defaultDenominator = 1

@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest/docker"
 	corev1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/e2e/nomostest/docker"
 )
 
 func connectToLocalRegistry(nt *NT) {

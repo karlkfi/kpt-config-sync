@@ -20,14 +20,14 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/client/restconfig"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/rest"
+	"kpt.dev/configsync/cmd/nomos/util"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/client/restconfig"
 )
 
 func TestVersion(t *testing.T) {

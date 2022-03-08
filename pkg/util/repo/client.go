@@ -18,9 +18,9 @@ import (
 	"context"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/status"
-	syncclient "github.com/google/nomos/pkg/syncer/client"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/status"
+	syncclient "kpt.dev/configsync/pkg/syncer/client"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

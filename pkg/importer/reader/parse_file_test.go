@@ -19,11 +19,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestParseYAMLFile(t *testing.T) {

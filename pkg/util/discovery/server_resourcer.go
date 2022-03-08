@@ -15,10 +15,10 @@
 package discovery
 
 import (
-	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // ServerResourcer returns a the API Groups and API Resources available on the

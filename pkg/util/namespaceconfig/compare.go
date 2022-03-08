@@ -16,10 +16,10 @@ package namespaceconfig
 
 import (
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/decode"
-	"github.com/google/nomos/pkg/util/compare"
 	"k8s.io/apimachinery/pkg/api/resource"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/syncer/decode"
+	"kpt.dev/configsync/pkg/util/compare"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

@@ -7,9 +7,9 @@ import (
 	sync "sync"
 	time "time"
 
-	apis "github.com/google/nomos/clientgen/apis"
-	configmanagement "github.com/google/nomos/clientgen/informer/configmanagement"
-	internalinterfaces "github.com/google/nomos/clientgen/informer/internalinterfaces"
+	apis "kpt.dev/configsync/clientgen/apis"
+	configmanagement "kpt.dev/configsync/clientgen/informer/configmanagement"
+	internalinterfaces "kpt.dev/configsync/clientgen/informer/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

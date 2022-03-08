@@ -24,12 +24,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/git"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/importer/git"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
 )
 
 const (

@@ -15,9 +15,9 @@
 package fake
 
 import (
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/resourcegroup"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/resourcegroup"
 )
 
 // ResourceGroupObject initializes a ResourceGroup.

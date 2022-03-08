@@ -15,16 +15,16 @@
 package sync
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/controller"
-	"github.com/google/nomos/pkg/syncer/decode"
-	syncerscheme "github.com/google/nomos/pkg/syncer/scheme"
-	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/util/watch"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/syncer/controller"
+	"kpt.dev/configsync/pkg/syncer/decode"
+	syncerscheme "kpt.dev/configsync/pkg/syncer/scheme"
+	"kpt.dev/configsync/pkg/util/discovery"
+	"kpt.dev/configsync/pkg/util/watch"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 

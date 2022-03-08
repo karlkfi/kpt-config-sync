@@ -21,12 +21,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/nomos/pkg/configsync"
-	"github.com/google/nomos/pkg/profiler"
-	"github.com/google/nomos/pkg/service"
-	"github.com/google/nomos/pkg/util/log"
 	"k8s.io/klog/klogr"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/configsync"
+	"kpt.dev/configsync/pkg/profiler"
+	"kpt.dev/configsync/pkg/service"
+	"kpt.dev/configsync/pkg/util/log"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

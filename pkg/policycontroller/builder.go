@@ -15,12 +15,12 @@
 package policycontroller
 
 import (
-	"github.com/google/nomos/pkg/policycontroller/constraint"
-	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
-	"github.com/google/nomos/pkg/util/watch"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/policycontroller/constraint"
+	"kpt.dev/configsync/pkg/policycontroller/constrainttemplate"
+	"kpt.dev/configsync/pkg/util/watch"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 

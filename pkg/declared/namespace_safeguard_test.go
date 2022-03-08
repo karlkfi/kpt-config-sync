@@ -17,12 +17,12 @@ package declared
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestDontDeleteAllNamespaces(t *testing.T) {

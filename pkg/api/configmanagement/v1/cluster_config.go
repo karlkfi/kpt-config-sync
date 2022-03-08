@@ -15,9 +15,9 @@
 package v1
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"kpt.dev/configsync/pkg/api/configmanagement"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

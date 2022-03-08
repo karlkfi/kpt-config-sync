@@ -15,8 +15,8 @@
 package syntax
 
 import (
-	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/importer/id"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

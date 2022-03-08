@@ -17,7 +17,7 @@ package status
 import (
 	"path/filepath"
 
-	"github.com/google/nomos/pkg/importer/id"
+	"kpt.dev/configsync/pkg/importer/id"
 )
 
 // PathErrorCode is the error code for a generic PathError.

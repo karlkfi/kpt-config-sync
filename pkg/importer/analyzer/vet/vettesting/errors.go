@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // ExpectErrors adds an error to testing if the expected and actual errors don't match.

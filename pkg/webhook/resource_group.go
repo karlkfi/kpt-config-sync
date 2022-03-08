@@ -18,11 +18,11 @@ import (
 	"fmt"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
-	"github.com/google/nomos/pkg/applier"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/applier"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )

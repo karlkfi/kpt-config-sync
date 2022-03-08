@@ -24,12 +24,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/e2e/nomostest/testing"
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"kpt.dev/configsync/e2e/nomostest/testing"
+	"kpt.dev/configsync/pkg/importer/filesystem"
+	"kpt.dev/configsync/pkg/syncer/reconcile"
+	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )

@@ -18,8 +18,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/pkg/errors"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
 )
 
 // FindFiles lists what are likely the files tracked by git in cases where

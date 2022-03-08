@@ -18,10 +18,10 @@ import (
 	"strconv"
 
 	"github.com/google/go-cmp/cmp"
-	ocmetrics "github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"go.opencensus.io/tag"
+	ocmetrics "kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // ConfigSyncMetrics is a map from metric names to its measurements.

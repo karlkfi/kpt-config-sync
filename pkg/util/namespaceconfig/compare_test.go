@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/syncertest/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/syncer/syncertest/fake"
 )
 
 type namespaceConfigEqualTestcase struct {

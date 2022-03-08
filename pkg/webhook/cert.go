@@ -15,10 +15,10 @@
 package webhook
 
 import (
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	cert "github.com/open-policy-agent/cert-controller/pkg/rotator"
 	"k8s.io/apimachinery/pkg/types"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 

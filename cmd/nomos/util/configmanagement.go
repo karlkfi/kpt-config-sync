@@ -17,13 +17,13 @@ package util
 import (
 	"context"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 )
 
 const (

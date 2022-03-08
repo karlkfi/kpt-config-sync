@@ -18,15 +18,15 @@ import (
 	"context"
 	"sync"
 
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/google/nomos/pkg/core"
+	"kpt.dev/configsync/pkg/core"
 )
 
 // Resources is a threadsafe container for a set of resources declared in a Git

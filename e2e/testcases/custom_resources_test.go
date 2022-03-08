@@ -20,14 +20,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/metrics"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/testing/fake"
+	"kpt.dev/configsync/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

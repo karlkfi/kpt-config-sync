@@ -18,10 +18,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
 )
 
 // RecordAPICallDuration produces a measurement for the APICallDuration view.

@@ -17,10 +17,10 @@ package queue
 import (
 	"sync"
 
-	"github.com/google/nomos/pkg/core"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/core"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

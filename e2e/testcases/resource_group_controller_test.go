@@ -18,13 +18,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/resourcegroup"
-	"github.com/google/nomos/pkg/testing/fake"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/applier"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/resourcegroup"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestResourceGroupController(t *testing.T) {

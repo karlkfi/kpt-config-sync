@@ -17,10 +17,10 @@ package namespaceconfig
 import (
 	"context"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

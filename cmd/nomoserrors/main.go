@@ -21,13 +21,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/nomos/cmd/nomoserrors/examples"
-	"github.com/google/nomos/pkg/status"
 	"github.com/spf13/cobra"
+	"kpt.dev/configsync/cmd/nomoserrors/examples"
+	"kpt.dev/configsync/pkg/status"
 
 	// Ensure it's very unlikely we're missing errors.
-	_ "github.com/google/nomos/pkg/importer/filesystem"
-	_ "github.com/google/nomos/pkg/remediator"
+	_ "kpt.dev/configsync/pkg/importer/filesystem"
+	_ "kpt.dev/configsync/pkg/remediator"
 )
 
 var idFlag string

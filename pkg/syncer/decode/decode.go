@@ -18,14 +18,14 @@ package decode
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/syncer/scheme"
+	"kpt.dev/configsync/pkg/syncer/scheme"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 )
 
 // Decoder decodes GenericResources from NamespaceConfigs / ClusterConfigs to

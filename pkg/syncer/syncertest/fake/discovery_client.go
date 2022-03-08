@@ -17,9 +17,9 @@ package fake
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/util/discovery"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/util/discovery"
 )
 
 // discoveryClient implements the subset of the DiscoveryInterface used by the

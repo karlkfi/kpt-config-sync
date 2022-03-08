@@ -15,8 +15,8 @@
 package declared
 
 import (
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // Scope defines a distinct (but not necessarily disjoint) area of responsibility

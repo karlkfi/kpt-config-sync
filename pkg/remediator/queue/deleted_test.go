@@ -18,12 +18,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/testing/testmetrics"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/testing/fake"
+	"kpt.dev/configsync/pkg/testing/testmetrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

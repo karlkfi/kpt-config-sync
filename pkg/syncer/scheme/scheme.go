@@ -17,13 +17,13 @@ package scheme
 import (
 	"reflect"
 
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/util/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

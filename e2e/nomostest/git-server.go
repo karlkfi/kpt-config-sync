@@ -18,18 +18,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/pkg/metrics"
 	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/pkg/metrics"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

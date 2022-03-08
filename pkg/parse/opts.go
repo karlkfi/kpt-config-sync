@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/filesystem"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/util/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

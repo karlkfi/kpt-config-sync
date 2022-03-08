@@ -15,10 +15,10 @@
 package hydrate
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
 	corev1 "k8s.io/api/core/v1"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/util/namespaceconfig"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

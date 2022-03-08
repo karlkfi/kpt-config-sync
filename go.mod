@@ -1,4 +1,4 @@
-module github.com/google/nomos
+module kpt.dev/configsync
 
 go 1.17
 

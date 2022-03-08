@@ -20,14 +20,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/cmd/nomos/flags"
-	"github.com/google/nomos/cmd/nomos/util"
-	v1repo "github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/printers"
+	"kpt.dev/configsync/cmd/nomos/flags"
+	"kpt.dev/configsync/cmd/nomos/util"
+	v1repo "kpt.dev/configsync/pkg/api/configmanagement/v1/repo"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/status"
 )
 
 var forceValue bool

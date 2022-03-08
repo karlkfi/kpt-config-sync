@@ -15,9 +15,9 @@
 package ntopts
 
 import (
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest/testing"
 	"k8s.io/client-go/rest"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest/testing"
 )
 
 // Opt is an option type for ntopts.New.

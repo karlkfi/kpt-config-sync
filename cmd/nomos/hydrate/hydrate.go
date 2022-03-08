@@ -17,17 +17,17 @@ package hydrate
 import (
 	"os"
 
-	"github.com/google/nomos/cmd/nomos/flags"
-	nomosparse "github.com/google/nomos/cmd/nomos/parse"
-	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/hydrate"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/reader"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"kpt.dev/configsync/cmd/nomos/flags"
+	nomosparse "kpt.dev/configsync/cmd/nomos/parse"
+	"kpt.dev/configsync/cmd/nomos/util"
+	"kpt.dev/configsync/pkg/hydrate"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/filesystem"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/importer/reader"
+	"kpt.dev/configsync/pkg/status"
 )
 
 var (

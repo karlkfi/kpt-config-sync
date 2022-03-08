@@ -15,9 +15,9 @@
 package fake
 
 import (
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	v1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
 )
 
 // PodObject returns an initialized Pod.

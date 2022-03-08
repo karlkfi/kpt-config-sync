@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/pkg/errors"
+	"kpt.dev/configsync/pkg/importer/id"
 )
 
 // Absolute represents an absolute path on a file system.

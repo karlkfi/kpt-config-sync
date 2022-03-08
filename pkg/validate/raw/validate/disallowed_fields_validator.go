@@ -15,10 +15,10 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/syntax"
+	"kpt.dev/configsync/pkg/importer/id"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
 )
 
 // DisallowedFields verifies if the given Raw objects contain any fields which

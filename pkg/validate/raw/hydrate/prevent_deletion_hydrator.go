@@ -15,11 +15,11 @@
 package hydrate
 
 import (
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
-	"github.com/google/nomos/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/differ"
+	"kpt.dev/configsync/pkg/validate/objects"
 	"sigs.k8s.io/cli-utils/pkg/common"
 )
 

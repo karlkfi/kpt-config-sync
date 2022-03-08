@@ -14,7 +14,7 @@
 
 package v1
 
-import "github.com/google/nomos/pkg/api/configmanagement"
+import "kpt.dev/configsync/pkg/api/configmanagement"
 
 // ClusterConfigName is the name of the ClusterConfig for all non-CRD cluster resources.
 const ClusterConfigName = "config-management-cluster-config"

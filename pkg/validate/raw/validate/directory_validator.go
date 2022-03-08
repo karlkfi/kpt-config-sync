@@ -15,11 +15,11 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/api/configmanagement/v1/repo"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/metadata"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // Directory verifies that the given FileObject is placed in a valid directory

@@ -17,7 +17,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/util/repo"
+	"kpt.dev/configsync/pkg/util/repo"
 )
 
 func main() {

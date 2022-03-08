@@ -15,10 +15,10 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
-	csmetadata "github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/metadata"
+	csmetadata "kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // IsInvalidLabel returns true if the label cannot be declared by users.

@@ -5,7 +5,7 @@ package fake
 import (
 	"context"
 
-	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

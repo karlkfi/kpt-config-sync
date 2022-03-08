@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	csmetadata "github.com/google/nomos/pkg/metadata"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	csmetadata "kpt.dev/configsync/pkg/metadata"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
 )

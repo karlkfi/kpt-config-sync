@@ -3,9 +3,9 @@
 package scheme
 
 import (
-	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	configsyncv1alpha1 "github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	configsyncv1beta1 "github.com/google/nomos/pkg/api/configsync/v1beta1"
+	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	configsyncv1alpha1 "kpt.dev/configsync/pkg/api/configsync/v1alpha1"
+	configsyncv1beta1 "kpt.dev/configsync/pkg/api/configsync/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

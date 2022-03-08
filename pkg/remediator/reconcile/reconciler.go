@@ -17,15 +17,15 @@ package reconcile
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/diff"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/status"
-	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/diff"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/status"
+	syncerreconcile "kpt.dev/configsync/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

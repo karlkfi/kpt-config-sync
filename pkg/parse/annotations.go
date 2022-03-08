@@ -18,12 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/metadata"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/applier"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/metadata"
 )
 
 // gitContext contains the fields which identify where a resource is being synced

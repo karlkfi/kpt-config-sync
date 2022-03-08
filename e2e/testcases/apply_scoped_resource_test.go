@@ -18,12 +18,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/api/configsync"
-	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	"kpt.dev/configsync/pkg/api/configsync"
+	ocmetrics "kpt.dev/configsync/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

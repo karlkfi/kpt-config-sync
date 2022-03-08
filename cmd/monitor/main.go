@@ -16,12 +16,12 @@
 package main
 
 import (
-	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/monitor"
-	"github.com/google/nomos/pkg/service"
-	"github.com/google/nomos/pkg/util/log"
 	"k8s.io/klog/klogr"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/client/restconfig"
+	"kpt.dev/configsync/pkg/monitor"
+	"kpt.dev/configsync/pkg/service"
+	"kpt.dev/configsync/pkg/util/log"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"

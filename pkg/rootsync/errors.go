@@ -15,7 +15,7 @@
 package rootsync
 
 import (
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
 )
 
 // Errors returns the errors referred by `errorSources`.

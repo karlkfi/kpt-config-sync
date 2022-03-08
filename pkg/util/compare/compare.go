@@ -18,9 +18,9 @@ import (
 	"reflect"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/decode"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/decode"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

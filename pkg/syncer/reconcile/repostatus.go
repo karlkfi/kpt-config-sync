@@ -21,13 +21,13 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/metrics"
-	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	syncclient "kpt.dev/configsync/pkg/syncer/client"
+	"kpt.dev/configsync/pkg/syncer/metrics"
+	"kpt.dev/configsync/pkg/util/repo"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 

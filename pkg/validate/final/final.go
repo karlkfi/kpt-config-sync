@@ -15,9 +15,9 @@
 package final
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/final/validate"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/final/validate"
 )
 
 type finalValidator func(objs []ast.FileObject) status.MultiError

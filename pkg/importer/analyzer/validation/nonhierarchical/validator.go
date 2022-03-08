@@ -15,8 +15,8 @@
 package nonhierarchical
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // Validator implementors validate a set of non-hierarchical configuration.

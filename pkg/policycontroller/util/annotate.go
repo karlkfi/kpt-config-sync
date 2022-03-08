@@ -16,9 +16,9 @@
 package util
 
 import (
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/metadata"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/metadata"
 )
 
 // AnnotateErrors sets the error status annotation to the given error messages.

@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/id"
+	"kpt.dev/configsync/pkg/importer/id"
 )
 
 // Relative represents a relative path on a file system.

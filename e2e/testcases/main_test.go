@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/nomostest"
+	"kpt.dev/configsync/e2e"
+	"kpt.dev/configsync/e2e/nomostest"
 )
 
 func TestMain(m *testing.M) {

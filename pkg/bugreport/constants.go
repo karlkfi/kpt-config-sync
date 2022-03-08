@@ -15,9 +15,9 @@
 package bugreport
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/policycontroller"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/policycontroller"
 )
 
 // Product describes an ACM Product

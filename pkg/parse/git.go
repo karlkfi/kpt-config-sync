@@ -21,15 +21,15 @@ import (
 	"os"
 	"path/filepath"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/hydrate"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/git"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/reconcilermanager"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"kpt.dev/configsync/pkg/hydrate"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/importer/git"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/reconcilermanager"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // FileSource includes all settings to configure where a Parser reads files from.

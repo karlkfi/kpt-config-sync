@@ -22,9 +22,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
-	m "github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,6 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
+	m "kpt.dev/configsync/pkg/metrics"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/syncer/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

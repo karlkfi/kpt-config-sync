@@ -19,10 +19,10 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/google/nomos/cmd/nomos/flags"
-	"github.com/google/nomos/cmd/nomos/vet"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
+	"kpt.dev/configsync/cmd/nomos/flags"
+	"kpt.dev/configsync/cmd/nomos/vet"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	ft "kpt.dev/configsync/pkg/importer/filesystem/filesystemtest"
 )
 
 func resetFlags() {

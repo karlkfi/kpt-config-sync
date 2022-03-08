@@ -17,11 +17,11 @@ package e2e
 import (
 	"testing"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/types"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/importer/analyzer/validation/system"
+	"kpt.dev/configsync/pkg/status"
 )
 
 func TestMissingRepoErrorWithHierarchicalFormat(t *testing.T) {

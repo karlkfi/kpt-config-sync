@@ -17,7 +17,7 @@ package declared
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configsync"
+	"kpt.dev/configsync/pkg/api/configsync"
 )
 
 func TestResourceManager(t *testing.T) {

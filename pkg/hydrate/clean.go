@@ -15,10 +15,10 @@
 package hydrate
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/validate/raw/validate"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/validate/raw/validate"
 )
 
 // Clean removes invalid fields from objects before writing them to a file.

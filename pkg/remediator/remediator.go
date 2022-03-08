@@ -18,16 +18,16 @@ import (
 	"context"
 	"sync"
 
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/remediator/queue"
-	"github.com/google/nomos/pkg/remediator/reconcile"
-	"github.com/google/nomos/pkg/remediator/watch"
-	"github.com/google/nomos/pkg/status"
-	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/remediator/queue"
+	"kpt.dev/configsync/pkg/remediator/reconcile"
+	"kpt.dev/configsync/pkg/remediator/watch"
+	"kpt.dev/configsync/pkg/status"
+	syncerreconcile "kpt.dev/configsync/pkg/syncer/reconcile"
 )
 
 // Remediator knows how to keep the state of a Kubernetes cluster in sync with

@@ -19,12 +19,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/hydrate"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/google/nomos/testing/testoutput"
+	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/hydrate"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/testing/fake"
+	"kpt.dev/configsync/pkg/util/namespaceconfig"
+	"kpt.dev/configsync/testing/testoutput"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

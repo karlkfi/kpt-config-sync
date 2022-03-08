@@ -17,15 +17,15 @@ package watch
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/remediator/queue"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/remediator/queue"
+	"kpt.dev/configsync/pkg/status"
 )
 
 type startWatchFunc func(metav1.ListOptions) (watch.Interface, error)

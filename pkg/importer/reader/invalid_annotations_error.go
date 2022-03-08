@@ -17,7 +17,7 @@ package reader
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

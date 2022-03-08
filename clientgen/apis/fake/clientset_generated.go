@@ -3,13 +3,13 @@
 package fake
 
 import (
-	clientset "github.com/google/nomos/clientgen/apis"
-	configmanagementv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
-	fakeconfigmanagementv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1/fake"
-	configsyncv1alpha1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1alpha1"
-	fakeconfigsyncv1alpha1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1alpha1/fake"
-	configsyncv1beta1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1beta1"
-	fakeconfigsyncv1beta1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1beta1/fake"
+	clientset "kpt.dev/configsync/clientgen/apis"
+	configmanagementv1 "kpt.dev/configsync/clientgen/apis/typed/configmanagement/v1"
+	fakeconfigmanagementv1 "kpt.dev/configsync/clientgen/apis/typed/configmanagement/v1/fake"
+	configsyncv1alpha1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1alpha1"
+	fakeconfigsyncv1alpha1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1alpha1/fake"
+	configsyncv1beta1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1beta1"
+	fakeconfigsyncv1beta1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

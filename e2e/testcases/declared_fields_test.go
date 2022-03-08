@@ -18,12 +18,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configsync"
 	corev1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/pkg/api/configsync"
 
-	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/testing/fake"
+	"kpt.dev/configsync/e2e/nomostest"
+	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestDeclaredFieldsPod(t *testing.T) {

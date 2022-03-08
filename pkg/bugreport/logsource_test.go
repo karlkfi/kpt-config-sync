@@ -17,8 +17,8 @@ package bugreport
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/testing/fake"
 	v1 "k8s.io/api/core/v1"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestLogSourceGetPathName(t *testing.T) {

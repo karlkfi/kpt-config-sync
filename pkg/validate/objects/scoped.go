@@ -15,8 +15,8 @@
 package objects
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // ScopedVisitor is a function that validates or hydrates Scoped objects.

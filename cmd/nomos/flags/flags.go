@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/spf13/cobra"
+	"kpt.dev/configsync/pkg/importer/filesystem"
+	"kpt.dev/configsync/pkg/reconcilermanager"
 )
 
 const (

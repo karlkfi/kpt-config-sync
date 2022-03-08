@@ -17,10 +17,10 @@ package differ
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/policycontroller"
-	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/policycontroller"
+	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestIsManageableSystem(t *testing.T) {

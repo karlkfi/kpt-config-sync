@@ -15,17 +15,17 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/validate/final"
-	"github.com/google/nomos/pkg/validate/objects"
-	"github.com/google/nomos/pkg/validate/raw"
-	"github.com/google/nomos/pkg/validate/scoped"
-	"github.com/google/nomos/pkg/validate/tree"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"kpt.dev/configsync/pkg/declared"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/util/discovery"
+	"kpt.dev/configsync/pkg/validate/final"
+	"kpt.dev/configsync/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/validate/raw"
+	"kpt.dev/configsync/pkg/validate/scoped"
+	"kpt.dev/configsync/pkg/validate/tree"
 )
 
 // VisitorFunc is a function that validates and/or hydrates the given set of

@@ -17,9 +17,9 @@ package vet
 import (
 	"fmt"
 
-	"github.com/google/nomos/cmd/nomos/flags"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/spf13/cobra"
+	"kpt.dev/configsync/cmd/nomos/flags"
+	"kpt.dev/configsync/pkg/importer/filesystem"
 )
 
 var (

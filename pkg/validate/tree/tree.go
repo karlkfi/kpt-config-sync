@@ -15,10 +15,10 @@
 package tree
 
 import (
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/objects"
-	"github.com/google/nomos/pkg/validate/tree/hydrate"
-	"github.com/google/nomos/pkg/validate/tree/validate"
+	"kpt.dev/configsync/pkg/status"
+	"kpt.dev/configsync/pkg/validate/objects"
+	"kpt.dev/configsync/pkg/validate/tree/hydrate"
+	"kpt.dev/configsync/pkg/validate/tree/validate"
 )
 
 // Hierarchical performs validation and hydration for a structured hierarchical

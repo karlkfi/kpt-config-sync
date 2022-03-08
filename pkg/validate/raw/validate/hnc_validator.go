@@ -17,10 +17,10 @@ package validate
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/hnc"
-	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/status"
+	"kpt.dev/configsync/pkg/importer/analyzer/ast"
+	"kpt.dev/configsync/pkg/importer/analyzer/hnc"
+	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/status"
 )
 
 // HasDepthSuffix returns true if the string ends with ".tree.hnc.x-k8s.io/depth".

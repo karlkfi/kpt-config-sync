@@ -15,10 +15,10 @@
 package differ
 
 import (
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/policycontroller"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kpt.dev/configsync/pkg/kinds"
+	"kpt.dev/configsync/pkg/policycontroller"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

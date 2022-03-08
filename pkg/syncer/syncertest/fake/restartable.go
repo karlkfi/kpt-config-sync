@@ -15,8 +15,8 @@
 package fake
 
 import (
-	"github.com/google/nomos/pkg/util/watch"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"kpt.dev/configsync/pkg/util/watch"
 )
 
 // RestartableManagerRecorder records whether each instance of Restart was
