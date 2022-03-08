@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 )
 
 // Reader reads a list of FileObjects.
@@ -75,6 +76,14 @@ func (r *File) Read(filePaths FilePaths) ([]ast.FileObject, status.MultiError) {
 
 // Read implements Reader.
 func (r *File) read(rootDir cmpath.Absolute, policyDir cmpath.Relative, file cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+	splitPath := strings.Split(file.OSPath(), "/")
+	for _, pathPiece := range splitPath {
+		if pathPiece == ".github" || pathPiece == ".gitlab" || pathPiece == ".gitlab-ci.yml" {
+			klog.Infof("Ignoring file path: %v", file.OSPath())
+			return nil, nil
+		}
+	}
+
 	unstructureds, err := parseFile(file.OSPath())
 	if err != nil {
 		return nil, status.PathWrapError(err, file.OSPath())

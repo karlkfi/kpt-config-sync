@@ -177,3 +177,54 @@ spec:
 		t.Fatalf("got Read() = %v, want nil", err)
 	}
 }
+
+func TestFileReader_Read_HiddenFolder(t *testing.T) {
+	testCases := []struct {
+		fileName     string
+		fileContents string
+	}{
+		{
+			fileName: "/.github/namespace.yaml",
+		},
+		{
+			fileName: "/.gitlab/namespace.yml",
+			fileContents: `
+apiVersion: configmanagement.gke.io/v1
+kind: Namespace
+metadata:
+name: ns
+spec:
+version: "1.0"
+`,
+		},
+		{
+			fileName:     ".gitlab/gitlab-ci.yml",
+			fileContents: "foo: bar",
+		},
+		{
+			fileName:     ".github/workflows/github-actions.yml",
+			fileContents: "This is just unformatted text",
+		},
+		{
+			fileName: ".gitlab-ci.yml",
+			fileContents: `
+variables:
+	FAKE_VARIABLE: "not real"
+workflow:
+	rules:`,
+		},
+	}
+
+	for _, tc := range testCases {
+		dir := ft.NewTestDir(t,
+			ft.FileContents(tc.fileName, tc.fileContents))
+
+		fps := dir.FilePaths(tc.fileName)
+		r := reader.File{}
+		fileObj, err := r.Read(fps)
+
+		if fileObj != nil || err != nil {
+			t.Fatalf("got Read() = %v, %v, want nil, nil", fileObj, err)
+		}
+	}
+}
