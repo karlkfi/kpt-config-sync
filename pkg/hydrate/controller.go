@@ -160,6 +160,8 @@ func (h *Hydrator) rehydrateOnError(sourceCommit, syncDir string) {
 // updateSymlink updates the symbolic link to the hydrated directory.
 func updateSymlink(hydratedRoot, link, newDir string) error {
 	linkPath := filepath.Join(hydratedRoot, link)
+	tmpLinkPath := filepath.Join(hydratedRoot, tmpLink)
+
 	oldDir, err := filepath.EvalSymlinks(linkPath)
 	if oldDir == newDir {
 		return nil
@@ -172,18 +174,11 @@ func updateSymlink(hydratedRoot, link, newDir string) error {
 		deleteOldDir = false
 	}
 
-	// newDir is absolute, so we need to change it to a relative path.  This is
-	// so it can be volume-mounted at another path and the symlink still works.
-	newDirRelative, err := filepath.Rel(hydratedRoot, newDir)
-	if err != nil {
-		return errors.Wrap(err, "unable to convert to relative path")
-	}
-
-	if _, err := runCommand(hydratedRoot, "ln", "-snf", newDirRelative, tmpLink); err != nil {
+	if err := os.Symlink(newDir, tmpLinkPath); err != nil {
 		return errors.Wrap(err, "unable to create symlink")
 	}
 
-	if _, err := runCommand(hydratedRoot, "mv", "-T", tmpLink, link); err != nil {
+	if err := os.Rename(tmpLinkPath, linkPath); err != nil {
 		return errors.Wrap(err, "unable to replace symlink")
 	}
 

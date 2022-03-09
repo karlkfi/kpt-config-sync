@@ -23,6 +23,21 @@ COPY . .
 ARG VERSION
 ARG HELM_INFLATOR_FUNCTIOPN_VERSION=v0.1.0
 
+ARG HELM_VERSION=v3.6.3
+ARG KUSTOMIZE_VERSION=v4.5.2
+
+# Install Helm
+RUN wget https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz -O /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz && \
+  tar -zxvf /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz -C /tmp && \
+  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
+  rm -rf /tmp/linux-amd64 /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz
+
+# Install Kustomize
+RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -O /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz && \
+  tar -zxvf /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -C /tmp && \
+  mv /tmp/kustomize /usr/local/bin/kustomize && \
+  rm /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
+
 # Install the render-helm-chart function.
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
   go install github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/render-helm-chart@${HELM_INFLATOR_FUNCTIOPN_VERSION}
@@ -41,26 +56,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
     ./cmd/admission-webhook
 
 # Hydration controller image
-FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.10.0 as hydration-controller
+FROM gcr.io/distroless/static:nonroot as hydration-controller
 WORKDIR /
 COPY --from=bins /go/bin/hydration-controller .
 COPY --from=bins /go/bin/render-helm-chart /usr/local/bin/render-helm-chart
-RUN apt-get update && apt-get install -y git wget
-
-ARG HELM_VERSION=v3.6.3
-ARG KUSTOMIZE_VERSION=v4.5.2
-
-# Install Helm
-RUN wget https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz -O /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz && \
-  tar -zxvf /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz -C /tmp && \
-  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
-  rm -rf /tmp/linux-amd64 /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz
-
-# Install Kustomize
-RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -O /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz && \
-  tar -zxvf /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -C /tmp && \
-  mv /tmp/kustomize /usr/local/bin/kustomize && \
-  rm /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
+COPY --from=bins /usr/local/bin/helm /usr/local/bin/helm
+COPY --from=bins /usr/local/bin/kustomize /usr/local/bin/kustomize
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
@@ -72,19 +73,13 @@ USER 1000
 ENTRYPOINT ["/hydration-controller"]
 
 # Reconciler image
-FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.10.0 as reconciler
+FROM gcr.io/distroless/static:nonroot as reconciler
 WORKDIR /
 COPY --from=bins /go/bin/reconciler .
-RUN apt-get update && apt-get install -y git
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
 COPY LICENSES.txt LICENSES.txt
-
-# Set up a HOME directory for non-root user
-RUN mkdir -p /nomos
-RUN chown 1000 /nomos
-ENV HOME="/nomos"
 
 # Switch to non-root user
 USER 1000

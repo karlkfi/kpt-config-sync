@@ -254,7 +254,6 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 	}
 
 	var hydrationErr hydrate.HydrationError
-	rendered := false
 	if _, err := os.Stat(absHydratedRoot.OSPath()); err == nil {
 		sourceState, hydrationErr = opts.readHydratedDir(absHydratedRoot, opts.HydratedLink, opts.reconcilerName)
 		if hydrationErr != nil {
@@ -263,7 +262,6 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 			return hydrationStatus, sourceStatus
 		}
 		hydrationStatus.message = RenderingSucceeded
-		rendered = true
 	} else if !os.IsNotExist(err) {
 		hydrationStatus.message = RenderingFailed
 		hydrationStatus.errs = status.InternalHydrationError(err, "unable to evaluate the hydrated path %s", absHydratedRoot.OSPath())
@@ -282,7 +280,7 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 	state.resetCache()
 
 	// Read all the files under state.policyDir
-	sourceStatus.errs = opts.readConfigFiles(&sourceState, rendered)
+	sourceStatus.errs = opts.readConfigFiles(&sourceState)
 	if sourceStatus.errs == nil {
 		// Set `state.cache.git` after `readConfigFiles` succeeded
 		state.cache.git = sourceState

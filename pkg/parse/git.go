@@ -75,7 +75,7 @@ type gitState struct {
 // - if rendered is true, state.policyDir contains the hydrated files.
 // - if rendered is false, state.policyDir contains the source files.
 // readConfigFiles should be called after gitState is populated.
-func (o *files) readConfigFiles(state *gitState, rendered bool) status.Error {
+func (o *files) readConfigFiles(state *gitState) status.Error {
 	if state == nil || state.commit == "" || state.policyDir.OSPath() == "" {
 		return status.InternalError("gitState is not populated yet")
 	}
@@ -89,11 +89,7 @@ func (o *files) readConfigFiles(state *gitState, rendered bool) status.Error {
 
 	var fileList []cmpath.Absolute
 	var err error
-	if rendered {
-		fileList, err = listFiles(policyDir)
-	} else {
-		fileList, err = git.ListFiles(policyDir)
-	}
+	fileList, err = listFiles(policyDir, map[string]bool{".git": true})
 	if err != nil {
 		return status.PathWrapError(errors.Wrap(err, "listing files in the configs directory"), policyDir.OSPath())
 	}
@@ -140,7 +136,7 @@ func (o *files) readHydratedDir(hydratedRoot cmpath.Absolute, link, reconciler s
 }
 
 // listFiles returns a list of all files in the specified directory.
-func listFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
+func listFiles(dir cmpath.Absolute, ignore map[string]bool) ([]cmpath.Absolute, error) {
 	var result []cmpath.Absolute
 	err := filepath.Walk(dir.OSPath(),
 		func(path string, fi os.FileInfo, err error) error {
@@ -148,6 +144,9 @@ func listFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
 				return err
 			}
 			if fi.IsDir() {
+				if _, contains := ignore[fi.Name()]; contains {
+					return filepath.SkipDir
+				}
 				return nil
 			}
 			abs, err := cmpath.AbsoluteOS(path)

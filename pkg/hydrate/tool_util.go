@@ -15,7 +15,6 @@
 package hydrate
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -153,28 +152,6 @@ func kustomizeBuild(input, output string, sendMetrics bool) HydrationError {
 	}
 
 	return nil
-}
-
-func runCommand(cwd, command string, args ...string) (string, error) {
-	cmdStr := command + " " + strings.Join(args, " ")
-
-	cmd := exec.Command(command, args...)
-	if cwd != "" {
-		cmd.Dir = cwd
-	}
-	outbuf := bytes.NewBuffer(nil)
-	errbuf := bytes.NewBuffer(nil)
-	cmd.Stdout = outbuf
-	cmd.Stderr = errbuf
-
-	err := cmd.Run()
-	stdout := outbuf.String()
-	stderr := errbuf.String()
-	if err != nil {
-		return "", fmt.Errorf("run(%s): %w: { stdout: %q, stderr: %q }", cmdStr, err, stdout, stderr)
-	}
-
-	return stdout, nil
 }
 
 // validateTool checks if the hydration tool is installed and if the installed

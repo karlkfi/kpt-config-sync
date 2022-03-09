@@ -189,47 +189,6 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	}
 }
 
-func TestHydrateRemoteResources(t *testing.T) {
-	nt := nomostest.New(t,
-		ntopts.SkipMonoRepo,
-		ntopts.Unstructured,
-	)
-
-	nt.T.Log("Add the remote-base root directory")
-	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-base", ".")
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add DRY configs to the repository")
-
-	nt.T.Log("Update RootSync to sync from the remote-base directory")
-	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
-	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "remote-base"}}}`)
-
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
-
-	expectedOrigin := "path: base/namespace.yaml\nrepo: https://github.com/config-sync-examples/kustomize-components\nref: main\n"
-	nt.T.Log("Validate resources are synced")
-	var expectedNamespaces = []string{"tenant-a"}
-	validateNamespaces(nt, expectedNamespaces, expectedOrigin)
-
-	nt.T.Log("Update kustomization.yaml to use a remote overlay")
-	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-overlay-kustomization.yaml", "./remote-base/kustomization.yaml")
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use a remote overlay")
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
-
-	nt.T.Log("Validate resources are synced")
-	expectedNamespaces = []string{"tenant-b"}
-	validateNamespaces(nt, expectedNamespaces, expectedOrigin)
-
-	// Update kustomization.yaml to use remote resources
-	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-resources-kustomization.yaml", "./remote-base/kustomization.yaml")
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use remote resources")
-	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
-
-	nt.T.Log("Validate resources are synced")
-	expectedNamespaces = []string{"tenant-a", "tenant-b", "tenant-c"}
-	expectedOrigin = "path: notCloned/base/namespace.yaml\nrepo: https://github.com/config-sync-examples/kustomize-components\nref: main\n"
-	validateNamespaces(nt, expectedNamespaces, expectedOrigin)
-}
-
 func TestHydrateResourcesInRelativePath(t *testing.T) {
 	nt := nomostest.New(t,
 		ntopts.SkipMonoRepo,
