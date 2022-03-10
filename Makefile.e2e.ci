@@ -52,7 +52,7 @@ __download_prober_creds:
 
 GCP_CLUSTER ?= $(USER)-cluster-1
 GCP_ZONE ?= us-central1-a
-GKE_E2E_TIMEOUT ?= 5h
+GKE_E2E_TIMEOUT ?= 6h
 
 # Run the golang e2e tests sequentially (--parallel 1) on a GKE cluster.
 # It requires a GKE cluster to be installed in `$(GCP_PROJECT)` and `$(GCP_ZONE)`/`$(GCP_REGION)`.
