@@ -41,7 +41,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
     ./cmd/admission-webhook
 
 # Hydration controller image
-FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.9.0 as hydration-controller
+FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.10.0 as hydration-controller
 WORKDIR /
 COPY --from=bins /go/bin/hydration-controller .
 COPY --from=bins /go/bin/render-helm-chart /usr/local/bin/render-helm-chart
@@ -71,7 +71,7 @@ USER 1000
 ENTRYPOINT ["/hydration-controller"]
 
 # Reconciler image
-FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.9.0 as reconciler
+FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.10.0 as reconciler
 WORKDIR /
 COPY --from=bins /go/bin/reconciler .
 RUN apt-get update && apt-get install -y git
@@ -112,7 +112,7 @@ COPY LICENSE LICENSE
 ENTRYPOINT ["/admission-webhook"]
 
 # Nomos image
-FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.9.0 as nomos
+FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.10.0 as nomos
 
 # https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
 RUN apt-get update && apt-get install -y \
