@@ -32,3 +32,15 @@ rules:
   - deployments
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - '*'
