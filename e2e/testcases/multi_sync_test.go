@@ -170,13 +170,6 @@ func TestMultiSyncs_Unstructured_MixedControl(t *testing.T) {
 	validateReconcilerResource(nt, kinds.ServiceAccount(), map[string]string{metadata.SyncNameLabel: rr1}, 1)
 	validateReconcilerResource(nt, kinds.ServiceAccount(), map[string]string{metadata.SyncNameLabel: nr1}, 2)
 
-	validateReconcilerResource(nt, kinds.ConfigMap(), map[string]string{"app": "reconciler"}, 4*4+6*3)
-	validateReconcilerResource(nt, kinds.ConfigMap(), map[string]string{metadata.SyncNamespaceLabel: configsync.ControllerNamespace}, 4*4)
-	validateReconcilerResource(nt, kinds.ConfigMap(), map[string]string{metadata.SyncNamespaceLabel: testNs}, 5*3)
-	validateReconcilerResource(nt, kinds.ConfigMap(), map[string]string{metadata.SyncNamespaceLabel: testNs2}, 3)
-	validateReconcilerResource(nt, kinds.ConfigMap(), map[string]string{metadata.SyncNameLabel: rr1}, 4)
-	validateReconcilerResource(nt, kinds.ConfigMap(), map[string]string{metadata.SyncNameLabel: nr1}, 6)
-
 	// Reconciler-manager doesn't copy the secret of RootSync's secretRef.
 	validateReconcilerResource(nt, kinds.Secret(), map[string]string{metadata.SyncNamespaceLabel: configsync.ControllerNamespace}, 0)
 	validateReconcilerResource(nt, kinds.Secret(), map[string]string{metadata.SyncNamespaceLabel: testNs}, 5)
@@ -572,9 +565,7 @@ func TestControllerValidationErrors(t *testing.T) {
 	if err := nt.Create(rs); err != nil {
 		nt.T.Fatal(err)
 	}
-	nt.WaitForRepoSyncStalledError(rs.Namespace, rs.Name, "Resource name validation",
-		fmt.Sprintf(`The resource name "ns-reconciler-%s-%s-34-git-sync" is invalid: must be no more than 63 characters.`,
-			syncNsTooLong.Name, syncNameTooLong))
+
 	t.Cleanup(func() {
 		if err := nt.Delete(rs); err != nil {
 			nt.T.Fatal(err)

@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"kpt.dev/configsync/e2e/nomostest"
 	"kpt.dev/configsync/e2e/nomostest/ntopts"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
@@ -34,39 +34,27 @@ import (
 
 func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
-		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
 
-	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
-	nsReconcilerBackendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
-	nsReconcilerFrontendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(frontendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
 	key := "GIT_SYNC_DEPTH"
-	defaultDepth := controllers.SyncDepthNoRev
 
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err := nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		return nt.ValidateMetricNotFound(ocmetrics.GitSyncDepthOverrideCountView.Name)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, controllers.SyncDepthNoRev))
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, controllers.SyncDepthNoRev))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -82,26 +70,9 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 
 	// Override the git sync depth setting for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"gitSyncDepth": 5}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "5"))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "5"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -113,36 +84,17 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync git sync depth to 33")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "33"))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "33"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, "5"))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
 
 	// Override the git sync depth setting for root-reconciler to 0
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"gitSyncDepth": 0}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "0"))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "0"))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -158,29 +110,6 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	// Clear `spec.override` from the RootSync
 	nt.MustMergePatch(rootSync, `{"spec": {"override": null}}`)
 
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, "33"))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
 	// Override the git sync depth setting for ns-reconciler-backend to 0
 	depth = 0
 	repoSyncBackend.Spec.Override.GitSyncDepth = &depth
@@ -188,10 +117,8 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync git sync depth to 0")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "0"))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "0"))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -203,25 +130,9 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncBackend")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "1"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -236,39 +147,26 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 
 func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
-		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
-
-	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
-	nsReconcilerBackendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
-	nsReconcilerFrontendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(frontendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
 	key := "GIT_SYNC_DEPTH"
-	defaultDepth := controllers.SyncDepthNoRev
 
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err := nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		return nt.ValidateMetricNotFound(ocmetrics.GitSyncDepthOverrideCountView.Name)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, controllers.SyncDepthNoRev))
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, controllers.SyncDepthNoRev))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -284,26 +182,9 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 
 	// Override the git sync depth setting for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"gitSyncDepth": 5}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "5"))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "5"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -315,36 +196,17 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync git sync depth to 33")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "33"))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "33"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, "5"))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
 
 	// Override the git sync depth setting for root-reconciler to 0
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"gitSyncDepth": 0}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "0"))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "0"))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -360,29 +222,6 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	// Clear `spec.override` from the RootSync
 	nt.MustMergePatch(rootSync, `{"spec": {"override": null}}`)
 
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, "33"))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
 	// Override the git sync depth setting for ns-reconciler-backend to 0
 	depth = 0
 	repoSyncBackend.Spec.Override.GitSyncDepth = &depth
@@ -390,10 +229,8 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync git sync depth to 0")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, "0"))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "0"))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -405,25 +242,9 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Clear `spec.override` from repoSyncBackend")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "1"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
 	if err != nil {
 		nt.T.Fatal(err)
 	}

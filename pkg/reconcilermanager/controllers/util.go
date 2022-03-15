@@ -16,7 +16,6 @@ package controllers
 
 import (
 	"os"
-	"sort"
 	"time"
 
 	"github.com/pkg/errors"
@@ -33,53 +32,114 @@ import (
 )
 
 // hydrationData returns configmap data for the hydration controller.
-func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, reconcilerName, pollPeriod string) map[string]string {
-	result := make(map[string]string)
-	result[reconcilermanager.ScopeKey] = string(scope)
-	result[reconcilermanager.ReconcilerNameKey] = reconcilerName
-	result[reconcilermanager.NamespaceNameKey] = string(scope)
-	result[reconcilermanager.SyncDirKey] = gitConfig.Dir
-	// Add Hydration Polling Period.
-	result[reconcilermanager.HydrationPollingPeriod] = pollPeriod
+func hydrationEnvs(gitConfig *v1beta1.Git, scope declared.Scope, reconcilerName, pollPeriod string) []corev1.EnvVar {
+	var result []corev1.EnvVar
+	result = append(result,
+		corev1.EnvVar{
+			Name:  reconcilermanager.ScopeKey,
+			Value: string(scope),
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.ReconcilerNameKey,
+			Value: reconcilerName,
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.NamespaceNameKey,
+			Value: string(scope),
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.SyncDirKey,
+			Value: gitConfig.Dir,
+		},
+		// Add Hydration Polling Period.
+		corev1.EnvVar{
+			Name:  reconcilermanager.HydrationPollingPeriod,
+			Value: pollPeriod,
+		})
 	return result
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod, statusMode string, reconcileTimeout string) map[string]string {
-	result := make(map[string]string)
-	result[reconcilermanager.ClusterNameKey] = clusterName
-	result[reconcilermanager.ScopeKey] = string(reconcilerScope)
-	result[reconcilermanager.SyncNameKey] = syncName
-	result[reconcilermanager.ReconcilerNameKey] = reconcilerName
-	result[reconcilermanager.NamespaceNameKey] = string(reconcilerScope)
-	result[reconcilermanager.PolicyDirKey] = gitConfig.Dir
-	result[reconcilermanager.GitRepoKey] = gitConfig.Repo
+func reconcilerEnvs(clusterName, syncName, reconcilerName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod, statusMode string, reconcileTimeout string) []corev1.EnvVar {
+	var result []corev1.EnvVar
 	if statusMode == "" {
 		statusMode = applier.StatusEnabled
 	}
-	result[reconcilermanager.StatusMode] = statusMode
-	result[reconcilermanager.ReconcileTimeout] = reconcileTimeout
-	// Add Filesystem Polling Period.
-	result[reconcilermanager.ReconcilerPollingPeriod] = pollPeriod
+
+	result = append(result,
+		corev1.EnvVar{
+			Name:  reconcilermanager.ClusterNameKey,
+			Value: clusterName,
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.ScopeKey,
+			Value: string(reconcilerScope),
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.SyncNameKey,
+			Value: syncName,
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.ReconcilerNameKey,
+			Value: reconcilerName,
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.NamespaceNameKey,
+			Value: string(reconcilerScope),
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.PolicyDirKey,
+			Value: gitConfig.Dir,
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.GitRepoKey,
+			Value: gitConfig.Repo,
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.StatusMode,
+			Value: statusMode,
+		},
+		corev1.EnvVar{
+			Name:  reconcilermanager.ReconcileTimeout,
+			Value: reconcileTimeout,
+		},
+		// Add Filesystem Polling Period.
+		corev1.EnvVar{
+			Name:  reconcilermanager.ReconcilerPollingPeriod,
+			Value: pollPeriod,
+		})
 
 	if gitConfig.Branch != "" {
-		result[reconcilermanager.GitBranchKey] = gitConfig.Branch
+		result = append(result, corev1.EnvVar{
+			Name:  reconcilermanager.GitBranchKey,
+			Value: gitConfig.Branch,
+		})
 	} else {
-		result[reconcilermanager.GitBranchKey] = "master"
+		result = append(result, corev1.EnvVar{
+			Name:  reconcilermanager.GitBranchKey,
+			Value: "master",
+		})
 	}
 	if gitConfig.Revision != "" {
-		result[reconcilermanager.GitRevKey] = gitConfig.Revision
+		result = append(result, corev1.EnvVar{
+			Name:  reconcilermanager.GitRevKey,
+			Value: gitConfig.Revision,
+		})
 	} else {
-		result[reconcilermanager.GitRevKey] = "HEAD"
+		result = append(result, corev1.EnvVar{
+			Name:  reconcilermanager.GitRevKey,
+			Value: "HEAD",
+		})
 	}
 	return result
 }
 
 // sourceFormatData returns configmap for reconciler.
-func sourceFormatData(format string) map[string]string {
-	result := make(map[string]string)
-	result[filesystem.SourceFormatKey] = format
-	return result
+func sourceFormatEnv(format string) corev1.EnvVar {
+	return corev1.EnvVar{
+		Name:  filesystem.SourceFormatKey,
+		Value: format,
+	}
 }
 
 func ownerReference(kind, name string, uid types.UID) metav1.OwnerReference {
@@ -91,30 +151,6 @@ func ownerReference(kind, name string, uid types.UID) metav1.OwnerReference {
 		BlockOwnerDeletion: pointer.BoolPtr(true),
 		UID:                uid,
 	}
-}
-
-func envFromSources(configmapRef map[string]*bool) []corev1.EnvFromSource {
-	var names []string
-	for name := range configmapRef {
-		names = append(names, name)
-	}
-	// We must sort the entries or else the Deployment's Pods will constantly get
-	// reloaded due to random ordering of the spec.template.spec.envFrom field.
-	sort.Strings(names)
-
-	var envFromSource []corev1.EnvFromSource
-	for _, name := range names {
-		cfgMap := corev1.EnvFromSource{
-			ConfigMapRef: &corev1.ConfigMapEnvSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: name,
-				},
-				Optional: configmapRef[name],
-			},
-		}
-		envFromSource = append(envFromSource, cfgMap)
-	}
-	return envFromSource
 }
 
 // PollingPeriod parses the polling duration from the environment variable.

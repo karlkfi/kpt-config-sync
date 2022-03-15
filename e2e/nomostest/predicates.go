@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/metadata"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -159,38 +158,6 @@ func HasExactlyLabelKeys(wantKeys ...string) Predicate {
 		sort.Strings(gotKeys)
 		if diff := cmp.Diff(wantKeys, gotKeys); diff != "" {
 			return errors.Errorf("unexpected diff in metadata.annotation keys: %s", diff)
-		}
-		return nil
-	}
-}
-
-// HasKeyValuePairInConfigMapData verifies that a ConfigMap object has a key/value pair.
-func HasKeyValuePairInConfigMapData(k, v string) Predicate {
-	return func(o client.Object) error {
-		cm, ok := o.(*corev1.ConfigMap)
-		if !ok {
-			return WrongTypeErr(cm, &corev1.ConfigMap{})
-		}
-		valueInCM, ok := cm.Data[k]
-		if !ok {
-			return errors.Errorf("The Data field of the %q ConfigMap does not have key %q.", core.GKNN(cm), k)
-		}
-		if valueInCM != v {
-			return errors.Errorf("The value for the %q key in the Data field of the %q ConfigMap should be %q, got %q.", k, core.GKNN(cm), v, valueInCM)
-		}
-		return nil
-	}
-}
-
-// MissingKeyInConfigMapData verifies that a ConfigMap object does not have a key.
-func MissingKeyInConfigMapData(k string) Predicate {
-	return func(o client.Object) error {
-		cm, ok := o.(*corev1.ConfigMap)
-		if !ok {
-			return WrongTypeErr(cm, &corev1.ConfigMap{})
-		}
-		if _, ok := cm.Data[k]; ok {
-			return errors.Errorf("The Data field of the %q ConfigMap should not have key %q.", core.GKNN(cm), k)
 		}
 		return nil
 	}
@@ -349,4 +316,53 @@ func hasStatus(o client.Object) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+// DeploymentHasEnvVar check whether the deployment contains environment variable
+// with specified name and value
+func DeploymentHasEnvVar(containerName, key, value string) Predicate {
+
+	return func(o client.Object) error {
+		d, ok := o.(*appsv1.Deployment)
+		if !ok {
+			return WrongTypeErr(o, d)
+		}
+		for _, c := range d.Spec.Template.Spec.Containers {
+			if c.Name == containerName {
+				for _, e := range c.Env {
+					if e.Name == key {
+						if e.Value == value {
+							return nil
+						}
+						return errors.Errorf("Container %q has the wrong value for environment variable %q. Expected : %q, actual %q", containerName, key, value, e.Value)
+					}
+				}
+			}
+		}
+
+		return errors.Errorf("Container %q does not contain environment variable %q", containerName, key)
+	}
+}
+
+// DeploymentMissingEnvVar check whether the deployment does not contain environment variable
+// with specified name and value
+func DeploymentMissingEnvVar(containerName, key string) Predicate {
+
+	return func(o client.Object) error {
+		d, ok := o.(*appsv1.Deployment)
+		if !ok {
+			return WrongTypeErr(o, d)
+		}
+		for _, c := range d.Spec.Template.Spec.Containers {
+			if c.Name == containerName {
+				for _, e := range c.Env {
+					if e.Name == key {
+						return errors.Errorf("Container %q should not have environment variable %q", containerName, key)
+					}
+				}
+			}
+		}
+
+		return nil
+	}
 }

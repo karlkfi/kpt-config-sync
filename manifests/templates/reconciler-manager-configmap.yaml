@@ -70,9 +70,6 @@ data:
                drop:
                - NET_RAW
              runAsUser: 65533
-           envFrom:
-           - configMapRef:
-               name: hydration-controller
            resources:
              limits:
                cpu: "1"
@@ -94,12 +91,6 @@ data:
            - name: repo
              mountPath: /repo
              readOnly: true
-           envFrom:
-           - configMapRef:
-               name: reconciler
-           - configMapRef:
-               name: source-format
-               optional: true
            resources:
              limits:
                cpu: "1"
@@ -135,9 +126,6 @@ data:
                drop:
                - NET_RAW
              runAsUser: 65533
-           envFrom:
-           - configMapRef:
-               name: git-sync
            resources:
              limits:
                cpu: "1"

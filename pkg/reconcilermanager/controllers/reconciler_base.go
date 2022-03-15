@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -30,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
@@ -38,7 +36,6 @@ import (
 	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/metadata"
 	"kpt.dev/configsync/pkg/metrics"
-	"kpt.dev/configsync/pkg/reconcilermanager"
 	"kpt.dev/configsync/pkg/util"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,54 +66,6 @@ type reconcilerBase struct {
 	reconcilerPollingPeriod time.Duration
 	hydrationPollingPeriod  time.Duration
 	membership              *hubv1.Membership
-}
-
-// configMapMutation provides an interface for named mutation functions passed to upsertConfigMaps
-type configMapMutation struct {
-	cmName string
-	data   map[string]string
-}
-
-func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []configMapMutation, labelMap map[string]string, refs ...metav1.OwnerReference) ([]byte, error) {
-	configMapData := make(map[string]map[string]string)
-
-	for _, mutation := range mutations {
-		// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
-		// the object must be performed.
-		// The name and namespace  must be filled in prior to calling CreateOrUpdate()
-		//
-		// Under the hood, CreateOrUpdate() first calls Get() on the object. If the
-		// object does not exist, Create() will be called. If it does exist, Update()
-		// will be called. Just before calling either Create() or Update(), the mutate
-		// callback will be called.
-
-		// CreateOrUpdate configmaps for a root or namespace Reconciler.
-		var childCM corev1.ConfigMap
-		childCM.Name = mutation.cmName
-		childCM.Namespace = v1.NSConfigManagementSystem
-		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			if len(refs) > 0 {
-				childCM.OwnerReferences = refs
-			}
-			r.addLabels(&childCM, labelMap)
-			childCM.Labels["app"] = reconcilermanager.Reconciler
-			childCM.Data = mutation.data
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-		if op != controllerutil.OperationResultNone {
-			r.log.Info("ConfigMap successfully reconciled", operationSubjectName, mutation.cmName, executedOperation, op)
-		}
-
-		configMapData[mutation.cmName] = mutation.data
-	}
-
-	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
-	// Reconciler deployment's spec.template.annotation updated with the hash to recreate the
-	// deployment in the event of configmap update.
-	return hash(configMapData)
 }
 
 func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name, auth, email string, labelMap map[string]string, refs ...metav1.OwnerReference) error {
@@ -355,19 +304,6 @@ func mutateContainerResource(ctx context.Context, c *corev1.Container, override 
 			}
 		}
 	}
-}
-
-// validateResourcesName will validate potential resource name using IsDNS1123Label function
-// only configMap names are validated since generate the longest names compared to other resources
-func (r *reconcilerBase) validateResourcesName(mutations []configMapMutation) error {
-	for _, mutation := range mutations {
-		name := mutation.cmName
-		errs := validation.IsDNS1123Label(name)
-		if len(errs) > 0 {
-			return fmt.Errorf("The resource name %q is invalid: %s. To fix it, update the resource name", name, strings.Join(errs, ", "))
-		}
-	}
-	return nil
 }
 
 // addLabels will copy the content of labelMaps to the current resource labels

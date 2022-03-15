@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
@@ -128,16 +127,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, err
 	}
 
-	repoCMMutations := r.repoConfigMapMutations(ctx, &rs, reconcilerName)
-	if err = r.validateResourcesName(repoCMMutations); err != nil {
-		log.Error(err, "Resource name failed validation")
-		reposync.SetStalled(&rs, "Resource name validation", err)
-		// We intentionally overwrite the previous error here since we do not want
-		// to return it to the controller runtime.
-		err = r.updateStatus(ctx, &rs, log)
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, err
-	}
+	repoContainerEnvs := r.populateRepoContainerEnvs(ctx, &rs, reconcilerName)
 
 	secretName := ReconcilerResourceName(reconcilerName, rs.Spec.SecretRef.Name)
 	if err := r.validateNamespaceSecret(ctx, &rs, secretName); err != nil {
@@ -163,16 +153,6 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, nil
 	}
 
-	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, repoCMMutations, reposyncLabelMap)
-	if err != nil {
-		log.Error(err, "Failed to create/update ConfigMap")
-		reposync.SetStalled(&rs, "ConfigMap", err)
-		_ = r.updateStatus(ctx, &rs, log)
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
-	}
-
 	// Overwrite reconciler pod ServiceAccount.
 	if err := r.upsertServiceAccount(ctx, reconcilerName, rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail, reposyncLabelMap); err != nil {
 		log.Error(err, "Failed to create/update ServiceAccount")
@@ -191,7 +171,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, errors.Wrap(err, "RoleBinding reconcile failed")
 	}
 
-	mut := r.mutationsFor(ctx, rs, configMapDataHash)
+	mut := r.mutationsFor(ctx, rs, repoContainerEnvs)
 
 	// Upsert Namespace reconciler deployment.
 	op, err := r.upsertDeployment(ctx, reconcilerName, v1.NSConfigManagementSystem, reposyncLabelMap, mut)
@@ -475,29 +455,20 @@ func requeueRepoSyncRequest(obj client.Object, rs *v1beta1.RepoSync) []reconcile
 	}
 }
 
-func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1beta1.RepoSync, reconcilerName string) []configMapMutation {
-	return []configMapMutation{
-		{
-			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.GitSync),
-			data: gitSyncData(ctx, options{
-				ref:         rs.Spec.Git.Revision,
-				branch:      rs.Spec.Git.Branch,
-				repo:        rs.Spec.Git.Repo,
-				secretType:  rs.Spec.Git.Auth,
-				period:      v1beta1.GetPeriodSecs(&rs.Spec.Git),
-				proxy:       rs.Spec.Proxy,
-				depth:       rs.Spec.Override.GitSyncDepth,
-				noSSLVerify: rs.Spec.Git.NoSSLVerify,
-			}),
-		},
-		{
-			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.HydrationController),
-			data:   hydrationData(&rs.Spec.Git, declared.Scope(rs.Namespace), reconcilerName, r.hydrationPollingPeriod.String()),
-		},
-		{
-			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler),
-			data:   reconcilerData(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode, v1beta1.GetReconcileTimeout(rs.Spec.Override.ReconcileTimeout)),
-		},
+func (r *RepoSyncReconciler) populateRepoContainerEnvs(ctx context.Context, rs *v1beta1.RepoSync, reconcilerName string) map[string][]corev1.EnvVar {
+	return map[string][]corev1.EnvVar{
+		reconcilermanager.GitSync: gitSyncEnvs(ctx, options{
+			ref:         rs.Spec.Git.Revision,
+			branch:      rs.Spec.Git.Branch,
+			repo:        rs.Spec.Git.Repo,
+			secretType:  rs.Spec.Git.Auth,
+			period:      v1beta1.GetPeriodSecs(&rs.Spec.Git),
+			proxy:       rs.Spec.Proxy,
+			depth:       rs.Spec.Override.GitSyncDepth,
+			noSSLVerify: rs.Spec.Git.NoSSLVerify,
+		}),
+		reconcilermanager.HydrationController: hydrationEnvs(&rs.Spec.Git, declared.Scope(rs.Namespace), reconcilerName, r.hydrationPollingPeriod.String()),
+		reconcilermanager.Reconciler:          reconcilerEnvs(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode, v1beta1.GetReconcileTimeout(rs.Spec.Override.ReconcileTimeout)),
 	}
 }
 
@@ -566,16 +537,13 @@ func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1beta1.RepoS
 	return err
 }
 
-func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSync, configMapDataHash []byte) mutateFn {
+func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSync, containerEnvs map[string][]corev1.EnvVar) mutateFn {
 	return func(obj client.Object) error {
 		d, ok := obj.(*appsv1.Deployment)
 		if !ok {
 			return errors.Errorf("expected appsv1 Deployment, got: %T", obj)
 		}
 		reconcilerName := reconciler.NsReconcilerName(rs.Namespace, rs.Name)
-		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
-		// reconciler creates/updates.
-		core.SetAnnotation(&d.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 		// Only inject the FWI credentials when the auth type is gcpserviceaccount and the membership info is available.
 		injectFWICreds := rs.Spec.Auth == configsync.GitSecretGCPServiceAccount && r.membership != nil
@@ -605,26 +573,20 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 		for _, container := range templateSpec.Containers {
 			switch container.Name {
 			case reconcilermanager.Reconciler:
-				configmapRef := make(map[string]*bool)
-				configmapRef[ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
-				container.EnvFrom = envFromSources(configmapRef)
+				container.Env = append(container.Env, containerEnvs[container.Name]...)
 				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case reconcilermanager.HydrationController:
-				configmapRef := make(map[string]*bool)
-				configmapRef[ReconcilerResourceName(reconcilerName, reconcilermanager.HydrationController)] = pointer.BoolPtr(false)
-				container.EnvFrom = envFromSources(configmapRef)
+				container.Env = append(container.Env, containerEnvs[container.Name]...)
 				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case reconcilermanager.GitSync:
-				configmapRef := make(map[string]*bool)
-				configmapRef[ReconcilerResourceName(reconcilerName, reconcilermanager.GitSync)] = pointer.BoolPtr(false)
-				container.EnvFrom = envFromSources(configmapRef)
+				container.Env = append(container.Env, containerEnvs[container.Name]...)
 				// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
 				container.VolumeMounts = volumeMounts(rs.Spec.Auth,
 					container.VolumeMounts)
 				// Update Environment variables for `token` Auth, which
 				// passes the credentials as the Username and Password.
 				if authTypeToken(rs.Spec.Auth) {
-					container.Env = gitSyncTokenAuthEnv(secretName)
+					container.Env = append(container.Env, gitSyncTokenAuthEnv(secretName)...)
 				}
 				keys := GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
 				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)

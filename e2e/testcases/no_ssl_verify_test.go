@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"kpt.dev/configsync/e2e/nomostest"
 	"kpt.dev/configsync/e2e/nomostest/ntopts"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
@@ -26,42 +26,32 @@ import (
 	ocmetrics "kpt.dev/configsync/pkg/metrics"
 	"kpt.dev/configsync/pkg/reconciler"
 	"kpt.dev/configsync/pkg/reconcilermanager"
-	"kpt.dev/configsync/pkg/reconcilermanager/controllers"
 	"kpt.dev/configsync/pkg/testing/fake"
 )
 
 func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
-		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
 
-	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
-	nsReconcilerBackendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
-	nsReconcilerFrontendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(frontendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
 	key := "GIT_SSL_NO_VERIFY"
-	value := "true"
 
-	// Verify the root-reconciler-git-sync ConfigMap does not have the key.
-	err := nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap does not have the key.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap does not have the key.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		return nt.ValidateMetricNotFound(ocmetrics.NoSSLVerifyCountView.Name)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	// verify the deployment doesn't have the key yet
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -77,24 +67,9 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 
 	// Set noSSLVerify to true for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": true}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, value))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "true"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -105,18 +80,9 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to true")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, value))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "true"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, value))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -130,10 +96,8 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 
 	// Set noSSLVerify to false for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": false}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -145,22 +109,9 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to false")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -175,36 +126,27 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 
 func TestNoSSLVerifyV1Beta1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName),
-		ntopts.NamespaceRepo(frontendNamespace, configsync.RepoSyncName))
+		ntopts.NamespaceRepo(backendNamespace, configsync.RepoSyncName))
 	nt.WaitForRepoSyncs()
 
-	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
-	nsReconcilerBackendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
-	nsReconcilerFrontendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(frontendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
 	key := "GIT_SSL_NO_VERIFY"
-	value := "true"
 
-	// Verify the root-reconciler-git-sync ConfigMap does not have the key.
-	err := nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap does not have the key.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap does not have the key.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		return nt.ValidateMetricNotFound(ocmetrics.NoSSLVerifyCountView.Name)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	// verify the deployment doesn't have the key yet
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -221,24 +163,9 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 
 	// Set noSSLVerify to true for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": true}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, value))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "true"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -249,18 +176,9 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to true")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-			nomostest.HasKeyValuePairInConfigMapData(key, value))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentHasEnvVar(reconcilermanager.GitSync, key, "true"))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
-		nomostest.HasKeyValuePairInConfigMapData(key, value))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -274,10 +192,8 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 
 	// Set noSSLVerify to false for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": false}}}`)
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -289,22 +205,9 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update backend RepoSync NoSSLVerify to false")
 	nt.WaitForRepoSyncs()
 
-	// Verify the ns-reconciler-backend-git-sync ConfigMap has the correct git sync depth setting.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(nsReconcilerBackendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
+		return nt.Validate(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, &appsv1.Deployment{}, nomostest.DeploymentMissingEnvVar(reconcilermanager.GitSync, key))
 	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the root-reconciler-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(rootReconcilerGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
-	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
