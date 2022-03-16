@@ -8,7 +8,7 @@
 # between these two files will eliminate any confusion on what versions are
 # actually being used.
 
-ARG KUBEKINS="v20210813-aac8152bd-1.22"
+ARG KUBEKINS="v20220204-29ea0e1be-1.22"
 
 FROM gcr.io/gke-test-infra/kubekins-e2e:${KUBEKINS}
 
