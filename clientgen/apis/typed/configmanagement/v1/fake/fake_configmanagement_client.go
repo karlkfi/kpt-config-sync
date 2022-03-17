@@ -3,9 +3,9 @@
 package fake
 
 import (
-	v1 "kpt.dev/configsync/clientgen/apis/typed/configmanagement/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
+	v1 "kpt.dev/configsync/clientgen/apis/typed/configmanagement/v1"
 )
 
 type FakeConfigmanagementV1 struct {

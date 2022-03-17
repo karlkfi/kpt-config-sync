@@ -6,14 +6,14 @@ import (
 	"context"
 	time "time"
 
-	apis "kpt.dev/configsync/clientgen/apis"
-	internalinterfaces "kpt.dev/configsync/clientgen/informer/internalinterfaces"
-	v1 "kpt.dev/configsync/clientgen/listers/configmanagement/v1"
-	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+	apis "kpt.dev/configsync/clientgen/apis"
+	internalinterfaces "kpt.dev/configsync/clientgen/informer/internalinterfaces"
+	v1 "kpt.dev/configsync/clientgen/listers/configmanagement/v1"
+	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 )
 
 // NamespaceSelectorInformer provides access to a shared informer and lister for

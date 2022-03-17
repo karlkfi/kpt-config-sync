@@ -3,6 +3,11 @@
 package fake
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/discovery"
+	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/testing"
 	clientset "kpt.dev/configsync/clientgen/apis"
 	configmanagementv1 "kpt.dev/configsync/clientgen/apis/typed/configmanagement/v1"
 	fakeconfigmanagementv1 "kpt.dev/configsync/clientgen/apis/typed/configmanagement/v1/fake"
@@ -10,11 +15,6 @@ import (
 	fakeconfigsyncv1alpha1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1alpha1/fake"
 	configsyncv1beta1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1beta1"
 	fakeconfigsyncv1beta1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1beta1/fake"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/discovery"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/testing"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -62,19 +62,22 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // ConfigmanagementV1 retrieves the ConfigmanagementV1Client
 func (c *Clientset) ConfigmanagementV1() configmanagementv1.ConfigmanagementV1Interface {
 	return &fakeconfigmanagementv1.FakeConfigmanagementV1{Fake: &c.Fake}
 }
 
-// ConfigsyncV1alpha1 retrieves the ConfigsyncV1alpha1Client
-func (c *Clientset) ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface {
-	return &fakeconfigsyncv1alpha1.FakeConfigsyncV1alpha1{Fake: &c.Fake}
-}
-
 // ConfigsyncV1beta1 retrieves the ConfigsyncV1beta1Client
 func (c *Clientset) ConfigsyncV1beta1() configsyncv1beta1.ConfigsyncV1beta1Interface {
 	return &fakeconfigsyncv1beta1.FakeConfigsyncV1beta1{Fake: &c.Fake}
+}
+
+// ConfigsyncV1alpha1 retrieves the ConfigsyncV1alpha1Client
+func (c *Clientset) ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface {
+	return &fakeconfigsyncv1alpha1.FakeConfigsyncV1alpha1{Fake: &c.Fake}
 }

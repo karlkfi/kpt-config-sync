@@ -3,9 +3,9 @@
 package v1alpha1
 
 import (
+	rest "k8s.io/client-go/rest"
 	"kpt.dev/configsync/clientgen/apis/scheme"
 	v1alpha1 "kpt.dev/configsync/pkg/api/configsync/v1alpha1"
-	rest "k8s.io/client-go/rest"
 )
 
 type ConfigsyncV1alpha1Interface interface {

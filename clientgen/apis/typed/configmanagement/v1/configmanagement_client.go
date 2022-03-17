@@ -3,9 +3,9 @@
 package v1
 
 import (
+	rest "k8s.io/client-go/rest"
 	"kpt.dev/configsync/clientgen/apis/scheme"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
-	rest "k8s.io/client-go/rest"
 )
 
 type ConfigmanagementV1Interface interface {

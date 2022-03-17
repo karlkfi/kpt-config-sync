@@ -6,12 +6,12 @@ import (
 	"context"
 	"time"
 
-	scheme "kpt.dev/configsync/clientgen/apis/scheme"
-	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+	scheme "kpt.dev/configsync/clientgen/apis/scheme"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 )
 
 // HierarchyConfigsGetter has a method to return a HierarchyConfigInterface.

@@ -7,13 +7,13 @@ import (
 	sync "sync"
 	time "time"
 
-	apis "kpt.dev/configsync/clientgen/apis"
-	configmanagement "kpt.dev/configsync/clientgen/informer/configmanagement"
-	internalinterfaces "kpt.dev/configsync/clientgen/informer/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
+	apis "kpt.dev/configsync/clientgen/apis"
+	configmanagement "kpt.dev/configsync/clientgen/informer/configmanagement"
+	internalinterfaces "kpt.dev/configsync/clientgen/informer/internalinterfaces"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
