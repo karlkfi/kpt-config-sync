@@ -26,15 +26,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	hubv1 "kpt.dev/configsync/pkg/api/hub/v1"
 	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/declared"
 	"kpt.dev/configsync/pkg/metadata"
@@ -249,7 +252,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 }
 
 // SetupWithManager registers RepoSync controller with reconciler-manager.
-func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
+func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager, dc dynamic.Interface, mapping *meta.RESTMapping) error {
 	// Index the `gitSecretRefName` field, so that we will be able to lookup RepoSync be a referenced `SecretRef` name.
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1beta1.RepoSync{}, gitSecretRefField, func(rawObj client.Object) []string {
 		rs := rawObj.(*v1beta1.RepoSync)
@@ -261,7 +264,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		return err
 	}
 
-	return controllerruntime.NewControllerManagedBy(mgr).
+	controllerBuilder := controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1beta1.RepoSync{}).
 		// Custom Watch to trigger Reconcile for objects created by RepoSync controller.
 		Watches(&source.Kind{Type: &corev1.Secret{}},
@@ -275,8 +278,59 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}},
 			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Complete(r)
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
+
+	if r.fleetMembershipCRDExists(dc, mapping) {
+		// Custom Watch for membership to trigger reconciliation.
+		controllerBuilder.Watches(&source.Kind{Type: &hubv1.Membership{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapMembershipToRepoSyncs(dc, mapping)),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	}
+	return controllerBuilder.Complete(r)
+}
+
+func (r *RepoSyncReconciler) mapMembershipToRepoSyncs(dc dynamic.Interface, mapping *meta.RESTMapping) func(client.Object) []reconcile.Request {
+	return func(o client.Object) []reconcile.Request {
+		// Clear the membership if the cluster is unregistered
+		if !r.fleetMembershipCRDExists(dc, mapping) {
+			r.membership = nil
+			return r.requeueAllRepoSyncs()
+		}
+
+		m, isMembership := o.(*hubv1.Membership)
+		if !isMembership {
+			klog.Error("object is not a type of membership, gvk ", o.GetObjectKind().GroupVersionKind())
+			return nil
+		}
+		if m.Name != fleetMembershipName {
+			klog.Error("membership is %s, not 'membership'", m.Name)
+			return nil
+		}
+		r.membership = m
+		return r.requeueAllRepoSyncs()
+	}
+}
+
+func (r *RepoSyncReconciler) requeueAllRepoSyncs() []reconcile.Request {
+	allRepoSyncs := &v1beta1.RepoSyncList{}
+	if err := r.client.List(context.Background(), allRepoSyncs); err != nil {
+		klog.Error("failed to list all RepoSyncs: %v", err)
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(allRepoSyncs.Items))
+	for i, rs := range allRepoSyncs.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      rs.GetName(),
+				Namespace: rs.GetNamespace(),
+			},
+		}
+	}
+	if len(requests) > 0 {
+		klog.Infof("Changes to membership trigger reconciliations for %d RepoSync objects.", len(allRepoSyncs.Items))
+	}
+	return requests
 }
 
 // mapSecretToRepoSyncs define a mapping from the Secret object to its attached
@@ -519,6 +573,14 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
+
+		// Only inject the FWI credentials when the auth type is gcpserviceaccount and the membership info is available.
+		injectFWICreds := rs.Spec.Auth == configsync.GitSecretGCPServiceAccount && r.membership != nil
+		if injectFWICreds {
+			if err := r.injectFleetWorkloadIdentityCredentials(&d.Spec.Template, rs.Spec.GCPServiceAccountEmail); err != nil {
+				return err
+			}
+		}
 		// Add unique reconciler label
 		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconcilerName)
 		core.SetLabel(&d.Spec.Template, metadata.SyncNameLabel, rs.Name)
@@ -534,7 +596,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 		// authenticate with the git repository using the authorization method specified
 		// in the RepoSync CR.
 		secretName := ReconcilerResourceName(reconcilerName, rs.Spec.SecretRef.Name)
-		templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, secretName)
+		templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, secretName, r.membership)
 		var updatedContainers []corev1.Container
 		// Mutate spec.Containers to update name, configmap references and volumemounts.
 		for _, container := range templateSpec.Containers {
@@ -570,7 +632,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 			case GceNodeAskpassSidecarName:
 				// container gcenode-askpass-sidecar is added to the reconciler
 				// deployment when auth: gcenode or auth: gcpserveraccount.
-				configureGceNodeAskPass(&container)
+				configureGceNodeAskPass(&container, rs.Spec.GCPServiceAccountEmail, injectFWICreds)
 			default:
 				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 			}
@@ -583,7 +645,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 		switch rs.Spec.Auth {
 		case configsync.GitSecretGCPServiceAccount, configsync.GitSecretGCENode:
 			if !containsGCENodeAskPassSidecar(updatedContainers) {
-				sidecar := gceNodeAskPassSidecar()
+				sidecar := gceNodeAskPassSidecar(rs.Spec.GCPServiceAccountEmail, injectFWICreds)
 				updatedContainers = append(updatedContainers, sidecar)
 			}
 		}

@@ -19,12 +19,15 @@ import (
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/klog/klogr"
 	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	hubv1 "kpt.dev/configsync/pkg/api/hub/v1"
+	"kpt.dev/configsync/pkg/kinds"
 	"kpt.dev/configsync/pkg/metrics"
 	"kpt.dev/configsync/pkg/profiler"
 	"kpt.dev/configsync/pkg/reconcilermanager"
@@ -55,6 +58,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = configmanagementv1.AddToScheme(scheme)
 	_ = v1beta1.AddToScheme(scheme)
+	_ = hubv1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -78,10 +82,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	dc, err := dynamic.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "failed to build dynamic client")
+		os.Exit(1)
+	}
+	crdRESTMapping, err := mgr.GetRESTMapper().RESTMapping(kinds.CustomResourceDefinition())
+	if err != nil {
+		setupLog.Error(err, "failed to get mapping of CRD type")
+		os.Exit(1)
+	}
+
 	repoSync := controllers.NewRepoSyncReconciler(*clusterName, *reconcilerPollingPeriod, *hydrationPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RepoSync"),
 		mgr.GetScheme())
-	if err := repoSync.SetupWithManager(mgr); err != nil {
+	if err := repoSync.SetupWithManager(mgr, dc, crdRESTMapping); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RepoSync")
 		os.Exit(1)
 	}
@@ -89,7 +104,7 @@ func main() {
 	rootSync := controllers.NewRootSyncReconciler(*clusterName, *reconcilerPollingPeriod, *hydrationPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RootSync"),
 		mgr.GetScheme())
-	if err := rootSync.SetupWithManager(mgr); err != nil {
+	if err := rootSync.SetupWithManager(mgr, dc, crdRESTMapping); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RootSync")
 		os.Exit(1)
 	}

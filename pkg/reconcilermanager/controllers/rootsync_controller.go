@@ -26,15 +26,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	hubv1 "kpt.dev/configsync/pkg/api/hub/v1"
 	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/declared"
 	"kpt.dev/configsync/pkg/metadata"
@@ -243,7 +246,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 }
 
 // SetupWithManager registers RootSync controller with reconciler-manager.
-func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
+func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager, dc dynamic.Interface, mapping *meta.RESTMapping) error {
 	// Index the `gitSecretRefName` field, so that we will be able to lookup RootSync be a referenced `SecretRef` name.
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1beta1.RootSync{}, gitSecretRefField, func(rawObj client.Object) []string {
 		rs := rawObj.(*v1beta1.RootSync)
@@ -255,13 +258,64 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		return err
 	}
 
-	return controllerruntime.NewControllerManagedBy(mgr).
+	controllerBuilder := controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1beta1.RootSync{}).
 		Owns(&appsv1.Deployment{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}},
 			handler.EnqueueRequestsFromMapFunc(r.mapSecretToRootSyncs),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Complete(r)
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
+
+	if r.fleetMembershipCRDExists(dc, mapping) {
+		// Custom Watch for membership to trigger reconciliation.
+		controllerBuilder.Watches(&source.Kind{Type: &hubv1.Membership{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapMembershipToRootSyncs(dc, mapping)),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	}
+	return controllerBuilder.Complete(r)
+}
+
+func (r *RootSyncReconciler) mapMembershipToRootSyncs(dc dynamic.Interface, mapping *meta.RESTMapping) func(client.Object) []reconcile.Request {
+	return func(o client.Object) []reconcile.Request {
+		// Clear the membership if the cluster is unregistered
+		if !r.fleetMembershipCRDExists(dc, mapping) {
+			r.membership = nil
+			return r.requeueAllRootSyncs()
+		}
+
+		m, isMembership := o.(*hubv1.Membership)
+		if !isMembership {
+			klog.Error("object is not a type of membership, gvk ", o.GetObjectKind().GroupVersionKind())
+			return nil
+		}
+		if m.Name != fleetMembershipName {
+			klog.Error("membership is %s, not 'membership'", m.Name)
+			return nil
+		}
+		r.membership = m
+		return r.requeueAllRootSyncs()
+	}
+}
+
+func (r *RootSyncReconciler) requeueAllRootSyncs() []reconcile.Request {
+	allRootSyncs := &v1beta1.RootSyncList{}
+	if err := r.client.List(context.Background(), allRootSyncs); err != nil {
+		klog.Error("failed to list all RootSyncs: %v", err)
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(allRootSyncs.Items))
+	for i, rs := range allRootSyncs.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      rs.GetName(),
+				Namespace: rs.GetNamespace(),
+			},
+		}
+	}
+	if len(requests) > 0 {
+		klog.Infof("Changes to membership trigger reconciliations for %d RootSync objects.", len(allRootSyncs.Items))
+	}
+	return requests
 }
 
 // mapSecretToRootSyncs define a mapping from the Secret object to its attached
@@ -417,6 +471,14 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RootSy
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
+		// Only inject the FWI credentials when the auth type is gcpserviceaccount and the membership info is available.
+		injectFWICreds := rs.Spec.Auth == configsync.GitSecretGCPServiceAccount && r.membership != nil
+		if injectFWICreds {
+			if err := r.injectFleetWorkloadIdentityCredentials(&d.Spec.Template, rs.Spec.GCPServiceAccountEmail); err != nil {
+				return err
+			}
+		}
+
 		// Add unique reconciler label
 		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconcilerName)
 		core.SetLabel(&d.Spec.Template, metadata.SyncNameLabel, rs.Name)
@@ -434,7 +496,7 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RootSy
 		// Secret reference is the name of the secret used by git-sync container to
 		// authenticate with the git repository using the authorization method specified
 		// in the RootSync CR.
-		templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, rs.Spec.SecretRef.Name)
+		templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, rs.Spec.SecretRef.Name, r.membership)
 
 		var updatedContainers []corev1.Container
 		// Mutate spec.Containers to update configmap references.
@@ -475,7 +537,7 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RootSy
 			case GceNodeAskpassSidecarName:
 				// container gcenode-askpass-sidecar is added to the reconciler
 				// deployment when auth: gcenode or auth: gcpserveraccount.
-				configureGceNodeAskPass(&container)
+				configureGceNodeAskPass(&container, rs.Spec.GCPServiceAccountEmail, injectFWICreds)
 			default:
 				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 			}
@@ -488,7 +550,7 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RootSy
 		switch rs.Spec.Auth {
 		case configsync.GitSecretGCPServiceAccount, configsync.GitSecretGCENode:
 			if !containsGCENodeAskPassSidecar(updatedContainers) {
-				sidecar := gceNodeAskPassSidecar()
+				sidecar := gceNodeAskPassSidecar(rs.Spec.GCPServiceAccountEmail, injectFWICreds)
 				updatedContainers = append(updatedContainers, sidecar)
 			}
 		}

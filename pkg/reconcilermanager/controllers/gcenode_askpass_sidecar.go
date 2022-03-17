@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"fmt"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -26,31 +27,65 @@ const (
 	gceNodeAskpassImageTag = "20210831174857"
 	// GceNodeAskpassSidecarName is the container name of gcenode-askpass-sidecar.
 	GceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
-	gceNodeAskpassPort        = 9102
+	// gceNodeAskpassPort is the port number of the askpass-sidecar container.
+	gceNodeAskpassPort = 9102
+	// gcpKSATokenDir specifies the mount path of the GCP KSA directory, including the token file and credentials file.
+	gcpKSATokenDir = "/var/run/secrets/tokens/gcp-ksa"
+	// googleApplicationCredentialsFile is the name of the Google application credentials file mounted in the container.
+	googleApplicationCredentialsFile = "google-application-credentials.json"
+	// googleApplicationCredentialsEnvKey is the name of the GOOGLE_APPLICATION_CREDENTIALS env variable in the askpass-sidecar container.
+	googleApplicationCredentialsEnvKey = "GOOGLE_APPLICATION_CREDENTIALS"
+	// gsaEmailEnvKey is the name of the GSA_EMAIL env variable in the askpass-sidecar container.
+	gsaEmailEnvKey = "GSA_EMAIL"
+	// gcpKSAVolumeName is the name of the volume used by the askpass-sidecar container.
+	gcpKSAVolumeName = "gcp-ksa"
+	// gsaTokenPath is the name of the GCP KSA token file mounted in the askpass-sidecar container.
+	gsaTokenPath = "token"
+	// defaultGCEServiceAccountEmail indicates it the askpass-sidecar container uses
+	// Compute Engine default service account when gcpServiceAccountEmails is not set (authType is `gcenode`).
+	defaultGCEServiceAccountEmail = "Google Compute Engine default service account"
 )
 
 func gceNodeAskPassContainerImage(name, tag string) string {
 	return fmt.Sprintf("gcr.io/config-management-release/%v:%v", name, tag)
 }
 
-func configureGceNodeAskPass(cr *corev1.Container) {
+func configureGceNodeAskPass(cr *corev1.Container, gsaEmail string, injectFWICreds bool) {
+	if injectFWICreds {
+		cr.Env = append(cr.Env, corev1.EnvVar{
+			Name:  googleApplicationCredentialsEnvKey,
+			Value: filepath.Join(gcpKSATokenDir, googleApplicationCredentialsFile),
+		})
+		cr.VolumeMounts = append(cr.VolumeMounts, corev1.VolumeMount{
+			Name:      gcpKSAVolumeName,
+			ReadOnly:  true,
+			MountPath: gcpKSATokenDir,
+		})
+	}
+	if gsaEmail == "" {
+		gsaEmail = defaultGCEServiceAccountEmail
+	}
+	cr.Env = append(cr.Env, corev1.EnvVar{
+		Name:  gsaEmailEnvKey,
+		Value: gsaEmail,
+	})
 	cr.Name = GceNodeAskpassSidecarName
 	cr.Image = gceNodeAskPassContainerImage(GceNodeAskpassSidecarName, gceNodeAskpassImageTag)
-	cr.Args = addPort(gceNodeAskpassPort)
+	cr.Args = buildArgs(gceNodeAskpassPort)
 	cr.SecurityContext = setSecurityContext()
 	cr.TerminationMessagePolicy = corev1.TerminationMessageReadFile
 	cr.TerminationMessagePath = corev1.TerminationMessagePathDefault
 	cr.ImagePullPolicy = corev1.PullIfNotPresent
 }
 
-func gceNodeAskPassSidecar() corev1.Container {
+func gceNodeAskPassSidecar(gsaEmail string, injectFWICreds bool) corev1.Container {
 	var cr corev1.Container
-	configureGceNodeAskPass(&cr)
+	configureGceNodeAskPass(&cr, gsaEmail, injectFWICreds)
 	return cr
 }
 
-func addPort(port int) []string {
-	return []string{fmt.Sprintf("--port=%v", port)}
+func buildArgs(port int) []string {
+	return []string{fmt.Sprintf("--port=%v", port), "--logtostderr"}
 }
 
 // setSecurityContext sets the security context for the gcenode-askpass-sidecar container.

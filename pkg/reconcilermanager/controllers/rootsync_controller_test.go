@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +35,7 @@ import (
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	hubv1 "kpt.dev/configsync/pkg/api/hub/v1"
 	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/declared"
 	"kpt.dev/configsync/pkg/kinds"
@@ -1242,7 +1244,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setAnnotations(deploymentAnnotation(rsAnnotationGCENode)),
 		setServiceAccountName(rootReconcilerName),
-		gceNodeMutator(rootReconcilerName),
+		gceNodeMutator(rootReconcilerName, gcpSAEmail),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -1453,7 +1455,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootDeployment2 := rootSyncDeployment(rootReconcilerName2,
 		setAnnotations(deploymentAnnotation("626f608208fb5b4ac11893bddb934a64")),
 		setServiceAccountName(rootReconcilerName2),
-		gceNodeMutator(rootReconcilerName2),
+		gceNodeMutator(rootReconcilerName2, defaultGCEServiceAccountEmail),
 	)
 	wantDeployments[core.IDOf(rootDeployment2)] = rootDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1501,7 +1503,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootDeployment3 := rootSyncDeployment(rootReconcilerName3,
 		setAnnotations(deploymentAnnotation("0205fbc98b62c4e4b20d7334b0d67c6a")),
 		setServiceAccountName(rootReconcilerName3),
-		gceNodeMutator(rootReconcilerName3),
+		gceNodeMutator(rootReconcilerName3, gcpSAEmail),
 	)
 	wantDeployments[core.IDOf(rootDeployment3)] = rootDeployment3
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1684,7 +1686,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootDeployment2 = rootSyncDeployment(rootReconcilerName2,
 		setAnnotations(deploymentAnnotation("f5aa1a824b5ef92e9e2a85448c73af74")),
 		setServiceAccountName(rootReconcilerName2),
-		gceNodeMutator(rootReconcilerName2),
+		gceNodeMutator(rootReconcilerName2, defaultGCEServiceAccountEmail),
 	)
 	wantDeployments[core.IDOf(rootDeployment2)] = rootDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1712,7 +1714,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootDeployment3 = rootSyncDeployment(rootReconcilerName3,
 		setAnnotations(deploymentAnnotation("4a65f1280d7e500f95644cce02981252")),
 		setServiceAccountName(rootReconcilerName3),
-		gceNodeMutator(rootReconcilerName3),
+		gceNodeMutator(rootReconcilerName3, gcpSAEmail),
 	)
 	wantDeployments[core.IDOf(rootDeployment3)] = rootDeployment3
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1871,6 +1873,89 @@ func TestMapSecretToRootSyncs(t *testing.T) {
 	}
 }
 
+func TestInjectFleetWorkloadIdentityCredentialsToRootSync(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := rootSync(rootsyncName, rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(configsync.GitSecretGCPServiceAccount), rootsyncGCPSAEmail(gcpSAEmail))
+	reqNamespacedName := namespacedName(rs.Name, rs.Namespace)
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rs.Namespace)))
+	workloadIdentityPool := "test-gke-dev.svc.id.goog"
+	testReconciler.membership = &hubv1.Membership{
+		Spec: hubv1.MembershipSpec{
+			WorkloadIdentityPool: workloadIdentityPool,
+			IdentityProvider:     "https://container.googleapis.com/v1/projects/test-gke-dev/locations/us-central1-c/clusters/fleet-workload-identity-test-cluster",
+		},
+	}
+
+	// Test creating Configmaps and Deployment resources with GCPServiceAccount auth type.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	rootDeployment := rootSyncDeployment(rootReconcilerName,
+		setAnnotations(map[string]string{
+			metadata.ConfigMapAnnotationKey:           rsAnnotationGCENode,
+			metadata.FleetWorkloadIdentityCredentials: `{"audience":"identitynamespace:test-gke-dev.svc.id.goog:https://container.googleapis.com/v1/projects/test-gke-dev/locations/us-central1-c/clusters/fleet-workload-identity-test-cluster","credential_source":{"file":"/var/run/secrets/tokens/gcp-ksa/token"},"service_account_impersonation_url":"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/config-sync@cs-project.iam.gserviceaccount.com:generateAccessToken","subject_token_type":"urn:ietf:params:oauth:token-type:jwt","token_url":"https://sts.googleapis.com/v1/token","type":"external_account"}`,
+		}),
+		setServiceAccountName(rootReconcilerName),
+		fleetWorkloadIdentityMutator(rootReconcilerName, workloadIdentityPool, gcpSAEmail),
+	)
+	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
+
+	// compare Deployment.
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Resources successfully created")
+
+	// Test updating RootSync resources with SSH auth type.
+	rs.Spec.Auth = secretAuth
+	rs.Spec.Git.SecretRef.Name = rootsyncSSHKey
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the root sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	rootDeployment = rootSyncDeployment(rootReconcilerName,
+		setAnnotations(deploymentAnnotation(rsAnnotation)),
+		setServiceAccountName(rootReconcilerName),
+		secretMutator(rootReconcilerName, rootsyncSSHKey),
+	)
+	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Deployment successfully updated")
+
+	// Test updating RootSync resources with None auth type.
+	rs.Spec.Auth = noneAuth
+	rs.Spec.SecretRef = v1beta1.SecretReference{}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the root sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	rootDeployment = rootSyncDeployment(rootReconcilerName,
+		setAnnotations(deploymentAnnotation(rsAnnotationNone)),
+		setServiceAccountName(rootReconcilerName),
+		noneMutator(rootReconcilerName),
+	)
+	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Deployment successfully updated")
+}
+
 type depMutator func(*appsv1.Deployment)
 
 func rootSyncDeployment(reconcilerName string, muts ...depMutator) *appsv1.Deployment {
@@ -1920,11 +2005,67 @@ func envVarMutator(envName, secretName, key string) depMutator {
 	}
 }
 
-func gceNodeMutator(reconcilerName string) depMutator {
+func gceNodeMutator(reconcilerName, gsaEmail string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Spec.Volumes = []corev1.Volume{{Name: "repo"}}
-		dep.Spec.Template.Spec.Containers = gceNodeContainers(reconcilerName)
+		dep.Spec.Template.Spec.Containers = gceNodeContainers(reconcilerName, gsaEmail)
 	}
+}
+
+func fleetWorkloadIdentityMutator(reconcilerName, workloadIdentityPool, gsaEmail string) depMutator {
+	return func(dep *appsv1.Deployment) {
+		dep.Spec.Template.Spec.Volumes = []corev1.Volume{
+			{Name: "repo"},
+			{Name: gcpKSAVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						Sources: []corev1.VolumeProjection{
+							{
+								ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+									Audience:          workloadIdentityPool,
+									ExpirationSeconds: &expirationSeconds,
+									Path:              gsaTokenPath,
+								},
+							},
+							{
+								DownwardAPI: &corev1.DownwardAPIProjection{Items: []corev1.DownwardAPIVolumeFile{
+									{
+										Path: googleApplicationCredentialsFile,
+										FieldRef: &corev1.ObjectFieldSelector{
+											APIVersion: "v1",
+											FieldPath:  fmt.Sprintf("metadata.annotations['%s']", metadata.FleetWorkloadIdentityCredentials),
+										},
+									},
+								}},
+							},
+						},
+						DefaultMode: &defaultMode,
+					},
+				},
+			},
+		}
+		dep.Spec.Template.Spec.Containers = fleetWorkloadIdentityContainers(reconcilerName, gsaEmail)
+	}
+}
+
+func fleetWorkloadIdentityContainers(reconcilerName, gsaEmail string) []corev1.Container {
+	containers := noneContainers(reconcilerName)
+	containers = append(containers, corev1.Container{
+		Name: GceNodeAskpassSidecarName,
+		Env: []corev1.EnvVar{{
+			Name:  googleApplicationCredentialsEnvKey,
+			Value: filepath.Join(gcpKSATokenDir, googleApplicationCredentialsFile),
+		}, {
+			Name:  gsaEmailEnvKey,
+			Value: gsaEmail,
+		}},
+		VolumeMounts: []corev1.VolumeMount{{
+			Name:      gcpKSAVolumeName,
+			ReadOnly:  true,
+			MountPath: gcpKSATokenDir,
+		}},
+	})
+	return containers
 }
 
 func noneMutator(reconcilerName string) depMutator {
@@ -2060,9 +2201,12 @@ func noneContainers(reconcilerName string) []corev1.Container {
 	}
 }
 
-func gceNodeContainers(reconcilerName string) []corev1.Container {
+func gceNodeContainers(reconcilerName, gsaEmail string) []corev1.Container {
 	containers := noneContainers(reconcilerName)
-	containers = append(containers, corev1.Container{Name: GceNodeAskpassSidecarName})
+	containers = append(containers, corev1.Container{
+		Name: GceNodeAskpassSidecarName,
+		Env:  []corev1.EnvVar{{Name: gsaEmailEnvKey, Value: gsaEmail}},
+	})
 	return containers
 }
 

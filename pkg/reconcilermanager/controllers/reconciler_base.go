@@ -16,7 +16,9 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -26,12 +28,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/dynamic"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	hubv1 "kpt.dev/configsync/pkg/api/hub/v1"
 	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/metadata"
 	"kpt.dev/configsync/pkg/metrics"
@@ -51,6 +56,9 @@ const (
 	// that we wish to use as the "object reference".
 	// It will be used in both the indexing and watching.
 	gitSecretRefField = ".spec.git.secretRef.name"
+
+	// fleetMembershipName is the name of the fleet membership
+	fleetMembershipName = "membership"
 )
 
 // reconcilerBase provides common data and methods for the RepoSync and RootSync reconcilers
@@ -62,6 +70,7 @@ type reconcilerBase struct {
 	isAutopilotCluster      *bool
 	reconcilerPollingPeriod time.Duration
 	hydrationPollingPeriod  time.Duration
+	membership              *hubv1.Membership
 }
 
 // configMapMutation provides an interface for named mutation functions passed to upsertConfigMaps
@@ -299,4 +308,40 @@ func (r *reconcilerBase) addLabels(resource client.Object, labelMap map[string]s
 
 	resource.SetLabels(currentLabels)
 
+}
+
+func (r *reconcilerBase) injectFleetWorkloadIdentityCredentials(podTemplate *corev1.PodTemplateSpec, gsaEmail string) error {
+	content := map[string]interface{}{
+		"type":                              "external_account",
+		"audience":                          fmt.Sprintf("identitynamespace:%s:%s", r.membership.Spec.WorkloadIdentityPool, r.membership.Spec.IdentityProvider),
+		"service_account_impersonation_url": fmt.Sprintf("https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken", gsaEmail),
+		"subject_token_type":                "urn:ietf:params:oauth:token-type:jwt",
+		"token_url":                         "https://sts.googleapis.com/v1/token",
+		"credential_source": map[string]string{
+			"file": filepath.Join(gcpKSATokenDir, gsaTokenPath),
+		},
+	}
+	bytes, err := json.Marshal(content)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal the Fleet Workload Identity credentials")
+	}
+	core.SetAnnotation(podTemplate, metadata.FleetWorkloadIdentityCredentials, string(bytes))
+	return nil
+}
+
+// fleetMembershipCRDExists checks if the fleet membership CRD exists.
+// It checks the CRD first so that the controller can watch the Membership resource in the startup time.
+// If the cluster is unregistered from a fleet, the cached Membership needs to be cleared.
+// It uses the existence of the Membership CRD to determine if it is a DELETE event.
+func (r *reconcilerBase) fleetMembershipCRDExists(dc dynamic.Interface, mapping *meta.RESTMapping) bool {
+	_, err := dc.Resource(mapping.Resource).Get(context.TODO(), "memberships.hub.gke.io", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.log.Info("The memberships CRD doesn't exist")
+		} else {
+			r.log.Error(err, "failed to GET the CRD for the memberships resource from the cluster")
+		}
+		return false
+	}
+	return true
 }
