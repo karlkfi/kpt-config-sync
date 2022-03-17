@@ -15,6 +15,8 @@ import (
 	fakeconfigsyncv1alpha1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1alpha1/fake"
 	configsyncv1beta1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1beta1"
 	fakeconfigsyncv1beta1 "kpt.dev/configsync/clientgen/apis/typed/configsync/v1beta1/fake"
+	hubv1 "kpt.dev/configsync/clientgen/apis/typed/hub/v1"
+	fakehubv1 "kpt.dev/configsync/clientgen/apis/typed/hub/v1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -72,12 +74,17 @@ func (c *Clientset) ConfigmanagementV1() configmanagementv1.ConfigmanagementV1In
 	return &fakeconfigmanagementv1.FakeConfigmanagementV1{Fake: &c.Fake}
 }
 
+// ConfigsyncV1alpha1 retrieves the ConfigsyncV1alpha1Client
+func (c *Clientset) ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface {
+	return &fakeconfigsyncv1alpha1.FakeConfigsyncV1alpha1{Fake: &c.Fake}
+}
+
 // ConfigsyncV1beta1 retrieves the ConfigsyncV1beta1Client
 func (c *Clientset) ConfigsyncV1beta1() configsyncv1beta1.ConfigsyncV1beta1Interface {
 	return &fakeconfigsyncv1beta1.FakeConfigsyncV1beta1{Fake: &c.Fake}
 }
 
-// ConfigsyncV1alpha1 retrieves the ConfigsyncV1alpha1Client
-func (c *Clientset) ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface {
-	return &fakeconfigsyncv1alpha1.FakeConfigsyncV1alpha1{Fake: &c.Fake}
+// HubV1 retrieves the HubV1Client
+func (c *Clientset) HubV1() hubv1.HubV1Interface {
+	return &fakehubv1.FakeHubV1{Fake: &c.Fake}
 }

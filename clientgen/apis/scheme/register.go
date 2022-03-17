@@ -11,6 +11,7 @@ import (
 	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	configsyncv1alpha1 "kpt.dev/configsync/pkg/api/configsync/v1alpha1"
 	configsyncv1beta1 "kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	hubv1 "kpt.dev/configsync/pkg/api/hub/v1"
 )
 
 var Scheme = runtime.NewScheme()
@@ -18,8 +19,9 @@ var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	configmanagementv1.AddToScheme,
-	configsyncv1beta1.AddToScheme,
 	configsyncv1alpha1.AddToScheme,
+	configsyncv1beta1.AddToScheme,
+	hubv1.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition
