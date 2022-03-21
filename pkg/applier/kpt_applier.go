@@ -85,6 +85,8 @@ type Applier struct {
 	// statusMode controls if the applier injects the acutation status into the
 	// ResourceGroup object
 	statusMode string
+	// reconcileTimeout controls the reconcile and prune timeout
+	reconcileTimeout time.Duration
 }
 
 // Interface is a fake-able subset of the interface Applier implements.
@@ -105,7 +107,7 @@ var _ Interface = &Applier{}
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
-func NewNamespaceApplier(c client.Client, cfg *rest.Config, namespace declared.Scope, syncName string, statusMode string) (*Applier, error) {
+func NewNamespaceApplier(c client.Client, cfg *rest.Config, namespace declared.Scope, syncName string, statusMode string, reconcileTimeout time.Duration) (*Applier, error) {
 	u := newInventoryUnstructured(syncName, string(namespace), statusMode)
 	// If the ResourceGroup object exists, annotate the status mode on the
 	// existing object.
@@ -118,23 +120,23 @@ func NewNamespaceApplier(c client.Client, cfg *rest.Config, namespace declared.S
 	if !ok {
 		return nil, errors.New("failed to create an ResourceGroup object")
 	}
-
 	a := &Applier{
-		inventory:     inv,
-		client:        c,
-		clientConfig:  cfg,
-		clientSetFunc: newClientSet,
-		policy:        inventory.PolicyAdoptIfNoInventory,
-		syncName:      syncName,
-		syncNamespace: string(namespace),
-		statusMode:    statusMode,
+		inventory:        inv,
+		client:           c,
+		clientConfig:     cfg,
+		clientSetFunc:    newClientSet,
+		policy:           inventory.PolicyAdoptIfNoInventory,
+		syncName:         syncName,
+		syncNamespace:    string(namespace),
+		statusMode:       statusMode,
+		reconcileTimeout: reconcileTimeout,
 	}
 	klog.V(4).Infof("Applier %s/%s is initialized", namespace, syncName)
 	return a, nil
 }
 
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
-func NewRootApplier(c client.Client, cfg *rest.Config, syncName, statusMode string) (*Applier, error) {
+func NewRootApplier(c client.Client, cfg *rest.Config, syncName, statusMode string, reconcileTimeout time.Duration) (*Applier, error) {
 	u := newInventoryUnstructured(syncName, configmanagement.ControllerNamespace, statusMode)
 	// If the ResourceGroup object exists, annotate the status mode on the
 	// existing object.
@@ -147,14 +149,14 @@ func NewRootApplier(c client.Client, cfg *rest.Config, syncName, statusMode stri
 	if !ok {
 		return nil, errors.New("failed to create an ResourceGroup object")
 	}
-
 	a := &Applier{
-		inventory:     inv,
-		client:        c,
-		clientConfig:  cfg,
-		clientSetFunc: newClientSet,
-		policy:        inventory.PolicyAdoptAll,
-		statusMode:    statusMode,
+		inventory:        inv,
+		client:           c,
+		clientConfig:     cfg,
+		clientSetFunc:    newClientSet,
+		policy:           inventory.PolicyAdoptAll,
+		statusMode:       statusMode,
+		reconcileTimeout: reconcileTimeout,
 	}
 	klog.V(4).Infof("Root applier %s is initialized and synced with the API server", syncName)
 	return a, nil
@@ -325,10 +327,10 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		// Leaving ReconcileTimeout and PruneTimeout unset may cause a WaitTask to wait forever.
 		// ReconcileTimeout defines the timeout for a wait task after an apply task.
 		// ReconcileTimeout is a task-level setting instead of an object-level setting.
-		ReconcileTimeout: 5 * time.Minute,
+		ReconcileTimeout: a.reconcileTimeout,
 		// PruneTimeout defines the timeout for a wait task after a prune task.
 		// PruneTimeout is a task-level setting instead of an object-level setting.
-		PruneTimeout: 5 * time.Minute,
+		PruneTimeout: a.reconcileTimeout,
 	}
 
 	events := cs.apply(ctx, a.inventory, resources, options)

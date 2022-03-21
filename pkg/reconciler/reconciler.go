@@ -90,6 +90,8 @@ type Options struct {
 	PolicyDir cmpath.Relative
 	// StatusMode controls the kpt applier to inject the actuation status data or not
 	StatusMode string
+	// ReconcileTimeout controls the reconcile/prune Timeout in kpt applier
+	ReconcileTimeout string
 	// DiscoveryClient is used to read types and schemas from the API server.
 	DiscoveryClient discovery.DiscoveryInterface
 	// RootOptions is the set of options to fill in if this is configuring the
@@ -144,11 +146,18 @@ func Run(opts Options) {
 		klog.Fatalf("Instantiating Applier: %v", err)
 	}
 
+	reconcileTimeout, err := time.ParseDuration(opts.ReconcileTimeout)
+	if err != nil {
+		klog.Fatalf("failed to get the applier reconcile/prune task timeout: %v", err)
+	}
+	if reconcileTimeout < 0 {
+		klog.Fatalf("Invalid reconcileTimeout: %v, timeout should not be negative", reconcileTimeout)
+	}
 	var a *applier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a, err = applier.NewRootApplier(cl, cfg, opts.SyncName, opts.StatusMode)
+		a, err = applier.NewRootApplier(cl, cfg, opts.SyncName, opts.StatusMode, reconcileTimeout)
 	} else {
-		a, err = applier.NewNamespaceApplier(cl, cfg, opts.ReconcilerScope, opts.SyncName, opts.StatusMode)
+		a, err = applier.NewNamespaceApplier(cl, cfg, opts.ReconcilerScope, opts.SyncName, opts.StatusMode, reconcileTimeout)
 	}
 	if err != nil {
 		klog.Fatalf("failed to create the applier: %v", err)

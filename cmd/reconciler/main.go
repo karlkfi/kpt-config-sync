@@ -80,7 +80,8 @@ var (
 	// Root-Repo-only flags. If set for a Namespace-scoped Reconciler, causes the Reconciler to fail immediately.
 	sourceFormat = flag.String(flags.sourceFormat, os.Getenv(filesystem.SourceFormatKey),
 		"The format of the repository.")
-
+	// Applier flag, Make the reconcile/prune timeout configurable
+	reconcileTimeout = flag.String(flags.reconcileTimeout, os.Getenv(reconcilermanager.ReconcileTimeout), "The timeout of applier reconcile and prune tasks")
 	// Enable the applier to inject actuation status data into the ResourceGroup object
 	statusMode = flag.String(flags.statusMode, os.Getenv(reconcilermanager.StatusMode),
 		"When the value is enabled or empty, the applier injects actuation status data into the ResourceGroup object")
@@ -91,19 +92,21 @@ var (
 )
 
 var flags = struct {
-	gitDir          string
-	repoRootDir     string
-	hydratedRootDir string
-	clusterName     string
-	sourceFormat    string
-	statusMode      string
+	gitDir           string
+	repoRootDir      string
+	hydratedRootDir  string
+	clusterName      string
+	sourceFormat     string
+	statusMode       string
+	reconcileTimeout string
 }{
-	repoRootDir:     "repo-root",
-	gitDir:          "git-dir",
-	hydratedRootDir: "hydrated-root",
-	clusterName:     "cluster-name",
-	sourceFormat:    reconcilermanager.SourceFormat,
-	statusMode:      "status-mode",
+	repoRootDir:      "repo-root",
+	gitDir:           "git-dir",
+	hydratedRootDir:  "hydrated-root",
+	clusterName:      "cluster-name",
+	sourceFormat:     reconcilermanager.SourceFormat,
+	statusMode:       "status-mode",
+	reconcileTimeout: "reconcile-timeout",
 }
 
 func main() {
@@ -177,6 +180,7 @@ func main() {
 		SyncName:                   *syncName,
 		ReconcilerName:             *reconcilerName,
 		StatusMode:                 *statusMode,
+		ReconcileTimeout:           *reconcileTimeout,
 	}
 
 	if declared.Scope(*scope) == declared.RootReconciler {

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -58,15 +59,17 @@ const (
 	rootsyncInvalidName = "qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "21f45bbf56a2df37a472b1e73ea7eb92"
+	rsAnnotation = "4fdb2a3e4a4b0841e530cca9e1125eec"
 
-	rsUpdatedAnnotationOverrideGitSyncDepth     = "9af958150d82d78a9be3361c9fe3f03a"
-	rsUpdatedAnnotationOverrideGitSyncDepthZero = "e29e95afb3a1a81a6177cdcdd6f062fd"
+	rsUpdatedAnnotationOverrideGitSyncDepth     = "a70191514cbae8e5da830969a34ac2f4"
+	rsUpdatedAnnotationOverrideGitSyncDepthZero = "382bd81fe88358eddd27260bcaf435e9"
 
-	rsUpdatedAnnotationNoSSLVerify = "f94c0fdd2a91e0f07e7d48faa2b433c7"
+	rsUpdatedAnnotationOverrideReconcileTimeout = "ab8396dfcb72885870370ccc38a41e0e"
 
-	rsAnnotationGCENode = "0d15c3fc994183349e191087e9aa5c7b"
-	rsAnnotationNone    = "cd5c2251bb8c40aa41ddc8af52320961"
+	rsUpdatedAnnotationNoSSLVerify = "0158b3f5e4c610a9a68f83b618fc65e7"
+
+	rsAnnotationGCENode = "bfed8b658aa4431528c43dd8d89486db"
+	rsAnnotationNone    = "74eecb5d698c42906003c216415b67ad"
 
 	rootsyncSSHKey = "root-ssh-key"
 )
@@ -191,6 +194,12 @@ func rootsyncOverrideResources(containers []v1beta1.ContainerResourcesSpec) func
 func rootsyncOverrideGitSyncDepth(depth int64) func(*v1beta1.RootSync) {
 	return func(rs *v1beta1.RootSync) {
 		rs.Spec.Override.GitSyncDepth = &depth
+	}
+}
+
+func rootsyncOverrideReconcileTimeout(reconcileTimeout metav1.Duration) func(*v1beta1.RootSync) {
+	return func(rs *v1beta1.RootSync) {
+		rs.Spec.Override.ReconcileTimeout = &reconcileTimeout
 	}
 }
 
@@ -1057,6 +1066,148 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	t.Log("No need to update ConfigMap and Deployment.")
 }
 
+func TestRootSyncCreateWithOverrideReconcileTimeout(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := rootSync(rootsyncName, rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey), rootsyncOverrideReconcileTimeout(metav1.Duration{Duration: 50 * time.Second}))
+	reqNamespacedName := namespacedName(rs.Name, rs.Namespace)
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rs.Namespace)))
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.RootReconciler, rs.Name, rootReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
+
+	rootDeployment := rootSyncDeployment(rootReconcilerName,
+		setAnnotations(deploymentAnnotation(rsUpdatedAnnotationOverrideReconcileTimeout)),
+		setServiceAccountName(rootReconcilerName),
+		secretMutator(rootReconcilerName, rootsyncSSHKey),
+	)
+	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
+
+	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
+		t.Error(err)
+	}
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+}
+
+func TestRootSyncUpdateOverrideReconcileTimeout(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := rootSync(rootsyncName, rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey))
+	reqNamespacedName := namespacedName(rs.Name, rs.Namespace)
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rs.Namespace)))
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+	label := map[string]string{
+		metadata.SyncNamespaceLabel: rs.Namespace,
+		metadata.SyncNameLabel:      rs.Name,
+	}
+	wantConfigMaps := buildWantConfigMaps(ctx, declared.RootReconciler, rs.Name, rootReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
+	rootDeployment := rootSyncDeployment(rootReconcilerName,
+		setAnnotations(deploymentAnnotation(rsAnnotation)),
+		setServiceAccountName(rootReconcilerName),
+		secretMutator(rootReconcilerName, rootsyncSSHKey),
+	)
+	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
+
+	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
+		t.Error(err)
+	}
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap, ServiceAccount, ClusterRoleBinding and Deployment successfully created")
+
+	// Test overriding the reconcile timeout to 50s
+	reconcileTimeout := metav1.Duration{Duration: 50 * time.Second}
+	rs.Spec.Override.ReconcileTimeout = &reconcileTimeout
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	updatedCMID, updatedCM := reconcilerConfigMap(declared.RootReconciler, rs.Name, rootReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
+	wantConfigMaps[updatedCMID] = updatedCM
+
+	updatedRootDeployment := rootSyncDeployment(rootReconcilerName,
+		setAnnotations(deploymentAnnotation(rsUpdatedAnnotationOverrideReconcileTimeout)),
+		setServiceAccountName(rootReconcilerName),
+		secretMutator(rootReconcilerName, rootsyncSSHKey),
+	)
+
+	wantDeployments[core.IDOf(updatedRootDeployment)] = updatedRootDeployment
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
+		t.Error(err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Set rs.Spec.Override.ReconcileTimeout to nil.
+	rs.Spec.Override.ReconcileTimeout = nil
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
+	}
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	updatedCMID, updatedCM = reconcilerConfigMap(declared.RootReconciler, rs.Name, rootReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
+	wantConfigMaps[updatedCMID] = updatedCM
+
+	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
+		t.Error(err)
+	}
+
+	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Clear rs.Spec.Override
+	rs.Spec.Override = v1beta1.OverrideSpec{}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
+	}
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	updatedCMID, updatedCM = reconcilerConfigMap(declared.RootReconciler, rs.Name, rootReconcilerName, &rs.Spec.Git, &rs.Spec.Override, label)
+	wantConfigMaps[updatedCMID] = updatedCM
+
+	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
+		t.Error(err)
+	}
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("No need to update ConfigMap and Deployment.")
+}
+
 func TestRootSyncSwitchAuthTypes(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
@@ -1300,7 +1451,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment2 := rootSyncDeployment(rootReconcilerName2,
-		setAnnotations(deploymentAnnotation("8fff1d1662c631270343d7145d229084")),
+		setAnnotations(deploymentAnnotation("626f608208fb5b4ac11893bddb934a64")),
 		setServiceAccountName(rootReconcilerName2),
 		gceNodeMutator(rootReconcilerName2),
 	)
@@ -1348,7 +1499,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment3 := rootSyncDeployment(rootReconcilerName3,
-		setAnnotations(deploymentAnnotation("e7e9d4d43a0cca3a1d7b607c9aedc218")),
+		setAnnotations(deploymentAnnotation("0205fbc98b62c4e4b20d7334b0d67c6a")),
 		setServiceAccountName(rootReconcilerName3),
 		gceNodeMutator(rootReconcilerName3),
 	)
@@ -1400,7 +1551,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment4 := rootSyncDeployment(rootReconcilerName4,
-		setAnnotations(deploymentAnnotation("1067636f00eb2765ad473e9950fd0f35")),
+		setAnnotations(deploymentAnnotation("63c679dde4f0b9a009d40e35514cc9c1")),
 		setServiceAccountName(rootReconcilerName4),
 		secretMutator(rootReconcilerName4, reposyncCookie),
 		envVarMutator("HTTPS_PROXY", reposyncCookie, "https_proxy"),
@@ -1452,7 +1603,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment5 := rootSyncDeployment(rootReconcilerName5,
-		setAnnotations(deploymentAnnotation("6326cda9f52c1d426b2537a24e233b34")),
+		setAnnotations(deploymentAnnotation("81e7e6140d5314fbd37daeeb83acec86")),
 		setServiceAccountName(rootReconcilerName5),
 		secretMutator(rootReconcilerName5, secretName),
 		envVarMutator("HTTPS_PROXY", secretName, "https_proxy"),
@@ -1496,7 +1647,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	updatedGitSyncCMID, updatedGitSyncCM := gitSyncConfigMap(ctx, rootReconcilerName, &rs1.Spec.Git, &rs1.Spec.Override, label1)
-	updatedReconcilerCMID, updatedReconcilerCM := reconcilerConfigMap(declared.RootReconciler, rs1.Name, rootReconcilerName, &rs1.Spec.Git, label1)
+	updatedReconcilerCMID, updatedReconcilerCM := reconcilerConfigMap(declared.RootReconciler, rs1.Name, rootReconcilerName, &rs1.Spec.Git, &rs1.Spec.Override, label1)
 	wantConfigMaps[updatedGitSyncCMID] = updatedGitSyncCM
 	wantConfigMaps[updatedReconcilerCMID] = updatedReconcilerCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
@@ -1504,7 +1655,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment1 = rootSyncDeployment(rootReconcilerName,
-		setAnnotations(deploymentAnnotation("8a8b0643b878f9ad81a6c45f398eaeda")),
+		setAnnotations(deploymentAnnotation("1f4a4ec554c070544fcfa7f79a923754")),
 		setServiceAccountName(rootReconcilerName),
 		secretMutator(rootReconcilerName, rootsyncSSHKey),
 	)
@@ -1523,7 +1674,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 	updatedGitSyncCMID, updatedGitSyncCM = gitSyncConfigMap(ctx, rootReconcilerName2, &rs2.Spec.Git, &rs2.Spec.Override, label2)
-	updatedReconcilerCMID, updatedReconcilerCM = reconcilerConfigMap(declared.RootReconciler, rs2.Name, rootReconcilerName2, &rs2.Spec.Git, label2)
+	updatedReconcilerCMID, updatedReconcilerCM = reconcilerConfigMap(declared.RootReconciler, rs2.Name, rootReconcilerName2, &rs2.Spec.Git, &rs2.Spec.Override, label2)
 	wantConfigMaps[updatedGitSyncCMID] = updatedGitSyncCM
 	wantConfigMaps[updatedReconcilerCMID] = updatedReconcilerCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
@@ -1531,7 +1682,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment2 = rootSyncDeployment(rootReconcilerName2,
-		setAnnotations(deploymentAnnotation("0d3023871f8474674cf0233719ce9c94")),
+		setAnnotations(deploymentAnnotation("f5aa1a824b5ef92e9e2a85448c73af74")),
 		setServiceAccountName(rootReconcilerName2),
 		gceNodeMutator(rootReconcilerName2),
 	)
@@ -1551,7 +1702,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 	updatedGitSyncCMID, updatedGitSyncCM = gitSyncConfigMap(ctx, rootReconcilerName3, &rs3.Spec.Git, &rs3.Spec.Override, label3)
-	updatedReconcilerCMID, updatedReconcilerCM = reconcilerConfigMap(declared.RootReconciler, rs3.Name, rootReconcilerName3, &rs3.Spec.Git, label3)
+	updatedReconcilerCMID, updatedReconcilerCM = reconcilerConfigMap(declared.RootReconciler, rs3.Name, rootReconcilerName3, &rs3.Spec.Git, &rs3.Spec.Override, label3)
 	wantConfigMaps[updatedGitSyncCMID] = updatedGitSyncCM
 	wantConfigMaps[updatedReconcilerCMID] = updatedReconcilerCM
 	if err := validateConfigMaps(wantConfigMaps, fakeClient); err != nil {
@@ -1559,7 +1710,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment3 = rootSyncDeployment(rootReconcilerName3,
-		setAnnotations(deploymentAnnotation("9f7e16738622a0adb6afae737d8fd560")),
+		setAnnotations(deploymentAnnotation("4a65f1280d7e500f95644cce02981252")),
 		setServiceAccountName(rootReconcilerName3),
 		gceNodeMutator(rootReconcilerName3),
 	)

@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/google/go-cmp/cmp"
@@ -209,7 +210,7 @@ func TestSync(t *testing.T) {
 		}
 
 		var errs status.MultiError
-		applier, err := NewNamespaceApplier(fakeClient, cfg, "test-namespace", "rs", "")
+		applier, err := NewNamespaceApplier(fakeClient, cfg, "test-namespace", "rs", "", 5*time.Minute)
 		if err != nil {
 			errs = Error(err)
 		} else {

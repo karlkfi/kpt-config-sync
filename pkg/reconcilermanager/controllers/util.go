@@ -44,7 +44,7 @@ func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, reconcilerName,
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod, statusMode string) map[string]string {
+func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod, statusMode string, reconcileTimeout string) map[string]string {
 	result := make(map[string]string)
 	result[reconcilermanager.ClusterNameKey] = clusterName
 	result[reconcilermanager.ScopeKey] = string(reconcilerScope)
@@ -56,7 +56,7 @@ func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScop
 		statusMode = applier.StatusEnabled
 	}
 	result[reconcilermanager.StatusMode] = statusMode
-
+	result[reconcilermanager.ReconcileTimeout] = reconcileTimeout
 	// Add Filesystem Polling Period.
 	result[reconcilermanager.ReconcilerPollingPeriod] = pollPeriod
 

@@ -14,7 +14,11 @@
 
 package v1alpha1
 
-import "k8s.io/apimachinery/pkg/api/resource"
+import (
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"kpt.dev/configsync/pkg/api/configsync"
+)
 
 // OverrideSpec allows to override the settings for a reconciler pod
 type OverrideSpec struct {
@@ -41,6 +45,15 @@ type OverrideSpec struct {
 	// +kubebuilder:validation:Pattern=^(enabled|disabled|)$
 	// +optional
 	StatusMode string `json:"statusMode,omitempty"`
+
+	// reconcileTimeout allows one to override the threshold for how long to wait for
+	// all resources to reconcile before giving up.
+	// Default: 5m.
+	// Use string to specify this field value, like "30s", "5m".
+	// More details about valid inputs: https://pkg.go.dev/time#ParseDuration.
+	// Recommended reconcileTimeout range is from "10s" to "1h".
+	// +optional
+	ReconcileTimeout *metav1.Duration `json:"reconcileTimeout,omitempty"`
 }
 
 // ContainerResourcesSpec allows to override the resource requirements for a container
@@ -63,4 +76,12 @@ type ContainerResourcesSpec struct {
 	// memoryLimit allows one to override the memory limit of a container
 	// +optional
 	MemoryLimit resource.Quantity `json:"memoryLimit,omitempty"`
+}
+
+//GetReconcileTimeout returns reconcile timeout in string, defaulting to 5m if empty
+func GetReconcileTimeout(d *metav1.Duration) string {
+	if d == nil || d.Duration == 0 {
+		return configsync.DefaultReconcileTimeout
+	}
+	return d.Duration.String()
 }

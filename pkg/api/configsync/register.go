@@ -49,6 +49,9 @@ const (
 	// DefaultHydrationPollingPeriod defines how often the hydration controller
 	// should poll the filesystem for rendering the DRY configs.
 	DefaultHydrationPollingPeriod = 5 * time.Second
+
+	// DefaultReconcileTimeout defines the timeout of kpt applier reconcile/prune task
+	DefaultReconcileTimeout = "5m"
 )
 
 // Git secret values

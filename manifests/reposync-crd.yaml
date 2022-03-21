@@ -151,6 +151,13 @@ spec:
                     format: int64
                     minimum: 0
                     type: integer
+                  reconcileTimeout:
+                    description: 'reconcileTimeout allows one to override the threshold
+                      for how long to wait for all resources to reconcile before giving
+                      up. Default: 5m. Use string to specify this field value, like
+                      "30s", "5m". More details about valid inputs: https://pkg.go.dev/time#ParseDuration.
+                      Recommended reconcileTimeout range is from "10s" to "1h".'
+                    type: string
                   resources:
                     description: resources allow one to override the resource requirements
                       for the containers in a reconciler pod.
@@ -860,6 +867,13 @@ spec:
                     format: int64
                     minimum: 0
                     type: integer
+                  reconcileTimeout:
+                    description: 'reconcileTimeout allows one to override the threshold
+                      for how long to wait for all resources to reconcile before giving
+                      up. Default: 5m. Use string to specify this field value, like
+                      "30s", "5m". More details about valid inputs: https://pkg.go.dev/time#ParseDuration.
+                      Recommended reconcileTimeout range is from "10s" to "1h".'
+                    type: string
                   resources:
                     description: resources allow one to override the resource requirements
                       for the containers in a reconciler pod.
