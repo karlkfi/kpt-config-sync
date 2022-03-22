@@ -55,24 +55,36 @@ func init() {
 	Cmd.Flags().BoolVar(&resourceStatus, "resources", true, "show resource level status for Namespace repo (multi-repo only)")
 }
 
-// GetStatusReadCloser returns a ReadCloser with the output produced by running the "nomos status" command as a string
-func GetStatusReadCloser(ctx context.Context, contexts []string) (io.ReadCloser, error) {
-	r, w, _ := os.Pipe()
-	writer := util.NewWriter(w)
+// SaveToTempFile writes the `nomos status` output into a temporary file, and
+// opens the file for reading. It returns the file descriptor with read_only permission.
+// Using the temp file instead of os.Pipe is to avoid the hanging issue
+// caused by the os.Pipe buffer limit: 64k.
+// This function is only used in `nomos bugreport` for the `nomos status` output.
+func SaveToTempFile(ctx context.Context, contexts []string) (*os.File, error) {
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "nomos-status-")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a temporary file: %w", err)
+	}
+	writer := util.NewWriter(tmpFile)
 
 	clientMap, err := ClusterClients(ctx, contexts)
 	if err != nil {
-		return nil, err
+		return tmpFile, err
 	}
 	names := clusterNames(clientMap)
 
 	printStatus(ctx, writer, clientMap, names)
-	err = w.Close()
+	err = tmpFile.Close()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to close status file writer with error")
+		return tmpFile, errors.Wrap(err, "failed to close status file writer with error")
 	}
 
-	return ioutil.NopCloser(r), nil
+	f, err := os.Open(tmpFile.Name())
+	if err != nil {
+		return tmpFile, errors.Wrap(err, "failed to open the file for reading")
+	}
+
+	return f, nil
 }
 
 // Cmd runs a loop that fetches ACM objects from all available clusters and prints a summary of the

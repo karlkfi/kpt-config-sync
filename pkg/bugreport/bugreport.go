@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -461,14 +462,40 @@ func pathToNamespacePodList(ns string) string {
 
 // AddNomosStatusToZip writes `nomos status` to bugreport zip file
 func (b *BugReporter) AddNomosStatusToZip(ctx context.Context) {
-	if statusRc, err := status.GetStatusReadCloser(ctx, []string{b.k8sContext}); err != nil {
+	tmpFile, err := status.SaveToTempFile(ctx, []string{b.k8sContext})
+	defer func() {
+		if tmpFile != nil {
+			if err = os.Remove(tmpFile.Name()); err != nil && !os.IsNotExist(err) {
+				klog.Errorf("failed to remove the temporary file %q: %v", tmpFile.Name(), err)
+			}
+		}
+	}()
+	if err != nil {
 		b.ErrorList = append(b.ErrorList, err)
-	} else if err = b.writeReadableToZip(Readable{
-		Name:       path.Join(Processed, b.k8sContext, "status"),
-		ReadCloser: statusRc,
-	}); err != nil {
+	} else if err = b.copyToZip(tmpFile, path.Join(Processed, b.k8sContext, "status")); err != nil {
 		b.WritingErrors = append(b.WritingErrors, err)
 	}
+}
+
+// copyToZip copies the content from the input file to the zip file.
+func (b *BugReporter) copyToZip(inputFile *os.File, zipFileName string) error {
+	baseName := filepath.Base(b.name)
+	dirName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+	fileName := filepath.FromSlash(filepath.Join(dirName, zipFileName) + ".txt")
+	zipFile, err := b.writer.Create(fileName)
+	if err != nil {
+		e := fmt.Errorf("failed to create file %v inside zip: %v", fileName, err)
+		return e
+	}
+	if _, err = io.Copy(zipFile, inputFile); err != nil {
+		return fmt.Errorf("failed to copy file %s to zip %s: %v", inputFile.Name(), fileName, err)
+	}
+	if err = inputFile.Close(); err != nil {
+		klog.Errorf("failed to close file %s: %v", inputFile.Name(), err)
+	}
+
+	fmt.Println("Wrote file " + fileName)
+	return nil
 }
 
 // AddNomosVersionToZip writes `nomos version` to bugreport zip file
