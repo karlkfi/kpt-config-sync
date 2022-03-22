@@ -434,7 +434,7 @@ func (c *ClusterClient) IsConfigured(ctx context.Context, cs *ClusterState) bool
 // ClusterClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
 func ClusterClients(ctx context.Context, contexts []string) (map[string]*ClusterClient, error) {
-	configs, err := restconfig.AllKubectlConfigs(flags.DefaultClusterClientTimeout)
+	configs, err := restconfig.AllKubectlConfigs(flags.ClientTimeout)
 	if configs == nil {
 		return nil, errors.Wrap(err, "failed to create client configs")
 	}

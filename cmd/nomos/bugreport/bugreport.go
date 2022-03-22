@@ -21,10 +21,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
+	"kpt.dev/configsync/cmd/nomos/flags"
 	"kpt.dev/configsync/pkg/api/configmanagement"
 	"kpt.dev/configsync/pkg/bugreport"
 	"kpt.dev/configsync/pkg/client/restconfig"
 )
+
+func init() {
+	Cmd.Flags().DurationVar(&flags.ClientTimeout, "timeout", flags.DefaultClusterClientTimeout, "Timeout for connecting to the cluster")
+}
 
 // Cmd retrieves readers for all relevant nomos container logs and cluster state commands and writes them to a zip file
 var Cmd = &cobra.Command{
@@ -41,7 +46,7 @@ var Cmd = &cobra.Command{
 			klog.Errorf("could not increase logging verbosity: %v", err)
 		}
 
-		cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
+		cfg, err := restconfig.NewRestConfig(flags.ClientTimeout)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create rest config")
 		}
