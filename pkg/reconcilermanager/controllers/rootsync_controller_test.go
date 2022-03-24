@@ -1455,7 +1455,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootDeployment2 := rootSyncDeployment(rootReconcilerName2,
 		setAnnotations(deploymentAnnotation("626f608208fb5b4ac11893bddb934a64")),
 		setServiceAccountName(rootReconcilerName2),
-		gceNodeMutator(rootReconcilerName2, defaultGCEServiceAccountEmail),
+		gceNodeMutator(rootReconcilerName2, ""),
 	)
 	wantDeployments[core.IDOf(rootDeployment2)] = rootDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1686,7 +1686,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootDeployment2 = rootSyncDeployment(rootReconcilerName2,
 		setAnnotations(deploymentAnnotation("f5aa1a824b5ef92e9e2a85448c73af74")),
 		setServiceAccountName(rootReconcilerName2),
-		gceNodeMutator(rootReconcilerName2, defaultGCEServiceAccountEmail),
+		gceNodeMutator(rootReconcilerName2, ""),
 	)
 	wantDeployments[core.IDOf(rootDeployment2)] = rootDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {

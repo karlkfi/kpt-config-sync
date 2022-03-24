@@ -24,7 +24,7 @@ import (
 const (
 	// The GCENode* values are interpolated in the prepareGCENodeSnippet function
 	// Keep the image tag consistent with nomos-operator.
-	gceNodeAskpassImageTag = "20210831174857"
+	gceNodeAskpassImageTag = "20220326001639"
 	// GceNodeAskpassSidecarName is the container name of gcenode-askpass-sidecar.
 	GceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
 	// gceNodeAskpassPort is the port number of the askpass-sidecar container.
@@ -41,9 +41,6 @@ const (
 	gcpKSAVolumeName = "gcp-ksa"
 	// gsaTokenPath is the name of the GCP KSA token file mounted in the askpass-sidecar container.
 	gsaTokenPath = "token"
-	// defaultGCEServiceAccountEmail indicates it the askpass-sidecar container uses
-	// Compute Engine default service account when gcpServiceAccountEmails is not set (authType is `gcenode`).
-	defaultGCEServiceAccountEmail = "Google Compute Engine default service account"
 )
 
 func gceNodeAskPassContainerImage(name, tag string) string {
@@ -61,9 +58,6 @@ func configureGceNodeAskPass(cr *corev1.Container, gsaEmail string, injectFWICre
 			ReadOnly:  true,
 			MountPath: gcpKSATokenDir,
 		})
-	}
-	if gsaEmail == "" {
-		gsaEmail = defaultGCEServiceAccountEmail
 	}
 	cr.Env = append(cr.Env, corev1.EnvVar{
 		Name:  gsaEmailEnvKey,

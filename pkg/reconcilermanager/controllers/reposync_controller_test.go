@@ -1524,7 +1524,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		nsReconcilerName2,
 		setAnnotations(deploymentAnnotation("8e06d12710fc18b524110189180beb43")),
 		setServiceAccountName(nsReconcilerName2),
-		gceNodeMutator(nsReconcilerName2, defaultGCEServiceAccountEmail),
+		gceNodeMutator(nsReconcilerName2, ""),
 	)
 	wantDeployments[core.IDOf(repoDeployment2)] = repoDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1773,7 +1773,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 		nsReconcilerName2,
 		setAnnotations(deploymentAnnotation("04b2c4d198c76569dc1a5779a3e6596b")),
 		setServiceAccountName(nsReconcilerName2),
-		gceNodeMutator(nsReconcilerName2, defaultGCEServiceAccountEmail),
+		gceNodeMutator(nsReconcilerName2, ""),
 	)
 	wantDeployments[core.IDOf(repoDeployment2)] = repoDeployment2
 
