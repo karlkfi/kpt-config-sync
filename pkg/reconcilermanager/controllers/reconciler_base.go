@@ -28,11 +28,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/client-go/dynamic"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
@@ -327,21 +325,4 @@ func (r *reconcilerBase) injectFleetWorkloadIdentityCredentials(podTemplate *cor
 	}
 	core.SetAnnotation(podTemplate, metadata.FleetWorkloadIdentityCredentials, string(bytes))
 	return nil
-}
-
-// fleetMembershipCRDExists checks if the fleet membership CRD exists.
-// It checks the CRD first so that the controller can watch the Membership resource in the startup time.
-// If the cluster is unregistered from a fleet, the cached Membership needs to be cleared.
-// It uses the existence of the Membership CRD to determine if it is a DELETE event.
-func (r *reconcilerBase) fleetMembershipCRDExists(dc dynamic.Interface, mapping *meta.RESTMapping) bool {
-	_, err := dc.Resource(mapping.Resource).Get(context.TODO(), "memberships.hub.gke.io", metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			r.log.Info("The memberships CRD doesn't exist")
-		} else {
-			r.log.Error(err, "failed to GET the CRD for the memberships resource from the cluster")
-		}
-		return false
-	}
-	return true
 }

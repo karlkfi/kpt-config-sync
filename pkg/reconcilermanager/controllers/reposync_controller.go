@@ -26,12 +26,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
@@ -252,7 +250,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 }
 
 // SetupWithManager registers RepoSync controller with reconciler-manager.
-func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager, dc dynamic.Interface, mapping *meta.RESTMapping) error {
+func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager, watchFleetMembership bool) error {
 	// Index the `gitSecretRefName` field, so that we will be able to lookup RepoSync be a referenced `SecretRef` name.
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1beta1.RepoSync{}, gitSecretRefField, func(rawObj client.Object) []string {
 		rs := rawObj.(*v1beta1.RepoSync)
@@ -280,21 +278,26 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager, dc 
 			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
 
-	if r.fleetMembershipCRDExists(dc, mapping) {
+	if watchFleetMembership {
 		// Custom Watch for membership to trigger reconciliation.
 		controllerBuilder.Watches(&source.Kind{Type: &hubv1.Membership{}},
-			handler.EnqueueRequestsFromMapFunc(r.mapMembershipToRepoSyncs(dc, mapping)),
+			handler.EnqueueRequestsFromMapFunc(r.mapMembershipToRepoSyncs()),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	}
 	return controllerBuilder.Complete(r)
 }
 
-func (r *RepoSyncReconciler) mapMembershipToRepoSyncs(dc dynamic.Interface, mapping *meta.RESTMapping) func(client.Object) []reconcile.Request {
+func (r *RepoSyncReconciler) mapMembershipToRepoSyncs() func(client.Object) []reconcile.Request {
 	return func(o client.Object) []reconcile.Request {
 		// Clear the membership if the cluster is unregistered
-		if !r.fleetMembershipCRDExists(dc, mapping) {
-			r.membership = nil
-			return r.requeueAllRepoSyncs()
+		if err := r.client.Get(context.Background(), types.NamespacedName{Name: fleetMembershipName}, &hubv1.Membership{}); err != nil {
+			if apierrors.IsNotFound(err) {
+				klog.Infof("Clear membership cache because %v", err)
+				r.membership = nil
+				return r.requeueAllRepoSyncs()
+			}
+			klog.Errorf("failed to get membership: %v", err)
+			return nil
 		}
 
 		m, isMembership := o.(*hubv1.Membership)

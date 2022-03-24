@@ -15,13 +15,18 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/klogr"
 	configmanagementv1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
@@ -82,21 +87,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	dc, err := dynamic.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		setupLog.Error(err, "failed to build dynamic client")
-		os.Exit(1)
-	}
-	crdRESTMapping, err := mgr.GetRESTMapper().RESTMapping(kinds.CustomResourceDefinition())
-	if err != nil {
-		setupLog.Error(err, "failed to get mapping of CRD type")
-		os.Exit(1)
-	}
+	watchFleetMembership := fleetMembershipCRDExists(mgr.GetConfig(), mgr.GetRESTMapper())
 
 	repoSync := controllers.NewRepoSyncReconciler(*clusterName, *reconcilerPollingPeriod, *hydrationPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RepoSync"),
 		mgr.GetScheme())
-	if err := repoSync.SetupWithManager(mgr, dc, crdRESTMapping); err != nil {
+	if err := repoSync.SetupWithManager(mgr, watchFleetMembership); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RepoSync")
 		os.Exit(1)
 	}
@@ -104,7 +100,7 @@ func main() {
 	rootSync := controllers.NewRootSyncReconciler(*clusterName, *reconcilerPollingPeriod, *hydrationPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RootSync"),
 		mgr.GetScheme())
-	if err := rootSync.SetupWithManager(mgr, dc, crdRESTMapping); err != nil {
+	if err := rootSync.SetupWithManager(mgr, watchFleetMembership); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RootSync")
 		os.Exit(1)
 	}
@@ -146,4 +142,29 @@ func main() {
 		}
 		os.Exit(1)
 	}
+}
+
+// fleetMembershipCRDExists checks if the fleet membership CRD exists.
+// It checks the CRD first so that the controller can watch the Membership resource in the startup time.
+func fleetMembershipCRDExists(config *rest.Config, mapper meta.RESTMapper) bool {
+	dc, err := dynamic.NewForConfig(config)
+	if err != nil {
+		setupLog.Error(err, "failed to build dynamic client")
+		os.Exit(1)
+	}
+	crdRESTMapping, err := mapper.RESTMapping(kinds.CustomResourceDefinition())
+	if err != nil {
+		setupLog.Error(err, "failed to get mapping of CRD type")
+		os.Exit(1)
+	}
+	_, err = dc.Resource(crdRESTMapping.Resource).Get(context.TODO(), "memberships.hub.gke.io", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			setupLog.Info("The memberships CRD doesn't exist")
+		} else {
+			setupLog.Error(err, "failed to GET the CRD for the memberships resource from the cluster")
+		}
+		return false
+	}
+	return true
 }
