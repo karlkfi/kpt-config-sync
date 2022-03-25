@@ -57,3 +57,11 @@ func RequireManual(t testing.NTB) Opt {
 func SkipAutopilotCluster(opt *New) {
 	opt.SkipAutopilot = true
 }
+
+// RequireGKE requires the --test-cluster flag to be `gke` so that the test only runs on GKE clusters.
+func RequireGKE(t testing.NTB) Opt {
+	if *e2e.TestCluster != e2e.GKE {
+		t.Skip("The --test-cluster flag must be set to `gke` to run this test.")
+	}
+	return func(opt *New) {}
+}

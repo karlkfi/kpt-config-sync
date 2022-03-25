@@ -85,6 +85,14 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 		t.Skip("Test skipped since it is a KCC test")
 	}
 
+	if !*e2e.GceNode && optsStruct.GCENodeTest {
+		t.Skip("Test skipped since it is a test for GCENode auth type, which requires a GKE cluster without workload identity")
+	}
+
+	if *e2e.GceNode && !optsStruct.GCENodeTest {
+		t.Skip("Test skipped for non-gcenode auth types")
+	}
+
 	switch {
 	case optsStruct.Nomos.MultiRepo:
 		if optsStruct.MultiRepoIncompatible {

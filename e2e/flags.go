@@ -41,6 +41,10 @@ var Stress = flag.Bool("stress", false,
 var Kcc = flag.Bool("kcc", false,
 	"If true, run kcc tests.")
 
+// GceNode enables running the e2e tests for 'gcenode' auth type
+var GceNode = flag.Bool("gcenode", false,
+	"If true, run test with 'gcenode' auth type.")
+
 // Debug enables running the test in debug mode.
 // In debug mode:
 // 1) Test execution immediately stops on a call to t.Fatal.

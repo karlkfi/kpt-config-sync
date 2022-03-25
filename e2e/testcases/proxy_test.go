@@ -70,14 +70,7 @@ func TestSyncingThroughAProxy(t *testing.T) {
 	if err = nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
 		nt.T.Fatal(err)
 	}
-	sha1Fn := func(nt *nomostest.NT, nn types.NamespacedName) (string, error) {
-		rs = &v1beta1.RootSync{}
-		if err = nt.Get(nn.Name, nn.Namespace, rs); err != nil {
-			return "", err
-		}
-		return rs.Status.LastSyncedCommit, nil
-	}
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn),
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
 		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "foo-corp"}))
 }
 

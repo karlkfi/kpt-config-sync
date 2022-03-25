@@ -24,146 +24,9 @@ import (
 	"kpt.dev/configsync/e2e/nomostest"
 	"kpt.dev/configsync/e2e/nomostest/ntopts"
 	"kpt.dev/configsync/pkg/api/configsync"
-	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
-	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// This file includes tests for KCC resources.
-// The test applies KCC resources and verifies the GCP resources
-// are created successfully.
-// It then deletes KCC resources and verifies the GCP resources
-// are removed successfully.
-func TestKCCResources(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.KccTest)
-
-	// Namespace foo holds the KCC resources.
-	nt.RootRepos[configsync.RootSyncName].Add("acme/namespaces/foo/ns.yaml",
-		fake.NamespaceObject("foo",
-			// Annotate the namespace to create GCP resources in the project "jingfang-fishfood".
-			core.Annotation("cnrm.cloud.google.com/project-id", "jingfang-fishfood")))
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add Namespace for holding KCC resources")
-	nt.WaitForRepoSyncs()
-
-	// Add KCC resources
-	enablePubSub := []byte(`
-apiVersion: serviceusage.cnrm.cloud.google.com/v1beta1
-kind: Service
-metadata:
-  name: pubsub.googleapis.com
-  namespace: foo
-  annotations:
-    cnrm.cloud.google.com/deletion-policy: "abandon"
-`)
-	pubsubTopic := []byte(`
-apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
-kind: PubSubTopic
-metadata:
-  labels:
-    environment: staging
-  name: test-cs
-  namespace: foo
-`)
-	pubsubKey := []byte(`
-apiVersion: iam.cnrm.cloud.google.com/v1beta1
-kind: IAMServiceAccountKey
-metadata:
-  name: pubsub-key
-  namespace: foo
-spec:
-  publicKeyType: TYPE_X509_PEM_FILE
-  keyAlgorithm: KEY_ALG_RSA_2048
-  privateKeyType: TYPE_GOOGLE_CREDENTIALS_FILE
-  serviceAccountRef:
-    name: pubsub-app
-`)
-	policy := []byte(`
-apiVersion: iam.cnrm.cloud.google.com/v1beta1
-kind: IAMPolicyMember
-metadata:
-  name: policy-member-binding
-  namespace: foo
-spec:
-  member: serviceAccount:pubsub-app@jingfang-fishfood.iam.gserviceaccount.com
-  role: roles/pubsub.subscriber
-  resourceRef:
-    apiVersion: resourcemanager.cnrm.cloud.google.com/v1beta1
-    kind: Project
-    external: projects/jingfang-fishfood
-`)
-	serviceAccount := []byte(`
-apiVersion: iam.cnrm.cloud.google.com/v1beta1
-kind: IAMServiceAccount
-metadata:
-  name: pubsub-app
-  namespace: foo
-spec:
-  displayName: Service account for PubSub example
-`)
-	subscription := []byte(`
-apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
-kind: PubSubSubscription
-metadata:
-  name: test-cs-read
-  namespace: foo
-spec:
-  topicRef:
-    name: test-cs
-`)
-	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/enable-pubsub.yaml", enablePubSub)
-	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/pubsub-topic.yaml", pubsubTopic)
-	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/pubsub-key.yaml", pubsubKey)
-	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/service-account-policy.yaml", policy)
-	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/service-account.yaml", serviceAccount)
-	nt.RootRepos[configsync.RootSyncName].AddFile("acme/namespaces/foo/subscription.yaml", subscription)
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add KCC resources")
-	nt.WaitForRepoSyncs()
-
-	// Verify that the GCP resources are created.
-	gvkPubSubTopic := schema.GroupVersionKind{
-		Group:   "pubsub.cnrm.cloud.google.com",
-		Version: "v1beta1",
-		Kind:    "PubSubTopic",
-	}
-	gvkPubSubSubscription := schema.GroupVersionKind{
-		Group:   "pubsub.cnrm.cloud.google.com",
-		Version: "v1beta1",
-		Kind:    "PubSubSubscription",
-	}
-	gvkServiceAccount := schema.GroupVersionKind{
-		Group:   "iam.cnrm.cloud.google.com",
-		Version: "v1beta1",
-		Kind:    "IAMServiceAccount",
-	}
-	gvkPolicyMember := schema.GroupVersionKind{
-		Group:   "iam.cnrm.cloud.google.com",
-		Version: "v1beta1",
-		Kind:    "IAMPolicyMember",
-	}
-	validateKCCResourceReady(nt, gvkPubSubTopic, "test-cs", "foo")
-	validateKCCResourceReady(nt, gvkPubSubSubscription, "test-cs-read", "foo")
-	validateKCCResourceReady(nt, gvkServiceAccount, "pubsub-app", "foo")
-	validateKCCResourceReady(nt, gvkPolicyMember, "policy-member-binding", "foo")
-
-	// Remove the kcc resources
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/enable-pubsub.yaml")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/pubsub-topic.yaml")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/pubsub-key.yaml")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/service-account-policy.yaml")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/service-account.yaml")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/subscription.yaml")
-	nt.RootRepos[configsync.RootSyncName].Remove("acme/namespaces/foo/ns.yaml")
-	nt.RootRepos[configsync.RootSyncName].CommitAndPush("remove KCC resources")
-	nt.WaitForRepoSyncs()
-
-	// Verify that the GCP resources are removed.
-	validateKCCResourceNotFound(nt, gvkPubSubTopic, "test-cs", "foo")
-	validateKCCResourceNotFound(nt, gvkPubSubSubscription, "test-cs-read", "foo")
-	validateKCCResourceNotFound(nt, gvkServiceAccount, "pubsub-app", "foo")
-	validateKCCResourceNotFound(nt, gvkPolicyMember, "policy-member-binding", "foo")
-
-}
 
 // This file includes tests for KCC resources from a cloud source repository.
 // The test applies KCC resources and verifies the GCP resources
@@ -176,14 +39,7 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 	nt.T.Log("sync to the kcc resources from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc", "branch": "main", "repo": "https://source.developers.google.com/p/stolos-dev/r/configsync-ci-cc", "auth": "gcpserviceaccount","gcpServiceAccountEmail": "e2e-test-csr-reader@stolos-dev.iam.gserviceaccount.com", "secretRef": {"name": ""}}, "sourceFormat": "unstructured"}}`)
 
-	sha1Fn := func(nt *nomostest.NT, nn types.NamespacedName) (string, error) {
-		rs = &v1beta1.RootSync{}
-		if err := nt.Get(nn.Name, nn.Namespace, rs); err != nil {
-			return "", err
-		}
-		return rs.Status.LastSyncedCommit, nil
-	}
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn),
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
 		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kcc"}))
 
 	// Verify that the GCP resources are created.
@@ -215,7 +71,7 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 	// Remove the kcc resources
 	nt.T.Log("sync to an empty directory from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc-empty"}}}`)
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn),
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
 		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kcc-empty"}))
 
 	// Verify that the GCP resources are removed.

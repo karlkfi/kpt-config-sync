@@ -31,7 +31,6 @@ import (
 	"kpt.dev/configsync/e2e/nomostest/ntopts"
 	"kpt.dev/configsync/pkg/api/configmanagement"
 	"kpt.dev/configsync/pkg/api/configsync"
-	"kpt.dev/configsync/pkg/api/configsync/v1alpha1"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
 	"kpt.dev/configsync/pkg/core"
 	"kpt.dev/configsync/pkg/metadata"
@@ -233,14 +232,7 @@ func TestStressLargeRequest(t *testing.T) {
 	}
 
 	nt.T.Logf("Wait for the sync to complete")
-	sha1Fn := func(nt *nomostest.NT, nn types.NamespacedName) (string, error) {
-		rs := &v1alpha1.RootSync{}
-		if err = nt.Get(nn.Name, nn.Namespace, rs); err != nil {
-			return "", err
-		}
-		return rs.Status.Source.Commit, nil
-	}
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn),
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
 		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "configs"}),
 		nomostest.WithTimeout(30*time.Minute))
 }
