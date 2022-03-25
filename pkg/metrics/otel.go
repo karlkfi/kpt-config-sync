@@ -24,8 +24,8 @@ const (
 	// OtelCollectorName is the name of the OpenTelemetry Collector.
 	OtelCollectorName = "otel-collector"
 
-	// OtelCollectorStackdriver is the name of the Stackdriver OpenTelemetry Collector ConfigMap.
-	OtelCollectorStackdriver = "otel-collector-stackdriver"
+	// OtelCollectorGooglecloud is the name of the OpenTelemetry Collector ConfigMap that contains Googlecloud exporter.
+	OtelCollectorGooglecloud = "otel-collector-googlecloud"
 
 	// OtelCollectorCustomCM is the name of the custom OpenTelemetry Collector ConfigMap.
 	OtelCollectorCustomCM = "otel-collector-custom"
@@ -33,15 +33,15 @@ const (
 	// MonitoringNamespace is the Namespace used for OpenTelemetry Collector deployment.
 	MonitoringNamespace = "config-management-monitoring"
 
-	// CollectorConfigStackdriver is the OpenTelemetry Collector configuration with
-	// the Stackdriver exporter.
-	CollectorConfigStackdriver = `receivers:
+	// CollectorConfigGooglecloud is the OpenTelemetry Collector configuration with
+	// the googlecloud exporter.
+	CollectorConfigGooglecloud = `receivers:
   opencensus:
 exporters:
   prometheus:
     endpoint: :8675
     namespace: config_sync
-  stackdriver:
+  googlecloud:
     metric:
       prefix: "custom.googleapis.com/opencensus/config_sync/"
       skip_create_descriptor: true
@@ -49,7 +49,7 @@ exporters:
       enabled: true
     sending_queue:
       enabled: true
-  stackdriver/kubernetes:
+  googlecloud/kubernetes:
     metric:
       prefix: "kubernetes.io/internal/addons/config_sync/"
       skip_create_descriptor: false
@@ -139,7 +139,7 @@ service:
     metrics/cloudmonitoring:
       receivers: [opencensus]
       processors: [batch, filter/cloudmonitoring]
-      exporters: [stackdriver]
+      exporters: [googlecloud]
     metrics/prometheus:
       receivers: [opencensus]
       processors: [batch]
@@ -147,5 +147,5 @@ service:
     metrics/kubernetes:
       receivers: [opencensus]
       processors: [batch, filter/kubernetes, metricstransform/kubernetes]
-      exporters: [stackdriver/kubernetes]`
+      exporters: [googlecloud/kubernetes]`
 )

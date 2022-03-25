@@ -83,7 +83,7 @@ func (r *OtelReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 //
 // If the reconciled ConfigMap is the standard `otel-collector` map, we check
 // whether Application Default Credentials exist. If so, we create a new map with
-// a collector config that includes both a Prometheus and a Stackdriver exporter.
+// a collector config that includes both a Prometheus and a Googlecloud exporter.
 func (r *OtelReconciler) reconcileConfigMap(ctx context.Context, req reconcile.Request) ([]byte, error) {
 	// The otel-collector Deployment only reads from the `otel-collector` and
 	// `otel-collector-custom` ConfigMaps, so we only reconcile these two maps.
@@ -99,18 +99,18 @@ func (r *OtelReconciler) reconcileConfigMap(ctx context.Context, req reconcile.R
 		return nil, status.APIServerErrorf(err, "failed to get otel ConfigMap %s", req.NamespacedName.String())
 	}
 	if cm.Name == metrics.OtelCollectorName {
-		return r.configureStackdriverConfigMap(ctx)
+		return r.configureGooglecloudConfigMap(ctx)
 	}
 	return hash(cm)
 }
 
-// configureStackdriverConfigMap creates or updates a map with a config that
-// enables Stackdriver if Application Default Credentials are present.
-func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]byte, error) {
+// configureGooglecloudConfigMap creates or updates a map with a config that
+// enables Googlecloud exporter if Application Default Credentials are present.
+func (r *OtelReconciler) configureGooglecloudConfigMap(ctx context.Context) ([]byte, error) {
 	creds, _ := getDefaultCredentials(ctx)
 	if creds != nil && creds.ProjectID != "" {
 		var cm corev1.ConfigMap
-		cm.Name = metrics.OtelCollectorStackdriver
+		cm.Name = metrics.OtelCollectorGooglecloud
 		cm.Namespace = metrics.MonitoringNamespace
 
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &cm, func() error {
@@ -121,7 +121,7 @@ func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]b
 				metadata.ArchLabel:   "csmr",
 			}
 			cm.Data = map[string]string{
-				"otel-collector-config.yaml": metrics.CollectorConfigStackdriver,
+				"otel-collector-config.yaml": metrics.CollectorConfigGooglecloud,
 			}
 			return nil
 		})

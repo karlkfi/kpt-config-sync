@@ -162,7 +162,7 @@ spec:
           - configMap:
               name: otel-collector
           - configMap:
-              name: otel-collector-stackdriver
+              name: otel-collector-googlecloud
               optional: true
           - configMap:
               name: otel-collector-custom

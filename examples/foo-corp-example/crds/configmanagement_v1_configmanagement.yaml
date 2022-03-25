@@ -197,7 +197,7 @@ spec:
                     type: boolean
                   enablePodTreeLabels:
                     description: PodTreeLabels copies the tree labels from namespaces
-                      to pods, allowing any system that uses pod logs (such as Stackdriver
+                      to pods, allowing any system that uses pod logs (such as Googlecloud
                       logging) to inspect the hierarchy.
                     type: boolean
                   enabled:

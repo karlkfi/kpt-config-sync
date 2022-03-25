@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	depAnnotationStackdriver = "070d46c0bfa1fa9e4427440cb051138b"
+	depAnnotationGooglecloud = "dd0990bae84b4e0e7c9e5aabe184c5a1"
 	depAnnotationCustom      = "9182661d55e260a55da649363c03c187"
 )
 
@@ -95,7 +95,7 @@ func TestOtelReconciler(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 }
 
-func TestOtelReconcilerStackdriver(t *testing.T) {
+func TestOtelReconcilerGooglecloud(t *testing.T) {
 	cm := configMapWithData(
 		metrics.MonitoringNamespace,
 		metrics.OtelCollectorName,
@@ -120,8 +120,8 @@ func TestOtelReconcilerStackdriver(t *testing.T) {
 
 	wantConfigMap := configMapWithData(
 		metrics.MonitoringNamespace,
-		metrics.OtelCollectorStackdriver,
-		map[string]string{"otel-collector-config.yaml": metrics.CollectorConfigStackdriver},
+		metrics.OtelCollectorGooglecloud,
+		map[string]string{"otel-collector-config.yaml": metrics.CollectorConfigGooglecloud},
 		core.Labels(map[string]string{
 			"app":                metrics.OpenTelemetry,
 			"component":          metrics.OtelCollectorName,
@@ -134,7 +134,7 @@ func TestOtelReconcilerStackdriver(t *testing.T) {
 		core.Namespace(metrics.MonitoringNamespace),
 		core.Name(metrics.OtelCollectorName),
 	)
-	core.SetAnnotation(&wantDeployment.Spec.Template, metadata.ConfigMapAnnotationKey, depAnnotationStackdriver)
+	core.SetAnnotation(&wantDeployment.Spec.Template, metadata.ConfigMapAnnotationKey, depAnnotationGooglecloud)
 
 	// compare ConfigMap
 	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantConfigMap)], wantConfigMap, cmpopts.EquateEmpty()); diff != "" {

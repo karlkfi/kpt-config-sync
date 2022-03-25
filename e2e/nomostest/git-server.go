@@ -102,7 +102,7 @@ func isAvailableDeployment(o client.Object) error {
 			ErrFailedPredicate, d.GetName(), d.GetNamespace(), available, want, string(jsn))
 	}
 
-	// otel_controller.go:configureStackdriverConfigMap creates or updates `otel-collector-stackdriver` configmap
+	// otel_controller.go:configureGooglecloudConfigMap creates or updates `otel-collector-googlecloud` configmap
 	// which causes the deployment to be updated. We need to make sure the updated deployment is available.
 	if *e2e.TestCluster == e2e.GKE && d.Name == metrics.OtelCollectorName && d.ObjectMeta.Generation < 2 {
 		return fmt.Errorf("deployment/%s in namespace %s should be updated after creation", d.Name, d.Namespace)
