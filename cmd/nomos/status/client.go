@@ -256,10 +256,10 @@ func (c *ClusterClient) multiRepoClusterStatus(ctx context.Context, cs *ClusterS
 	}
 
 	if len(rootSyncs) != 0 {
-		var repos []*repoState
+		var repos []*RepoState
 		for i, rs := range rootSyncs {
 			rg := rootRGs[i]
-			repos = append(repos, rootRepoStatus(rs, rg, syncingConditionSupported))
+			repos = append(repos, RootRepoStatus(rs, rg, syncingConditionSupported))
 		}
 		sort.Slice(repos, func(i, j int) bool {
 			return repos[i].scope < repos[j].scope || (repos[i].scope == repos[j].scope && repos[i].syncName < repos[j].syncName)
@@ -280,7 +280,7 @@ func (c *ClusterClient) multiRepoClusterStatus(ctx context.Context, cs *ClusterS
 	}
 
 	if len(repoSyncs) != 0 {
-		var repos []*repoState
+		var repos []*RepoState
 		for i, rs := range repoSyncs {
 			rg := namespaceRGs[i]
 			repos = append(repos, namespaceRepoStatus(rs, rg, syncingConditionSupported))
@@ -318,7 +318,7 @@ func (c *ClusterClient) namespaceRepoClusterStatus(ctx context.Context, cs *Clus
 	}
 
 	if len(syncs) != 0 {
-		var repos []*repoState
+		var repos []*RepoState
 		for i, rs := range syncs {
 			rg := rgs[i]
 			repos = append(repos, namespaceRepoStatus(rs, rg, syncingConditionSupported))

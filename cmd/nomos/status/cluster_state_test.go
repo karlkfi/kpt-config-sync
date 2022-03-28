@@ -59,12 +59,12 @@ var (
 func TestRepoState_PrintRows(t *testing.T) {
 	testCases := []struct {
 		name string
-		repo *repoState
+		repo *RepoState
 		want string
 	}{
 		{
 			"optional git fields missing",
-			&repoState{
+			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git: v1beta1.Git{
@@ -78,7 +78,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional git subdirectory specified",
-			&repoState{
+			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git: v1beta1.Git{
@@ -92,7 +92,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional git subdirectory is '/'",
-			&repoState{
+			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git: v1beta1.Git{
@@ -106,7 +106,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional git subdirectory is '.'",
-			&repoState{
+			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git: v1beta1.Git{
@@ -120,7 +120,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional git subdirectory starts with '/'",
-			&repoState{
+			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git: v1beta1.Git{
@@ -134,7 +134,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional git branch specified",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -148,7 +148,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional git revision specified",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -162,7 +162,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional default git revision HEAD specified",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -176,7 +176,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"optional default git revision HEAD and branch specified",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -191,7 +191,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"all optional git fields specified",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -207,7 +207,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"repo with errors",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -224,7 +224,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"repo with errors (truncated)",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -245,7 +245,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 		},
 		{
 			"unsynced repo",
-			&repoState{
+			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git: v1beta1.Git{
@@ -274,7 +274,7 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 		name   string
 		git    v1beta1.Git
 		status v1.RepoStatus
-		want   *repoState
+		want   *RepoState
 	}{
 		{
 			"repo is pending first sync",
@@ -284,7 +284,7 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 				Import: v1.RepoImportStatus{},
 				Sync:   v1.RepoSyncStatus{},
 			},
-			&repoState{
+			&RepoState{
 				scope:  "<root>",
 				git:    git,
 				status: "PENDING",
@@ -305,7 +305,7 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 					LatestToken: "abc123",
 				},
 			},
-			&repoState{
+			&RepoState{
 				scope:  "<root>",
 				git:    git,
 				status: "SYNCED",
@@ -329,7 +329,7 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 					LatestToken: "abc123",
 				},
 			},
-			&repoState{
+			&RepoState{
 				scope:        "<root>",
 				git:          git,
 				status:       "ERROR",
@@ -406,13 +406,13 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		renderingStatus           v1beta1.RenderingStatus
 		syncStatus                v1beta1.GitSyncStatus
 		resourceGroup             *unstructured.Unstructured
-		want                      *repoState
+		want                      *RepoState
 	}{
 		{
 			name:       "fresh installation, namespace reconciler is stalled",
 			gitSpec:    git,
 			conditions: []v1beta1.RepoSyncCondition{stalledCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          git,
@@ -440,7 +440,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          gitUpdated,
@@ -454,7 +454,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:       "fresh installation, namespace reconciler is reconciling",
 			gitSpec:    git,
 			conditions: []v1beta1.RepoSyncCondition{reconcilingCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -480,7 +480,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -492,7 +492,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:       "[accurate status before syncing condition is supported] fresh installation, namespace reconciler is importing source configs",
 			gitSpec:    git,
 			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -505,7 +505,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			gitSpec:                   git,
 			syncingConditionSupported: true,
 			conditions:                []v1beta1.RepoSyncCondition{reconciledCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -531,7 +531,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -562,7 +562,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -579,7 +579,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -605,7 +605,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          git,
@@ -634,7 +634,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -670,7 +670,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          gitUpdated,
@@ -689,7 +689,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering in progress",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -712,7 +712,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering in progress",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -738,7 +738,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -774,7 +774,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -791,7 +791,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -816,7 +816,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          git,
@@ -845,7 +845,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -881,7 +881,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          gitUpdated,
@@ -900,7 +900,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering succeeded",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -923,7 +923,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering succeeded",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -949,7 +949,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -985,7 +985,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -1007,7 +1007,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -1037,7 +1037,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          git,
@@ -1066,7 +1066,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -1102,7 +1102,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          gitUpdated,
@@ -1125,7 +1125,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -1153,7 +1153,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      git,
@@ -1179,7 +1179,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -1215,7 +1215,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
 				git:      gitUpdated,
@@ -1242,7 +1242,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          git,
@@ -1275,7 +1275,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          git,
@@ -1304,7 +1304,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          gitUpdated,
@@ -1337,7 +1337,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "bookstore",
 				syncName:     "repo-sync",
 				git:          gitUpdated,
@@ -1365,7 +1365,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:     "bookstore",
 				syncName:  "repo-sync",
 				git:       git,
@@ -1396,7 +1396,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:     "bookstore",
 				syncName:  "repo-sync",
 				git:       git,
@@ -1469,13 +1469,13 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		sourceStatus              v1beta1.GitSourceStatus
 		renderingStatus           v1beta1.RenderingStatus
 		syncStatus                v1beta1.GitSyncStatus
-		want                      *repoState
+		want                      *RepoState
 	}{
 		{
 			name:       "fresh installation, namespace reconciler is stalled",
 			gitSpec:    git,
 			conditions: []v1beta1.RootSyncCondition{stalledCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          git,
@@ -1503,7 +1503,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          gitUpdated,
@@ -1517,7 +1517,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:       "fresh installation, namespace reconciler is reconciling",
 			gitSpec:    git,
 			conditions: []v1beta1.RootSyncCondition{reconcilingCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1543,7 +1543,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -1555,7 +1555,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:       "[accurate status before syncing condition is supported] fresh installation, namespace reconciler is importing source configs",
 			gitSpec:    git,
 			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1568,7 +1568,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			gitSpec:                   git,
 			syncingConditionSupported: true,
 			conditions:                []v1beta1.RootSyncCondition{reconciledCondition},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1594,7 +1594,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -1625,7 +1625,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -1642,7 +1642,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1668,7 +1668,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          git,
@@ -1697,7 +1697,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -1733,7 +1733,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          gitUpdated,
@@ -1752,7 +1752,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering in progress",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1775,7 +1775,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering in progress",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1801,7 +1801,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -1837,7 +1837,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -1854,7 +1854,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1879,7 +1879,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          git,
@@ -1908,7 +1908,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -1944,7 +1944,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          gitUpdated,
@@ -1963,7 +1963,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering succeeded",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -1986,7 +1986,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering succeeded",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -2012,7 +2012,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -2048,7 +2048,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -2070,7 +2070,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -2100,7 +2100,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          git,
@@ -2129,7 +2129,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -2165,7 +2165,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          gitUpdated,
@@ -2188,7 +2188,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -2216,7 +2216,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -2242,7 +2242,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -2278,7 +2278,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      gitUpdated,
@@ -2305,7 +2305,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          git,
@@ -2338,7 +2338,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          git,
@@ -2367,7 +2367,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          gitUpdated,
@@ -2400,7 +2400,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:        "<root>",
 				syncName:     "root-sync",
 				git:          gitUpdated,
@@ -2427,7 +2427,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -2456,7 +2456,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			want: &repoState{
+			want: &RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
 				git:      git,
@@ -2473,7 +2473,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			rootSync.Status.Source = tc.sourceStatus
 			rootSync.Status.Rendering = tc.renderingStatus
 			rootSync.Status.Sync = tc.syncStatus
-			got := rootRepoStatus(rootSync, nil, tc.syncingConditionSupported)
+			got := RootRepoStatus(rootSync, nil, tc.syncingConditionSupported)
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(*tc.want)); diff != "" {
 				t.Error(diff)
 			}
@@ -2516,7 +2516,7 @@ gke_sample-project_europe-west1-b_cluster-1
 			"cluster with repos",
 			&ClusterState{
 				Ref: "gke_sample-project_europe-west1-b_cluster-2",
-				repos: []*repoState{
+				repos: []*RepoState{
 					{
 						scope:    "<root>",
 						syncName: "root-sync",

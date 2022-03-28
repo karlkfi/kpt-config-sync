@@ -42,7 +42,7 @@ type ClusterState struct {
 	status string
 	// Error represents the sync errors
 	Error   string
-	repos   []*repoState
+	repos   []*RepoState
 	isMulti *bool
 }
 
@@ -69,8 +69,8 @@ func unavailableCluster(ref string) *ClusterState {
 	}
 }
 
-// repoState represents the sync status of a single repo on a cluster.
-type repoState struct {
+// RepoState represents the sync status of a single repo on a cluster.
+type RepoState struct {
 	scope    string
 	syncName string
 	git      v1beta1.Git
@@ -82,7 +82,7 @@ type repoState struct {
 	resources    []resourceState
 }
 
-func (r *repoState) printRows(writer io.Writer) {
+func (r *RepoState) printRows(writer io.Writer) {
 	fmt.Fprintf(writer, "%s%s:%s\t%s\t\n", util.Indent, r.scope, r.syncName, gitString(r.git))
 	fmt.Fprintf(writer, "%s%s\t%s\t\n", util.Indent, r.status, r.commit)
 
@@ -144,12 +144,12 @@ func gitString(git v1beta1.Git) string {
 	return gitStr
 }
 
-// monoRepoStatus converts the given Git config and mono-repo status into a repoState.
-func monoRepoStatus(git v1beta1.Git, status v1.RepoStatus) *repoState {
+// monoRepoStatus converts the given Git config and mono-repo status into a RepoState.
+func monoRepoStatus(git v1beta1.Git, status v1.RepoStatus) *RepoState {
 	errors := syncStatusErrors(status)
 	totalErrorCount := len(errors)
 
-	result := &repoState{
+	result := &RepoState{
 		scope:  "<root>",
 		git:    git,
 		status: getSyncStatus(status),
@@ -250,9 +250,9 @@ func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string
 	return syncErrors
 }
 
-// namespaceRepoStatus converts the given RepoSync into a repoState.
-func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
-	repostate := &repoState{
+// namespaceRepoStatus converts the given RepoSync into a RepoState.
+func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *RepoState {
+	repostate := &RepoState{
 		scope:    rs.Namespace,
 		syncName: rs.Name,
 		git:      rs.Spec.Git,
@@ -343,9 +343,9 @@ func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, sy
 	return repostate
 }
 
-// rootRepoStatus converts the given RootSync into a repoState.
-func rootRepoStatus(rs *v1beta1.RootSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
-	repostate := &repoState{
+// RootRepoStatus converts the given RootSync into a RepoState.
+func RootRepoStatus(rs *v1beta1.RootSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *RepoState {
+	repostate := &RepoState{
 		scope:    "<root>",
 		syncName: rs.Name,
 		git:      rs.Spec.Git,
@@ -502,3 +502,12 @@ func toErrorMessage(errs []v1beta1.ConfigSyncError) []string {
 	}
 	return msg
 }
+
+// GetCommit returns RepoState's commit
+func (r *RepoState) GetCommit() string { return r.commit }
+
+// GetStatus returns RepoState's status
+func (r *RepoState) GetStatus() string { return r.status }
+
+// GetErrorSummary returns RepoState's ErrorSummary
+func (r *RepoState) GetErrorSummary() *v1beta1.ErrorSummary { return r.errorSummary }
