@@ -137,34 +137,37 @@ func TestWorkloadIdentity(t *testing.T) {
 	validateTenant(nt, string(declared.RootReconciler), tenant)
 	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationAbsent)
 
-	nt.T.Log("Register the cluster to a fleet in a different project")
-	crossProjectFleetProjectID := "cs-dev-hub"
-	out, err = exec.Command("gcloud", "beta", "container", "hub", "memberships", "register",
-		fleetMembership, "--project", crossProjectFleetProjectID, "--gke-uri", gkeURI, "--enable-workload-identity").CombinedOutput()
-	if err != nil {
-		nt.T.Fatalf("%s: %v", string(out), err)
-	}
-	tenant = "tenant-c"
-	nt.T.Logf("Update RootSync to sync %s from a CSR repo", tenant)
-	nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, tenant))
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
-		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: tenant}))
-	validateTenant(nt, string(declared.RootReconciler), tenant)
-	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationExists)
-
-	nt.T.Log("Unregister the cluster from the fleet in a different project")
-	out, err = exec.Command("gcloud", "beta", "container", "hub", "memberships",
-		"unregister", fleetMembership, "--gke-uri", gkeURI, "--project", crossProjectFleetProjectID).CombinedOutput()
-	if err != nil {
-		nt.T.Fatalf("%s: %v", string(out), err)
-	}
-	tenant = "tenant-d"
-	nt.T.Logf("Update RootSync to sync %s from a CSR repo", tenant)
-	nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, tenant))
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
-		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: tenant}))
-	validateTenant(nt, string(declared.RootReconciler), tenant)
-	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationAbsent)
+	// The CI jobs run the e2e test with service account `prober-runner@nomos-e2e-test1.iam.gserviceaccount.com`, which needs `roles/gkehub.admin` permission in the `cs-dev-hub` project.
+	// Due to the domain restricted sharing policy, if fails to grant the permission to the external domain.
+	// Disable the cross-project fleet workload identity authentication verification before the exemption is applied.
+	//nt.T.Log("Register the cluster to a fleet in a different project")
+	//crossProjectFleetProjectID := "cs-dev-hub"
+	//out, err = exec.Command("gcloud", "beta", "container", "hub", "memberships", "register",
+	//	fleetMembership, "--project", crossProjectFleetProjectID, "--gke-uri", gkeURI, "--enable-workload-identity").CombinedOutput()
+	//if err != nil {
+	//	nt.T.Fatalf("%s: %v", string(out), err)
+	//}
+	//tenant = "tenant-c"
+	//nt.T.Logf("Update RootSync to sync %s from a CSR repo", tenant)
+	//nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, tenant))
+	//nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
+	//	nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: tenant}))
+	//validateTenant(nt, string(declared.RootReconciler), tenant)
+	//validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationExists)
+	//
+	//nt.T.Log("Unregister the cluster from the fleet in a different project")
+	//out, err = exec.Command("gcloud", "beta", "container", "hub", "memberships",
+	//	"unregister", fleetMembership, "--gke-uri", gkeURI, "--project", crossProjectFleetProjectID).CombinedOutput()
+	//if err != nil {
+	//	nt.T.Fatalf("%s: %v", string(out), err)
+	//}
+	//tenant = "tenant-d"
+	//nt.T.Logf("Update RootSync to sync %s from a CSR repo", tenant)
+	//nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, tenant))
+	//nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
+	//	nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: tenant}))
+	//validateTenant(nt, string(declared.RootReconciler), tenant)
+	//validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationAbsent)
 
 	// Change the rs back so that it works in the shared test environment.
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "git@test-git-server.config-management-system-test:/git-server/repos/config-management-system/root-sync", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`)
