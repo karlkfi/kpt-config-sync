@@ -166,6 +166,7 @@ include Makefile.docs
 include Makefile.e2e
 include Makefile.prow
 include Makefile.gen
+include Makefile.oss
 include Makefile.reconcilermanager
 include Makefile.release
 

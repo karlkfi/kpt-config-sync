@@ -31,8 +31,24 @@ make test-e2e-go-ephemeral-multi-repo
 ```
 
 ## Build
-TODO
+The project can be built from source with a single command:
 
+```
+make build-oss
+```
+
+This will build all the docker images needed for Config Sync and generate
+the manifests needed to run it. The images will by default be uploaded to 
+Google Container Registry under your current gcloud project and the manifests
+will be created in .output/oss/manifests under the Config Sync directory.
+
+## Run
+Running Config Sync is as simple as applying the generated manifests to your
+cluster (from the Config Sync directory):
+
+```
+kubectl apply -f .output/oss/manifests
+```
 
 
 [go]: https://go.dev/doc/install
