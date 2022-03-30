@@ -35,6 +35,8 @@ import (
 // are removed successfully.
 func TestKCCResourcesOnCSR(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.KccTest)
+	origRepoURL := nt.GitProvider.SyncURL(nt.RootRepos[configsync.RootSyncName].RemoteRepoName)
+
 	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.T.Log("sync to the kcc resources from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc", "branch": "main", "repo": "https://source.developers.google.com/p/stolos-dev/r/configsync-ci-cc", "auth": "gcpserviceaccount","gcpServiceAccountEmail": "e2e-test-csr-reader@stolos-dev.iam.gserviceaccount.com", "secretRef": {"name": ""}}, "sourceFormat": "unstructured"}}`)
@@ -81,7 +83,7 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 	validateKCCResourceNotFound(nt, gvkPolicyMember, "policy-member-binding", "foo")
 
 	// Change the rs back so that it works in the shared test environment.
-	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "git@test-git-server.config-management-system-test:/git-server/repos/config-management-system/root-sync", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`)
+	nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "%s", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`, origRepoURL))
 }
 
 func validateKCCResourceReady(nt *nomostest.NT, gvk schema.GroupVersionKind, name, namespace string) {

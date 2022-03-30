@@ -50,6 +50,7 @@ func TestGCENode(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.Unstructured,
 		ntopts.RequireGKE(t), ntopts.GCENodeTest)
 
+	origRepoURL := nt.GitProvider.SyncURL(nt.RootRepos[configsync.RootSyncName].RemoteRepoName)
 	tenant := "tenant-a"
 	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
 	nt.T.Log("Update RootSync to sync from a CSR repo")
@@ -62,7 +63,7 @@ func TestGCENode(t *testing.T) {
 	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationAbsent)
 
 	// Change the rs back so that it works in the shared test environment.
-	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "git@test-git-server.config-management-system-test:/git-server/repos/config-management-system/root-sync", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`)
+	nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "%s", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`, origRepoURL))
 }
 
 // TestWorkloadIdentity tests the `gcpserviceaccount` auth type with both GKE
@@ -82,6 +83,7 @@ func TestGCENode(t *testing.T) {
 func TestWorkloadIdentity(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.Unstructured, ntopts.RequireGKE(t))
 
+	origRepoURL := nt.GitProvider.SyncURL(nt.RootRepos[configsync.RootSyncName].RemoteRepoName)
 	gcpProject := os.Getenv("GCP_PROJECT")
 	if gcpProject == "" {
 		t.Fatal("Environment variable 'GCP_PROJECT' is required for this test case")
@@ -170,7 +172,7 @@ func TestWorkloadIdentity(t *testing.T) {
 	//validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationAbsent)
 
 	// Change the rs back so that it works in the shared test environment.
-	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "git@test-git-server.config-management-system-test:/git-server/repos/config-management-system/root-sync", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`)
+	nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "%s", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`, origRepoURL))
 }
 
 // validateTenant validates if the tenant resources are created and managed by the reonciler.
