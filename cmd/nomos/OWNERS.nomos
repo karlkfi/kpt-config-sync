@@ -1,8 +1,0 @@
-# All user facing CLI changes should be reviewed for consistency against go/nomos-cli.
-set noparent
-
-frankf@google.com
-willbeason@google.com
-
-# backup
-briankennedy@google.com
