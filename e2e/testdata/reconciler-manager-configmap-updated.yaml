@@ -70,12 +70,6 @@ data:
               drop:
               - NET_RAW
             runAsUser: 65533
-          env:
-          - name: NAMESPACE_NAME
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: metadata.namespace
           envFrom:
           - configMapRef:
               name: hydration-controller
@@ -100,12 +94,6 @@ data:
           - name: repo
             mountPath: /repo
             readOnly: true
-          env:
-          - name: NAMESPACE_NAME
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: metadata.namespace
           envFrom:
           - configMapRef:
               name: reconciler

@@ -61,17 +61,17 @@ const (
 	rootsyncInvalidName = "qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "4fdb2a3e4a4b0841e530cca9e1125eec"
+	rsAnnotation = "723898e1e3ca447221210c24651af4c2"
 
-	rsUpdatedAnnotationOverrideGitSyncDepth     = "a70191514cbae8e5da830969a34ac2f4"
-	rsUpdatedAnnotationOverrideGitSyncDepthZero = "382bd81fe88358eddd27260bcaf435e9"
+	rsUpdatedAnnotationOverrideGitSyncDepth     = "564bb4f808e9ffca36623c64c0c7ed2a"
+	rsUpdatedAnnotationOverrideGitSyncDepthZero = "848d749712d3bd2f31c36f4c138147d7"
 
-	rsUpdatedAnnotationOverrideReconcileTimeout = "ab8396dfcb72885870370ccc38a41e0e"
+	rsUpdatedAnnotationOverrideReconcileTimeout = "b8d2d95fa761195c0ee8195f847951d4"
 
-	rsUpdatedAnnotationNoSSLVerify = "0158b3f5e4c610a9a68f83b618fc65e7"
+	rsUpdatedAnnotationNoSSLVerify = "b8efc718cfdc6d6f60f98cd278097ecd"
 
-	rsAnnotationGCENode = "bfed8b658aa4431528c43dd8d89486db"
-	rsAnnotationNone    = "74eecb5d698c42906003c216415b67ad"
+	rsAnnotationGCENode = "e36b22be6a4bba1dc5e1f82789b25ae1"
+	rsAnnotationNone    = "5080a990b85855796c017c303ca4d88b"
 
 	rootsyncSSHKey = "root-ssh-key"
 )
@@ -1453,7 +1453,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment2 := rootSyncDeployment(rootReconcilerName2,
-		setAnnotations(deploymentAnnotation("626f608208fb5b4ac11893bddb934a64")),
+		setAnnotations(deploymentAnnotation("2d7f1da507c9fd4279c91297b67a3756")),
 		setServiceAccountName(rootReconcilerName2),
 		gceNodeMutator(rootReconcilerName2, ""),
 	)
@@ -1501,7 +1501,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment3 := rootSyncDeployment(rootReconcilerName3,
-		setAnnotations(deploymentAnnotation("0205fbc98b62c4e4b20d7334b0d67c6a")),
+		setAnnotations(deploymentAnnotation("da7ec7cb46b7fb30cbb82ab72dccac4c")),
 		setServiceAccountName(rootReconcilerName3),
 		gceNodeMutator(rootReconcilerName3, gcpSAEmail),
 	)
@@ -1553,7 +1553,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment4 := rootSyncDeployment(rootReconcilerName4,
-		setAnnotations(deploymentAnnotation("63c679dde4f0b9a009d40e35514cc9c1")),
+		setAnnotations(deploymentAnnotation("301185c35a8f40965a0d4d99813ce8cb")),
 		setServiceAccountName(rootReconcilerName4),
 		secretMutator(rootReconcilerName4, reposyncCookie),
 		envVarMutator("HTTPS_PROXY", reposyncCookie, "https_proxy"),
@@ -1605,7 +1605,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment5 := rootSyncDeployment(rootReconcilerName5,
-		setAnnotations(deploymentAnnotation("81e7e6140d5314fbd37daeeb83acec86")),
+		setAnnotations(deploymentAnnotation("e6bd11f45eb789b1a67591500fa78af0")),
 		setServiceAccountName(rootReconcilerName5),
 		secretMutator(rootReconcilerName5, secretName),
 		envVarMutator("HTTPS_PROXY", secretName, "https_proxy"),
@@ -1657,7 +1657,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment1 = rootSyncDeployment(rootReconcilerName,
-		setAnnotations(deploymentAnnotation("1f4a4ec554c070544fcfa7f79a923754")),
+		setAnnotations(deploymentAnnotation("f21c4420a172ae01e30123c7c8ff30ca")),
 		setServiceAccountName(rootReconcilerName),
 		secretMutator(rootReconcilerName, rootsyncSSHKey),
 	)
@@ -1684,7 +1684,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment2 = rootSyncDeployment(rootReconcilerName2,
-		setAnnotations(deploymentAnnotation("f5aa1a824b5ef92e9e2a85448c73af74")),
+		setAnnotations(deploymentAnnotation("d7e0a597a5d2752db4194acc267902d6")),
 		setServiceAccountName(rootReconcilerName2),
 		gceNodeMutator(rootReconcilerName2, ""),
 	)
@@ -1712,7 +1712,7 @@ func TestMultipleRootSyncs(t *testing.T) {
 	}
 
 	rootDeployment3 = rootSyncDeployment(rootReconcilerName3,
-		setAnnotations(deploymentAnnotation("4a65f1280d7e500f95644cce02981252")),
+		setAnnotations(deploymentAnnotation("02fe1fa40be3a2ace2a406b8a454d32c")),
 		setServiceAccountName(rootReconcilerName3),
 		gceNodeMutator(rootReconcilerName3, gcpSAEmail),
 	)

@@ -74,19 +74,19 @@ const (
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "681300084f48c8b8f480e5f7af6d7f23"
+	nsAnnotation = "a66c85bedd61424753c2c66d11c2bddb"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "cc8c4c580bc37e67f163ea3a11e0523f"
+	nsUpdatedAnnotation = "9ed2d86daf4242ca5ec4d1ee1bc6940b"
 
-	nsUpdatedAnnotationOverrideGitSyncDepth     = "172ac5f93f9658fd07e4ea3320d1e373"
-	nsUpdatedAnnotationOverrideGitSyncDepthZero = "4f543834f4bbe664d5f6ae049210199e"
+	nsUpdatedAnnotationOverrideGitSyncDepth     = "3cccfafa68d629897db780fd07a490ab"
+	nsUpdatedAnnotationOverrideGitSyncDepthZero = "3633a4153097fd2a7d23f8a71f7b4a56"
 
-	nsUpdatedAnnotationOverrideReconcileTimeout = "079289428421952de725e18d355f280d"
+	nsUpdatedAnnotationOverrideReconcileTimeout = "608b9def673c66483aab8a709c8040a5"
 
-	nsUpdatedAnnotationNoSSLVerify = "02be61f2b1ec715c8a66924a22968aca"
+	nsUpdatedAnnotationNoSSLVerify = "0ac170fdb123624374cbd510946097d2"
 
-	nsAnnotationGCENode = "d16ee33ea45f681f189c2c252021bf78"
-	nsAnnotationNone    = "dec3e802ee7915ee79ba702334a70a66"
+	nsAnnotationGCENode = "a3a138a48f71c56c6fed5ab6e94fe128"
+	nsAnnotationNone    = "3467f9a9dd01093f4e55e128a166335e"
 )
 
 // Set in init.
@@ -1522,7 +1522,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment2 := repoSyncDeployment(
 		nsReconcilerName2,
-		setAnnotations(deploymentAnnotation("8e06d12710fc18b524110189180beb43")),
+		setAnnotations(deploymentAnnotation("081abe92d16377ba316f48e2be4b38c9")),
 		setServiceAccountName(nsReconcilerName2),
 		gceNodeMutator(nsReconcilerName2, ""),
 	)
@@ -1576,7 +1576,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment3 := repoSyncDeployment(
 		nsReconcilerName3,
-		setAnnotations(deploymentAnnotation("f92af0c359ca89a3a4bebbaea474ec3c")),
+		setAnnotations(deploymentAnnotation("058da34b771663f4b030c3895a280182")),
 		setServiceAccountName(nsReconcilerName3),
 		gceNodeMutator(nsReconcilerName3, gcpSAEmail),
 	)
@@ -1633,7 +1633,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment4 := repoSyncDeployment(
 		nsReconcilerName4,
-		setAnnotations(deploymentAnnotation("561fa64c43ac9b7ed8ca7836eb388012")),
+		setAnnotations(deploymentAnnotation("96bc72d5b0ba9bc80e830ddfe04ae62a")),
 		setServiceAccountName(nsReconcilerName4),
 		secretMutator(nsReconcilerName4, nsReconcilerName4+"-"+reposyncCookie),
 		envVarMutator("HTTPS_PROXY", nsReconcilerName4+"-"+reposyncCookie, "https_proxy"),
@@ -1690,7 +1690,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment5 := repoSyncDeployment(
 		nsReconcilerName5,
-		setAnnotations(deploymentAnnotation("9bf15d77819ad709f8ad1c977d66b168")),
+		setAnnotations(deploymentAnnotation("c723038f7bf70810f5a34ea68736d0ac")),
 		setServiceAccountName(nsReconcilerName5),
 		secretMutator(nsReconcilerName5, nsReconcilerName5+"-"+secretName),
 		envVarMutator("HTTPS_PROXY", nsReconcilerName5+"-"+secretName, "https_proxy"),
@@ -1771,7 +1771,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment2 = repoSyncDeployment(
 		nsReconcilerName2,
-		setAnnotations(deploymentAnnotation("04b2c4d198c76569dc1a5779a3e6596b")),
+		setAnnotations(deploymentAnnotation("2929eb0f5e3203f89706982c1de0ec01")),
 		setServiceAccountName(nsReconcilerName2),
 		gceNodeMutator(nsReconcilerName2, ""),
 	)
@@ -1802,7 +1802,7 @@ func TestMultipleRepoSyncs(t *testing.T) {
 
 	repoDeployment3 = repoSyncDeployment(
 		nsReconcilerName3,
-		setAnnotations(deploymentAnnotation("9f8da31b946c9399993c2d11458ebe60")),
+		setAnnotations(deploymentAnnotation("0afb04bce73283d78bc9545934a51186")),
 		setServiceAccountName(nsReconcilerName3),
 		gceNodeMutator(nsReconcilerName3, gcpSAEmail),
 	)

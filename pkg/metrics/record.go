@@ -16,12 +16,14 @@ package metrics
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
+	"kpt.dev/configsync/pkg/reconcilermanager"
 )
 
 // RecordAPICallDuration produces a measurement for the APICallDuration view.
@@ -47,9 +49,9 @@ func RecordReconcilerErrors(ctx context.Context, component string, errs []v1beta
 
 // RecordPipelineError produces a measurement for the PipelineError view
 func RecordPipelineError(ctx context.Context, reconcilerType, component string, errLen int) {
-	podName, _ := GetResourceLabels()
+	reconcilerName := os.Getenv(reconcilermanager.ReconcilerNameKey)
 	tagCtx, _ := tag.New(ctx,
-		tag.Upsert(KeyName, podName),
+		tag.Upsert(KeyName, reconcilerName),
 		tag.Upsert(KeyReconcilerType, reconcilerType),
 		tag.Upsert(KeyComponent, component))
 	if errLen > 0 {

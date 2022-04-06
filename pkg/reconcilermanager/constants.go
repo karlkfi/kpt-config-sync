@@ -41,6 +41,10 @@ const (
 	// the Reconciler Deployment.
 	ReconcilerNameKey = "RECONCILER_NAME"
 
+	// NamespaceNameKey is the OS env variable and ConfigMap key for the name of
+	// the Reconciler's namespace
+	NamespaceNameKey = "NAMESPACE_NAME"
+
 	// SyncDirKey is the OS env variable and ConfigMap key for the sync directory
 	// read by the hydration controller.
 	SyncDirKey = "SYNC_DIR"

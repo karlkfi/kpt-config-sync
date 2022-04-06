@@ -37,6 +37,7 @@ func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, reconcilerName,
 	result := make(map[string]string)
 	result[reconcilermanager.ScopeKey] = string(scope)
 	result[reconcilermanager.ReconcilerNameKey] = reconcilerName
+	result[reconcilermanager.NamespaceNameKey] = string(scope)
 	result[reconcilermanager.SyncDirKey] = gitConfig.Dir
 	// Add Hydration Polling Period.
 	result[reconcilermanager.HydrationPollingPeriod] = pollPeriod
@@ -50,6 +51,7 @@ func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScop
 	result[reconcilermanager.ScopeKey] = string(reconcilerScope)
 	result[reconcilermanager.SyncNameKey] = syncName
 	result[reconcilermanager.ReconcilerNameKey] = reconcilerName
+	result[reconcilermanager.NamespaceNameKey] = string(reconcilerScope)
 	result[reconcilermanager.PolicyDirKey] = gitConfig.Dir
 	result[reconcilermanager.GitRepoKey] = gitConfig.Repo
 	if statusMode == "" {
