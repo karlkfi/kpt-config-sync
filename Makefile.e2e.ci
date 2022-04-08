@@ -1,4 +1,4 @@
-GCS_PROBER_CREDS_URL ?= "gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json"
+GCS_PROBER_CREDS_URL ?= "gs://stolos-dev/e2e/prober_runner_client_key.json"
 
 # Environment:
 #   E2E_FLAGS: flag passed into the test container

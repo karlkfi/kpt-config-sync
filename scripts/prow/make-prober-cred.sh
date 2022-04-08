@@ -28,7 +28,8 @@
 
 set -euo pipefail
 
-gsutil cp gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json ./
+gsutil cp gs://stolos-dev/e2e/prober_runner_client_key.json ./
+kubectl delete secret -n test-pods nomos-prober-runner-gcp-client-key
 kubectl create secret generic \
   nomos-prober-runner-gcp-client-key \
   -n test-pods \
