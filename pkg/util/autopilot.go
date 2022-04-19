@@ -16,6 +16,7 @@ package util
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -82,4 +83,55 @@ func IsGKEAutopilotCluster(c client.Client) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// ContainerResources describes the container's resource requirements.
+type ContainerResources struct {
+	// Compute Resources required by this container.
+	corev1.ResourceRequirements
+	// Name of the container specified as a DNS_LABEL.
+	Name string `json:"name"`
+}
+
+// PodResources describes the resources of all containers in a Pod.
+type PodResources struct {
+	// List of initialization containers belonging to the pod.
+	InitContainers []ContainerResources `json:"initContainers,omitempty"`
+	// List of containers belonging to the pod.
+	Containers []ContainerResources `json:"containers,omitempty"`
+}
+
+// ResourceMutation describes the mutation made by Autopilot.
+type ResourceMutation struct {
+	// Input describes the container resources before the mutation.
+	Input *PodResources `json:"input,omitempty"`
+	// Output describes the container resources after the mutation.
+	Output *PodResources `json:"output,omitempty"`
+	// Modified indicates whether the resources are modified.
+	Modified bool `json:"modified"`
+}
+
+// AutopilotResourceMutation extracts the input and output resource requirements for all containers.
+// - input describes the containers' resources before Autopilot adjustment.
+// - output describes the resources after Autopilot adjustment.
+func AutopilotResourceMutation(annotation string) (map[string]corev1.ResourceRequirements, map[string]corev1.ResourceRequirements, error) {
+	input := map[string]corev1.ResourceRequirements{}
+	output := map[string]corev1.ResourceRequirements{}
+	rm := &ResourceMutation{}
+	if err := json.Unmarshal([]byte(annotation), rm); err != nil {
+		return input, output, err
+	}
+	for _, container := range rm.Input.InitContainers {
+		input[container.Name] = container.ResourceRequirements
+	}
+	for _, container := range rm.Input.Containers {
+		input[container.Name] = container.ResourceRequirements
+	}
+	for _, container := range rm.Output.InitContainers {
+		output[container.Name] = container.ResourceRequirements
+	}
+	for _, container := range rm.Output.Containers {
+		output[container.Name] = container.ResourceRequirements
+	}
+	return input, output, nil
 }

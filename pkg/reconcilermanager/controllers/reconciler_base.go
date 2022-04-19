@@ -169,74 +169,151 @@ func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace s
 // createOrPatchDeployment() first call Get() on the object. If the
 // object does not exist, Create() will be called. If it does exist, Patch()
 // will be called.
-func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv1.Deployment) (controllerutil.OperationResult, error) {
-	key := client.ObjectKeyFromObject(obj)
+func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, declared *appsv1.Deployment) (controllerutil.OperationResult, error) {
+	key := client.ObjectKeyFromObject(declared)
 
-	existing := &appsv1.Deployment{}
+	current := &appsv1.Deployment{}
 
-	if err := r.client.Get(ctx, key, existing); err != nil {
+	if err := r.client.Get(ctx, key, current); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return controllerutil.OperationResultNone, err
 		}
-		r.log.Info("Resource not found, creating one", "Resource", obj.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
-		if err := r.client.Create(ctx, obj); err != nil {
+		r.log.Info("Resource not found, creating one", "Resource", declared.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
+		if err := r.client.Create(ctx, declared); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
 		return controllerutil.OperationResultCreated, nil
 	}
 
-	// If Autopilot adjusts the resource requirements, use the current resource requirements.
-	// Otherwise, use the resource requirements in the mutated deployment template.
-	resourceRequirementChanged := false
+	// TODO: check if VPA is enabled
+	vpaEnabled := false
+
 	if r.isAutopilotCluster == nil {
 		isAutopilot, err := util.IsGKEAutopilotCluster(r.client)
 		if err != nil {
-			r.log.Error(err, "unable to check if it is an Autopilot cluster")
-			return controllerutil.OperationResultNone, err
+			return controllerutil.OperationResultNone, fmt.Errorf("unable to determine if it is an Autopilot cluster: %w", err)
 		}
 		r.isAutopilotCluster = &isAutopilot
 	}
-	if *r.isAutopilotCluster {
-		for _, existingContainer := range existing.Spec.Template.Spec.Containers {
-			for i, desiredContainer := range obj.Spec.Template.Spec.Containers {
-				if existingContainer.Name == desiredContainer.Name &&
-					!reflect.DeepEqual(obj.Spec.Template.Spec.Containers[i].Resources, existingContainer.Resources) {
-					obj.Spec.Template.Spec.Containers[i].Resources = existingContainer.Resources
-					resourceRequirementChanged = true
-				}
-			}
-		}
-		// Keep the autopilot annotation
-		if obj.Annotations == nil {
-			obj.Annotations = map[string]string{}
-		}
-		obj.Annotations[metadata.AutoPilotAnnotation] = core.GetAnnotation(existing, metadata.AutoPilotAnnotation)
+
+	adjusted, err := adjustContainerResources(vpaEnabled, *r.isAutopilotCluster, declared, current)
+	if err != nil {
+		return controllerutil.OperationResultNone, err
 	}
-	if resourceRequirementChanged {
-		r.log.V(3).Info("Container resource requirements diverged from the Deployment template because of the mutation made by the AutoPilot. The resource requirement override will be ignored.")
+	if adjusted {
+		mutator := "VPA"
+		if !vpaEnabled {
+			mutator = "Autopilot"
+		}
+		r.log.V(3).Info("The resources of the containers in the declared Deployment is updated", "mutator", mutator)
 	}
 
-	if reflect.DeepEqual(existing.Labels, obj.Labels) && reflect.DeepEqual(existing.Spec, obj.Spec) {
+	if reflect.DeepEqual(current.Labels, declared.Labels) && reflect.DeepEqual(current.Spec, declared.Spec) {
 		return controllerutil.OperationResultNone, nil
 	}
 
-	r.log.Info("The Deployment needs to be updated", "name", obj.Name)
-	if err := r.client.Update(ctx, obj); err != nil {
+	r.log.Info("The Deployment needs to be updated", "name", declared.Name)
+	if err := r.client.Update(ctx, declared); err != nil {
 		// Let the next reconciliation retry the patch operation for valid request.
 		if !apierrors.IsInvalid(err) {
 			return controllerutil.OperationResultNone, err
 		}
 		// The provided data is invalid (e.g. http://b/196922619), so delete and re-create the resource.
-		r.log.Error(err, "Failed to patch resource, deleting and re-creating the resource", "Resource", obj.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
-		if err := r.client.Delete(ctx, obj); err != nil {
+		r.log.Error(err, "Failed to patch resource, deleting and re-creating the resource", "Resource", declared.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
+		if err := r.client.Delete(ctx, declared); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
-		if err := r.client.Create(ctx, obj); err != nil {
+		if err := r.client.Create(ctx, declared); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
 	}
 
 	return controllerutil.OperationResultUpdated, nil
+}
+
+// adjustContainerResources adjusts the resources of all containers in the declared Deployment.
+// It returns a boolean to indicate if the declared Deployment is updated or not.
+// This function aims to address the fight among Autopilot, VPA and the reconciler since they all update the resources.
+// Below is the resolution:
+// 1. If VPA is enabled (no matter if it is a standard cluster or an Autopilot cluster),
+//    use the current resources and ignore the override defined in the declared Deployment
+//    because VPA will scale up and down automatically.
+// 2. If VPA is not enabled, and the cluster is a standard cluster, the controller
+//    will adjust the declared resources by applying the resource override.
+// 3. If VPA is not enabled, and it is an Autopilot cluster, the controller will
+//    honor the resource override, but update the declared resources to be compliant
+//    with the Autopilot resource range constraints.
+func adjustContainerResources(vpaEnabled, isAutopilot bool, declared, current *appsv1.Deployment) (bool, error) {
+	// If VPA is enabled, use the current resources because VPA takes full control of them.
+	if vpaEnabled {
+		return keepCurrentContainerResources(declared, current), nil
+	}
+
+	// If it is NOT an Autopilot cluster, use the declared Deployment without adjustment.
+	if !isAutopilot {
+		return false, nil
+	}
+
+	resourceMutationAnnotation, hasResourceMutationAnnotation := current.Annotations[metadata.AutoPilotAnnotation]
+	// If the current Deployment has not been adjusted by Autopilot yet, no adjustment to the declared Deployment is needed.
+	// The controller will apply the resource override and the next reconciliation can handle the compliance update.
+	if !hasResourceMutationAnnotation {
+		return false, nil
+	}
+
+	// If the current Deployment has been adjusted by Autopilot, adjust the declared Deployment
+	// to make sure the resource override is compliant with Autopilot constraints.
+	resourcesChanged := false
+	// input describes the containers' resources before Autopilot adjustment, output describes the resources after Autopilot adjustment.
+	input, output, err := util.AutopilotResourceMutation(resourceMutationAnnotation)
+	if err != nil {
+		return false, fmt.Errorf("unable to marshal the resource mutation annotation: %w", err)
+
+	}
+	allRequestsNoLowerThanInput := true
+	allRequestsNoHigherThanOutput := true
+	for _, declaredContainer := range declared.Spec.Template.Spec.Containers {
+		inputRequest := input[declaredContainer.Name].Requests
+		outputRequest := output[declaredContainer.Name].Requests
+		if declaredContainer.Resources.Requests.Cpu().Cmp(*inputRequest.Cpu()) < 0 || declaredContainer.Resources.Requests.Memory().Cmp(*inputRequest.Memory()) < 0 {
+			allRequestsNoLowerThanInput = false
+			break
+		}
+		if declaredContainer.Resources.Requests.Cpu().Cmp(*outputRequest.Cpu()) > 0 || declaredContainer.Resources.Requests.Memory().Cmp(*outputRequest.Memory()) > 0 {
+			allRequestsNoHigherThanOutput = false
+			break
+		}
+	}
+
+	if allRequestsNoLowerThanInput && allRequestsNoHigherThanOutput {
+		// No action is needed because Autopilot already optimized it based on the override
+		resourcesChanged = keepCurrentContainerResources(declared, current)
+	}
+
+	// Add the autopilot annotation to the declared Deployment
+	if declared.Annotations == nil {
+		declared.Annotations = map[string]string{}
+	}
+	declared.Annotations[metadata.AutoPilotAnnotation] = resourceMutationAnnotation
+	return resourcesChanged, nil
+}
+
+// keepCurrentContainerResources copies over all containers' resources from the current Deployment to the declared one,
+// so that the discrepancy won't cause a Deployment update.
+// That implies any resource override applied to the declared Deployment will be ignored.
+// It returns a boolean to indicate if the declared Deployment is updated or not.
+func keepCurrentContainerResources(declared, current *appsv1.Deployment) bool {
+	resourceChanged := false
+	for _, existingContainer := range current.Spec.Template.Spec.Containers {
+		for i, desiredContainer := range declared.Spec.Template.Spec.Containers {
+			if existingContainer.Name == desiredContainer.Name &&
+				!reflect.DeepEqual(declared.Spec.Template.Spec.Containers[i].Resources, existingContainer.Resources) {
+				declared.Spec.Template.Spec.Containers[i].Resources = existingContainer.Resources
+				resourceChanged = true
+			}
+		}
+	}
+	return resourceChanged
 }
 
 // deploymentStatus return standardized status for Deployment.
