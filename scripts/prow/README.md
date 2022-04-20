@@ -18,6 +18,10 @@ For some reason, it fails and complains about not having storage.objects.get,
 but adding `Storage Object Viewer` doesn't fix this.  Adding `Editor` fixes, so
 it's not clear what perms we need to give it.
 
-## Create "prober-runner" secret
+## Rotate "prober-runner" secret
 
-you may need to run make-prober-cred.sh to set up the prober runner.
+The prober cred is a service account key, which expires every 90 days.
+A [periodic job](https://gke-internal.googlesource.com/test-infra/+/refs/heads/master/prow/gob/config/team-review.googlesource.com/gke-kubernetes-enterprise-control/prototype/config-sync-utils.yaml)
+is set up to rotate the service account key for prober-runner and update the Kubernetes Secret on the Prow cluster.
+
+You can also manually rotate the service account key by running `make manual-rotate-prober-sa-key`.

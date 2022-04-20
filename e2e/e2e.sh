@@ -34,9 +34,6 @@ flags:
 - name: "OUTPUT_DIR"
   type: string
   help: "The directory for temporary output"
-- name: "gcs-prober-cred"
-  type: string
-  help: "If set, we will copy the prober creds into the container from gcs.  This is useful in hermetic tests where one can not rely on the credentials being mounted into the container"
 - name: "mounted-prober-cred"
   type: string
   help: "If set, we will mount the prober creds path into the test runner from here"
@@ -46,6 +43,17 @@ flags:
 - name: "use-ephemeral-cluster"
   type: bool
   help: "If set, the test runner will start an ephemeral in-docker cluster to run the tests on"
+- name: "fetch-prober-cred"
+  type: bool
+  help: "If set, we will fetch the service account key file from the cloud secret manager.  This is useful in hermetic tests where one can not rely on the credentials being mounted into the container"
+- name: "prober-cred-secret"
+  type: string
+  default: "nomos-prober-runner-gcp-client-key"
+  help: "The secret name for the service account key file stored in the cloud secret manager."
+- name: "prober-cred-secret-project"
+  type: string
+  default: "stolos-dev"
+  help: "The project in which the secret for the service account key file was created"
 EOF
 )
 eval "${gotopt2_output}"
@@ -56,11 +64,15 @@ readonly TEMP_OUTPUT_DIR="${gotopt2_TEMP_OUTPUT_DIR}"
 # shellcheck disable=SC2154
 readonly OUTPUT_DIR="${gotopt2_OUTPUT_DIR}"
 # shellcheck disable=SC2154
-readonly gcs_prober_cred="${gotopt2_gcs_prober_cred}"
+readonly fetch_prober_cred="${gotopt2_fetch_prober_cred:-false}"
 # shellcheck disable=SC2154
 readonly mounted_prober_cred="${gotopt2_mounted_prober_cred}"
 # shellcheck disable=SC2154
 readonly hermetic="${gotopt2_hermetic:-false}"
+# shellcheck disable=SC2154
+readonly prober_cred_secret="${gotopt2_prober_cred_secret}"
+# shellcheck disable=SC2154
+readonly prober_cred_secret_project="${gotopt2_prober_cred_secret_project}"
 
 if [[ "$OUTPUT_DIR" == "" ]]; then
   pushd "$(readlink -f "$(dirname "$0")/..")" > /dev/null
@@ -109,9 +121,9 @@ if "${hermetic}"; then
   # gcloud and kubectl are configured based on the credentials provided by the
   # test runner.   The credentials are either mounted into the container (if
   # the test runner is based on Kubernetes), in which case they are expected in
-  # ${TEMP_OUTPUT_DIR}/config/... (see above), or downloaded from GCS using the
-  # credentials of the user that is running this wrapper using the flag
-  # --gcs-prober-cred if the test runner is based off of local file content.
+  # ${TEMP_OUTPUT_DIR}/config/... (see above), or downloaded from Secret Manager
+  # using the credentials of the user that is running this wrapper using the flag
+  # --fetch-prober-cred if the test runner is based off of local file content.
   echo "+++ Executing e2e tests in hermetic mode."
 
   USER_DIR_ON_HOST="${TEMP_OUTPUT_DIR}/user"
@@ -218,9 +230,13 @@ EOF
   done
 fi
 
-if [[ "${gcs_prober_cred}" != "" ]]; then
-  echo "+++ Downloading GCS credentials: ${gcs_prober_cred}"
-  gsutil cp "${gcs_prober_cred}" "${TEMP_OUTPUT_DIR}/config/prober_runner_client_key.json"
+if "${fetch_prober_cred}"; then
+  key_file="${TEMP_OUTPUT_DIR}/config/prober_runner_client_key.json"
+  echo "++++ Getting latest secret from ${prober_cred_secret_project}/${prober_cred_secret}, writing to ${key_file}"
+  gcloud secrets versions access latest \
+    --secret "${prober_cred_secret}" \
+    --project "${prober_cred_secret_project}" \
+    > "${key_file}"
 fi
 
 DOCKER_FLAGS+=(
