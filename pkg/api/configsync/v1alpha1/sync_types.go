@@ -31,9 +31,21 @@ type SyncSpec struct {
 	// +optional
 	SourceFormat string `json:"sourceFormat,omitempty"`
 
-	// git contains configuration specific to importing policies from a Git repo.
+	// sourceType specifies the type of the source of truth.
+	//
+	// Must be one of git, oci. Optional. Set to git if not specified.
+	// +kubebuilder:validation:Pattern=^(git|oci|)$
+	// +kubebuilder:default:=git
 	// +optional
-	Git `json:"git,omitempty"`
+	SourceType string `json:"sourceType,omitempty"`
+
+	// git contains configuration specific to importing resources from a Git repo.
+	// +optional
+	*Git `json:"git,omitempty"`
+
+	// oci contains configuration specific to importing resources from an OCI package.
+	// +optional
+	Oci *Oci `json:"oci,omitempty"`
 
 	// override allows to override the settings for a reconciler.
 	// +nullable
@@ -222,3 +234,14 @@ type ResourceRef struct {
 	// +optional
 	GVK metav1.GroupVersionKind `json:"gvk,omitempty"`
 }
+
+// SourceType specifies the type of the source of truth.
+type SourceType string
+
+const (
+	// GitSource represents the source type is Git repository.
+	GitSource SourceType = "git"
+
+	// OciSource represents the source type is OCI package.
+	OciSource SourceType = "oci"
+)

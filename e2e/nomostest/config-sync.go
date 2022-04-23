@@ -782,7 +782,7 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 func RootSyncObjectV1Alpha1(name, repoURL string, sourceFormat filesystem.SourceFormat) *v1alpha1.RootSync {
 	rs := fake.RootSyncObjectV1Alpha1(name)
 	rs.Spec.SourceFormat = string(sourceFormat)
-	rs.Spec.Git = v1alpha1.Git{
+	rs.Spec.Git = &v1alpha1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
 		Dir:    AcmeDir,
@@ -798,7 +798,7 @@ func RootSyncObjectV1Alpha1(name, repoURL string, sourceFormat filesystem.Source
 func RootSyncObjectV1Beta1(name, repoURL string, sourceFormat filesystem.SourceFormat) *v1beta1.RootSync {
 	rs := fake.RootSyncObjectV1Beta1(name)
 	rs.Spec.SourceFormat = string(sourceFormat)
-	rs.Spec.Git = v1beta1.Git{
+	rs.Spec.Git = &v1beta1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
 		Dir:    AcmeDir,
@@ -818,7 +818,7 @@ func StructuredNSPath(namespace, resourceName string) string {
 // RepoSyncObjectV1Alpha1 returns the default RepoSync object in the given namespace.
 func RepoSyncObjectV1Alpha1(ns, name, repoURL string) *v1alpha1.RepoSync {
 	rs := fake.RepoSyncObjectV1Alpha1(ns, name)
-	rs.Spec.Git = v1alpha1.Git{
+	rs.Spec.Git = &v1alpha1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
 		Dir:    AcmeDir,
@@ -834,7 +834,7 @@ func RepoSyncObjectV1Alpha1(ns, name, repoURL string) *v1alpha1.RepoSync {
 // with version v1beta1 in the given namespace.
 func RepoSyncObjectV1Beta1(ns, name, repoURL string) *v1beta1.RepoSync {
 	rs := fake.RepoSyncObjectV1Beta1(ns, name)
-	rs.Spec.Git = v1beta1.Git{
+	rs.Spec.Git = &v1beta1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
 		Dir:    AcmeDir,
@@ -1050,7 +1050,7 @@ func resetRootRepo(nt *NT, rsName, upstream string, sourceFormat filesystem.Sour
 			nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, AcmeDir))
 		} else {
 			rs.Spec.SourceFormat = string(sourceFormat)
-			rs.Spec.Git = v1beta1.Git{
+			rs.Spec.Git = &v1beta1.Git{
 				Repo:      nt.GitProvider.SyncURL(nt.RootRepos[rsName].RemoteRepoName),
 				Branch:    MainBranch,
 				Dir:       AcmeDir,

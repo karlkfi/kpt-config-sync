@@ -41,7 +41,7 @@ const (
 
 func repoSyncWithAuth(ns, name, auth string, opts ...core.MetaMutator) *v1beta1.RepoSync {
 	result := fake.RepoSyncObjectV1Beta1(ns, name, opts...)
-	result.Spec.Git = v1beta1.Git{
+	result.Spec.Git = &v1beta1.Git{
 		Auth:      auth,
 		SecretRef: v1beta1.SecretReference{Name: "ssh-key"},
 	}

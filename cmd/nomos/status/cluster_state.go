@@ -73,7 +73,7 @@ func unavailableCluster(ref string) *ClusterState {
 type RepoState struct {
 	scope    string
 	syncName string
-	git      v1beta1.Git
+	git      *v1beta1.Git
 	status   string
 	commit   string
 	errors   []string
@@ -123,7 +123,7 @@ func (r *RepoState) printRows(writer io.Writer) {
 	}
 }
 
-func gitString(git v1beta1.Git) string {
+func gitString(git *v1beta1.Git) string {
 	var gitStr string
 	if git.Dir == "" || git.Dir == "." || git.Dir == "/" {
 		gitStr = strings.TrimSuffix(git.Repo, "/")
@@ -145,7 +145,7 @@ func gitString(git v1beta1.Git) string {
 }
 
 // monoRepoStatus converts the given Git config and mono-repo status into a RepoState.
-func monoRepoStatus(git v1beta1.Git, status v1.RepoStatus) *RepoState {
+func monoRepoStatus(git *v1beta1.Git, status v1.RepoStatus) *RepoState {
 	errors := syncStatusErrors(status)
 	totalErrorCount := len(errors)
 

@@ -117,6 +117,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	r.namespaces[req.Namespace] = struct{}{}
 	reconcilerName := reconciler.NsReconcilerName(rs.Namespace, rs.Name)
 
+	// TODO: update the following validations based on rs.Spec.SourceType.
 	if err = validate.GitSpec(rs.Spec.Git, &rs); err != nil {
 		log.Error(err, "RepoSync failed validation")
 		reposync.SetStalled(&rs, "Validation", err)
@@ -462,13 +463,13 @@ func (r *RepoSyncReconciler) populateRepoContainerEnvs(ctx context.Context, rs *
 			branch:      rs.Spec.Git.Branch,
 			repo:        rs.Spec.Git.Repo,
 			secretType:  rs.Spec.Git.Auth,
-			period:      v1beta1.GetPeriodSecs(&rs.Spec.Git),
+			period:      v1beta1.GetPeriodSecs(rs.Spec.Git),
 			proxy:       rs.Spec.Proxy,
 			depth:       rs.Spec.Override.GitSyncDepth,
 			noSSLVerify: rs.Spec.Git.NoSSLVerify,
 		}),
-		reconcilermanager.HydrationController: hydrationEnvs(&rs.Spec.Git, declared.Scope(rs.Namespace), reconcilerName, r.hydrationPollingPeriod.String()),
-		reconcilermanager.Reconciler:          reconcilerEnvs(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode, v1beta1.GetReconcileTimeout(rs.Spec.Override.ReconcileTimeout)),
+		reconcilermanager.HydrationController: hydrationEnvs(rs.Spec.Git, declared.Scope(rs.Namespace), reconcilerName, r.hydrationPollingPeriod.String()),
+		reconcilermanager.Reconciler:          reconcilerEnvs(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode, v1beta1.GetReconcileTimeout(rs.Spec.Override.ReconcileTimeout)),
 	}
 }
 

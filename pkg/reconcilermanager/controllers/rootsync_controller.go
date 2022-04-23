@@ -119,6 +119,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 
 	reconcilerName := reconciler.RootReconcilerName(rs.Name)
 
+	// TODO: update the following validations based on rs.Spec.SourceType.
 	if err = validate.GitSpec(rs.Spec.Git, &rs); err != nil {
 		log.Error(err, "RootSync failed validation")
 		rootsync.SetStalled(&rs, "Validation", err)
@@ -350,13 +351,13 @@ func (r *RootSyncReconciler) populateContainerEnvs(ctx context.Context, rs *v1be
 			branch:      rs.Spec.Git.Branch,
 			repo:        rs.Spec.Git.Repo,
 			secretType:  rs.Spec.Git.Auth,
-			period:      v1beta1.GetPeriodSecs(&rs.Spec.Git),
+			period:      v1beta1.GetPeriodSecs(rs.Spec.Git),
 			proxy:       rs.Spec.Proxy,
 			depth:       rs.Spec.Override.GitSyncDepth,
 			noSSLVerify: rs.Spec.Git.NoSSLVerify,
 		}),
-		reconcilermanager.HydrationController: hydrationEnvs(&rs.Spec.Git, declared.RootReconciler, reconcilerName, r.hydrationPollingPeriod.String()),
-		reconcilermanager.Reconciler:          append(reconcilerEnvs(r.clusterName, rs.Name, reconcilerName, declared.RootReconciler, &rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode, v1beta1.GetReconcileTimeout(rs.Spec.Override.ReconcileTimeout)), sourceFormatEnv(rs.Spec.SourceFormat)),
+		reconcilermanager.HydrationController: hydrationEnvs(rs.Spec.Git, declared.RootReconciler, reconcilerName, r.hydrationPollingPeriod.String()),
+		reconcilermanager.Reconciler:          append(reconcilerEnvs(r.clusterName, rs.Name, reconcilerName, declared.RootReconciler, rs.Spec.Git, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode, v1beta1.GetReconcileTimeout(rs.Spec.Override.ReconcileTimeout)), sourceFormatEnv(rs.Spec.SourceFormat)),
 	}
 }
 

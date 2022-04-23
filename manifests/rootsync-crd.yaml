@@ -71,14 +71,13 @@ spec:
             description: RootSyncSpec defines the desired state of RootSync
             properties:
               git:
-                description: git contains configuration specific to importing policies
+                description: git contains configuration specific to importing resources
                   from a Git repo.
                 properties:
                   auth:
                     description: auth is the type of secret configured for access
                       to the Git repo. Must be one of ssh, cookiefile, gcenode, token,
-                      or none. Required. The validation of this is case-sensitive.
-                      Required.
+                      or none. The validation of this is case-sensitive. Required.
                     pattern: ^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$
                     type: string
                   branch:
@@ -86,7 +85,7 @@ spec:
                     type: string
                   dir:
                     description: 'dir is the absolute path of the directory that contains
-                      the local policy.  Default: the root directory of the repo.'
+                      the local resources.  Default: the root directory of the repo.'
                     type: string
                   gcpServiceAccountEmail:
                     description: 'gcpServiceAccountEmail specifies the GCP service
@@ -104,7 +103,7 @@ spec:
                       syncs. Default: 15s. Note to developers that customers specify
                       this value using string (https://golang.org/pkg/time/#Duration.String)
                       like "3s" in their Custom Resource YAML. However, time.Duration
-                      is at a nanosecond granularity, and it''s easy to introduce
+                      is at a nanosecond granularity, and it is easy to introduce
                       a bug where it looks like the code is dealing with seconds but
                       its actually nanoseconds (or vice versa).'
                     type: string
@@ -137,6 +136,47 @@ spec:
                 required:
                 - auth
                 - repo
+                type: object
+              oci:
+                description: oci contains configuration specific to importing resources
+                  from an OCI package.
+                properties:
+                  auth:
+                    description: auth is the type of secret configured for access
+                      to the OCI package. Must be one of gcenode, gcpserviceaccount,
+                      or none. The validation of this is case-sensitive. Required.
+                    pattern: ^(gcenode|gcpserviceaccount|none)$
+                    type: string
+                  dir:
+                    description: 'dir is the absolute path of the directory that contains
+                      the local resources.  Default: the root directory of the image.'
+                    type: string
+                  gcpServiceAccountEmail:
+                    description: 'gcpServiceAccountEmail specifies the GCP service
+                      account used to annotate the RootSync/RepoSync controller Kubernetes
+                      Service Account. Note: The field is used when secretType: gcpServiceAccount.'
+                    type: string
+                  image:
+                    description: 'image is the OCI image repository URL for the package
+                      to sync from. e.g. `LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME/PACKAGE_NAME`.
+                      The image can be pulled by TAG or by DIGEST if it is specified
+                      in PACKAGE_NAME. - Pull by tag: `LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME/PACKAGE_NAME:TAG`.
+                      - Pull by digest: `LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME/PACKAGE_NAME@sha256:DIGEST`.
+                      If neither TAG nor DIGEST is specified, it pulls with the `latest`
+                      tag by default. Required'
+                    type: string
+                  period:
+                    description: 'period is the time duration between consecutive
+                      syncs. Default: 15s. Note to developers that customers specify
+                      this value using string (https://golang.org/pkg/time/#Duration.String)
+                      like "3s" in their Custom Resource YAML. However, time.Duration
+                      is at a nanosecond granularity, and it is easy to introduce
+                      a bug where it looks like the code is dealing with seconds but
+                      its actually nanoseconds (or vice versa).'
+                    type: string
+                required:
+                - auth
+                - image
                 type: object
               override:
                 description: override allows to override the settings for a reconciler.
@@ -220,6 +260,12 @@ spec:
                   be one of hierarchy, unstructured. Optional. Set to hierarchy if
                   not specified. \n The validation of this is case-sensitive."
                 pattern: ^(hierarchy|unstructured|)$
+                type: string
+              sourceType:
+                default: git
+                description: "sourceType specifies the type of the source of truth.
+                  \n Must be one of git, oci. Optional. Set to git if not specified."
+                pattern: ^(git|oci|)$
                 type: string
             type: object
           status:
@@ -787,14 +833,13 @@ spec:
             description: RootSyncSpec defines the desired state of RootSync
             properties:
               git:
-                description: git contains configuration specific to importing policies
+                description: git contains configuration specific to importing resources
                   from a Git repo.
                 properties:
                   auth:
                     description: auth is the type of secret configured for access
                       to the Git repo. Must be one of ssh, cookiefile, gcenode, token,
-                      or none. Required. The validation of this is case-sensitive.
-                      Required.
+                      or none. The validation of this is case-sensitive. Required.
                     pattern: ^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$
                     type: string
                   branch:
@@ -802,7 +847,7 @@ spec:
                     type: string
                   dir:
                     description: 'dir is the absolute path of the directory that contains
-                      the local policy.  Default: the root directory of the repo.'
+                      the local resources.  Default: the root directory of the repo.'
                     type: string
                   gcpServiceAccountEmail:
                     description: 'gcpServiceAccountEmail specifies the GCP service
@@ -819,7 +864,7 @@ spec:
                       syncs. Default: 15s. Note to developers that customers specify
                       this value using string (https://golang.org/pkg/time/#Duration.String)
                       like "3s" in their Custom Resource YAML. However, time.Duration
-                      is at a nanosecond granularity, and it''s easy to introduce
+                      is at a nanosecond granularity, and it is easy to introduce
                       a bug where it looks like the code is dealing with seconds but
                       its actually nanoseconds (or vice versa).'
                     type: string
@@ -852,6 +897,47 @@ spec:
                 required:
                 - auth
                 - repo
+                type: object
+              oci:
+                description: oci contains configuration specific to importing resources
+                  from an OCI package.
+                properties:
+                  auth:
+                    description: auth is the type of secret configured for access
+                      to the OCI package. Must be one of gcenode, gcpserviceaccount,
+                      or none. The validation of this is case-sensitive. Required.
+                    pattern: ^(gcenode|gcpserviceaccount|none)$
+                    type: string
+                  dir:
+                    description: 'dir is the absolute path of the directory that contains
+                      the local resources.  Default: the root directory of the image.'
+                    type: string
+                  gcpServiceAccountEmail:
+                    description: 'gcpServiceAccountEmail specifies the GCP service
+                      account used to annotate the RootSync/RepoSync controller Kubernetes
+                      Service Account. Note: The field is used when secretType: gcpServiceAccount.'
+                    type: string
+                  image:
+                    description: 'image is the OCI image repository URL for the package
+                      to sync from. e.g. `LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME/PACKAGE_NAME`.
+                      The image can be pulled by TAG or by DIGEST if it is specified
+                      in PACKAGE_NAME. - Pull by tag: `LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME/PACKAGE_NAME:TAG`.
+                      - Pull by digest: `LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME/PACKAGE_NAME@sha256:DIGEST`.
+                      If neither TAG nor DIGEST is specified, it pulls with the `latest`
+                      tag by default. Required'
+                    type: string
+                  period:
+                    description: 'period is the time duration between consecutive
+                      syncs. Default: 15s. Note to developers that customers specify
+                      this value using string (https://golang.org/pkg/time/#Duration.String)
+                      like "3s" in their Custom Resource YAML. However, time.Duration
+                      is at a nanosecond granularity, and it is easy to introduce
+                      a bug where it looks like the code is dealing with seconds but
+                      its actually nanoseconds (or vice versa).'
+                    type: string
+                required:
+                - auth
+                - image
                 type: object
               override:
                 description: override allows to override the settings for a root reconciler.
@@ -935,6 +1021,12 @@ spec:
                   be one of hierarchy, unstructured. Optional. Set to hierarchy if
                   not specified. \n The validation of this is case-sensitive."
                 pattern: ^(hierarchy|unstructured|)$
+                type: string
+              sourceType:
+                default: git
+                description: "sourceType specifies the type of the source of truth.
+                  \n Must be one of git, oci. Optional. Set to git if not specified."
+                pattern: ^(git|oci|)$
                 type: string
             type: object
           status:

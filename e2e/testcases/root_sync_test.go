@@ -103,7 +103,7 @@ func TestDeleteRootSyncAndRootSyncV1Alpha1(t *testing.T) {
 	nt.T.Log("Test RootSync v1alpha1 version")
 	rsv1alpha1 := fake.RootSyncObjectV1Alpha1(configsync.RootSyncName)
 	rsv1alpha1.Spec.SourceFormat = string(nt.RootRepos[configsync.RootSyncName].Format)
-	rsv1alpha1.Spec.Git = v1alpha1.Git{
+	rsv1alpha1.Spec.Git = &v1alpha1.Git{
 		Repo:      nt.GitProvider.SyncURL(nt.RootRepos[configsync.RootSyncName].RemoteRepoName),
 		Branch:    nomostest.MainBranch,
 		Dir:       nomostest.AcmeDir,

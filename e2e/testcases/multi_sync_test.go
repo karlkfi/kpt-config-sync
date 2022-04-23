@@ -527,7 +527,7 @@ func TestControllerValidationErrors(t *testing.T) {
 			Namespace: testNs,
 		},
 		Spec: v1beta1.RootSyncSpec{
-			Git: v1beta1.Git{
+			Git: &v1beta1.Git{
 				Auth: "none",
 			},
 		},

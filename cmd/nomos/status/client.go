@@ -196,25 +196,25 @@ func (c *ClusterClient) monoRepoClusterStatus(ctx context.Context, cs *ClusterSt
 
 // monoRepoGit fetches the mono repo ConfigManagement resource from the cluster
 // and builds a Git config out of it.
-func (c *ClusterClient) monoRepoGit(ctx context.Context) (v1beta1.Git, error) {
+func (c *ClusterClient) monoRepoGit(ctx context.Context) (*v1beta1.Git, error) {
 	syncRepo, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncRepo")
 	if err != nil {
-		return v1beta1.Git{}, err
+		return nil, err
 	}
 	syncBranch, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncBranch")
 	if err != nil {
-		return v1beta1.Git{}, err
+		return nil, err
 	}
 	syncRev, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncRev")
 	if err != nil {
-		return v1beta1.Git{}, err
+		return nil, err
 	}
 	policyDir, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "policyDir")
 	if err != nil {
-		return v1beta1.Git{}, err
+		return nil, err
 	}
 
-	return v1beta1.Git{
+	return &v1beta1.Git{
 		Repo:     syncRepo,
 		Branch:   syncBranch,
 		Revision: syncRev,

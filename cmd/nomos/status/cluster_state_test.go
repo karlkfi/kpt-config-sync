@@ -31,13 +31,13 @@ import (
 )
 
 var (
-	git = v1beta1.Git{
+	git = &v1beta1.Git{
 		Repo:     "git@github.com:tester/sample",
 		Revision: "v1",
 		Dir:      "admin",
 	}
 
-	gitUpdated = v1beta1.Git{
+	gitUpdated = &v1beta1.Git{
 		Repo:     "git@github.com:tester/sample-updated",
 		Revision: "v2",
 		Dir:      "admin",
@@ -67,7 +67,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 				},
 				status:    "SYNCED",
@@ -81,7 +81,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  "quickstart//multirepo//root/",
 				},
@@ -95,7 +95,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  "/",
 				},
@@ -109,7 +109,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  ".",
 				},
@@ -123,7 +123,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "<root>",
 				syncName: "root-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  "/admin",
 				},
@@ -137,7 +137,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:   "https://github.com/tester/sample",
 					Branch: "feature",
 				},
@@ -151,7 +151,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:     "https://github.com/tester/sample",
 					Revision: "v1",
 				},
@@ -165,7 +165,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:     "https://github.com/tester/sample",
 					Revision: "HEAD",
 				},
@@ -179,7 +179,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Revision: "HEAD",
 					Branch:   "feature",
@@ -194,7 +194,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Dir:      "books",
 					Branch:   "feature",
@@ -210,7 +210,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Dir:      "books",
 					Revision: "v1",
@@ -227,7 +227,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Dir:      "books",
 					Revision: "v1",
@@ -248,7 +248,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&RepoState{
 				scope:    "bookstore",
 				syncName: "repo-sync",
-				git: v1beta1.Git{
+				git: &v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Revision: "v1",
 				},
@@ -272,7 +272,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 func TestRepoState_MonoRepoStatus(t *testing.T) {
 	testCases := []struct {
 		name   string
-		git    v1beta1.Git
+		git    *v1beta1.Git
 		status v1.RepoStatus
 		want   *RepoState
 	}{
@@ -349,7 +349,7 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 	}
 }
 
-func toGitStatus(git v1beta1.Git) v1beta1.GitStatus {
+func toGitStatus(git *v1beta1.Git) v1beta1.GitStatus {
 	return v1beta1.GitStatus{
 		Repo:     git.Repo,
 		Revision: git.Revision,
@@ -400,7 +400,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 	testCases := []struct {
 		name                      string
 		syncingConditionSupported bool
-		gitSpec                   v1beta1.Git
+		gitSpec                   *v1beta1.Git
 		conditions                []v1beta1.RepoSyncCondition
 		sourceStatus              v1beta1.GitSourceStatus
 		renderingStatus           v1beta1.RenderingStatus
@@ -1464,7 +1464,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 	testCases := []struct {
 		name                      string
 		syncingConditionSupported bool
-		gitSpec                   v1beta1.Git
+		gitSpec                   *v1beta1.Git
 		conditions                []v1beta1.RootSyncCondition
 		sourceStatus              v1beta1.GitSourceStatus
 		renderingStatus           v1beta1.RenderingStatus
@@ -2520,7 +2520,7 @@ gke_sample-project_europe-west1-b_cluster-1
 					{
 						scope:    "<root>",
 						syncName: "root-sync",
-						git: v1beta1.Git{
+						git: &v1beta1.Git{
 							Repo: "git@github.com:tester/sample",
 						},
 						status: "SYNCED",
@@ -2529,7 +2529,7 @@ gke_sample-project_europe-west1-b_cluster-1
 					{
 						scope:    "bookstore",
 						syncName: "repos-sync",
-						git: v1beta1.Git{
+						git: &v1beta1.Git{
 							Repo:   "git@github.com:tester/sample",
 							Branch: "feature",
 						},

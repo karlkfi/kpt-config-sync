@@ -60,7 +60,9 @@ func missingRepo(rs *v1beta1.RepoSync) {
 
 func repoSync(opts ...func(*v1beta1.RepoSync)) *v1beta1.RepoSync {
 	rs := fake.RepoSyncObjectV1Beta1("test-ns", configsync.RepoSyncName)
-	rs.Spec.Git.Repo = "fake repo"
+	rs.Spec.Git = &v1beta1.Git{
+		Repo: "fake repo",
+	}
 	for _, opt := range opts {
 		opt(rs)
 	}

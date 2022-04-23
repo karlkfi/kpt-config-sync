@@ -37,7 +37,11 @@ var (
 const gcpSASuffix = ".iam.gserviceaccount.com"
 
 // GitSpec validates the git specification for any obvious problems.
-func GitSpec(git v1beta1.Git, rs client.Object) status.Error {
+func GitSpec(git *v1beta1.Git, rs client.Object) status.Error {
+	if git == nil {
+		return MissingGitSpec(rs)
+	}
+
 	// We can't connect to the git repo if we don't have the URL.
 	if git.Repo == "" {
 		return MissingGitRepo(rs)
@@ -83,6 +87,15 @@ func GitSpec(git v1beta1.Git, rs client.Object) status.Error {
 var InvalidSyncCode = "1061"
 
 var invalidSyncBuilder = status.NewErrorBuilder(InvalidSyncCode)
+
+// MissingGitSpec reports that a RootSync/RepoSync doesn't declare the git spec
+// when spec.sourceType is set to `git`.
+func MissingGitSpec(o client.Object) status.Error {
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss must define spec.git when spec.sourceType is %q", kind, v1beta1.GitSource).
+		BuildWithResources(o)
+}
 
 // MissingGitRepo reports that a RootSync/RepoSync doesn't declare the git repo it is
 // supposed to connect to.

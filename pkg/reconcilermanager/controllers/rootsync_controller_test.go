@@ -195,8 +195,10 @@ func rootsyncNoSSLVerify() func(*v1beta1.RootSync) {
 
 func rootSync(name string, opts ...func(*v1beta1.RootSync)) *v1beta1.RootSync {
 	rs := fake.RootSyncObjectV1Beta1(name)
-	rs.Spec.Repo = rootsyncRepo
-	rs.Spec.Dir = rootsyncDir
+	rs.Spec.Git = &v1beta1.Git{
+		Repo: rootsyncRepo,
+		Dir:  rootsyncDir,
+	}
 	for _, opt := range opts {
 		opt(rs)
 	}

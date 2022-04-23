@@ -34,7 +34,7 @@ type Git struct {
 	Revision string `json:"revision,omitempty"`
 
 	// dir is the absolute path of the directory that contains
-	// the local policy.  Default: the root directory of the repo.
+	// the local resources.  Default: the root directory of the repo.
 	// +optional
 	Dir string `json:"dir,omitempty"`
 
@@ -42,13 +42,13 @@ type Git struct {
 	// Note to developers that customers specify this value using
 	// string (https://golang.org/pkg/time/#Duration.String) like "3s"
 	// in their Custom Resource YAML. However, time.Duration is at a nanosecond
-	// granularity, and it's easy to introduce a bug where it looks like the
+	// granularity, and it is easy to introduce a bug where it looks like the
 	// code is dealing with seconds but its actually nanoseconds (or vice versa).
 	// +optional
 	Period metav1.Duration `json:"period,omitempty"`
 
 	// auth is the type of secret configured for access to the Git repo.
-	// Must be one of ssh, cookiefile, gcenode, token, or none. Required.
+	// Must be one of ssh, cookiefile, gcenode, token, or none.
 	// The validation of this is case-sensitive. Required.
 	//
 	// +kubebuilder:validation:Pattern=^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$

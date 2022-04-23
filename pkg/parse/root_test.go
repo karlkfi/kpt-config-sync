@@ -82,8 +82,10 @@ func (r *noOpRemediator) Errors() status.MultiError {
 func gitSpec(repo, auth string) core.MetaMutator {
 	return func(o client.Object) {
 		if rs, ok := o.(*v1beta1.RootSync); ok {
-			rs.Spec.Git.Repo = repo
-			rs.Spec.Git.Auth = auth
+			rs.Spec.Git = &v1beta1.Git{
+				Repo: repo,
+				Auth: auth,
+			}
 		}
 	}
 }
