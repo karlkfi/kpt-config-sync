@@ -185,6 +185,8 @@ func (c *Client) List(_ context.Context, list client.ObjectList, opts ...client.
 		return c.listRepoSyncs(l, options)
 	case *corev1.SecretList:
 		return c.listSecrets(l, options)
+	case *corev1.NodeList:
+		return c.listNodes(l, options)
 	}
 	return errors.Errorf("fake.Client does not support List(%T)", list)
 }
@@ -515,6 +517,31 @@ func (c *Client) listV1CRDs(list *apiextensionsv1.CustomResourceDefinitionList, 
 		default:
 			return errors.Errorf("non-CRD stored as CRD: %+v", obj)
 		}
+	}
+
+	return nil
+}
+
+func (c *Client) listNodes(list *corev1.NodeList, options client.ListOptions) error {
+	if options.FieldSelector != nil {
+		return errors.Errorf("fake.Client.List for NodeList does not yet support the FieldSelector option, but got: %+v", options)
+	}
+	objs := c.list(corev1.SchemeGroupVersion.WithKind("Node").GroupKind())
+	for _, obj := range objs {
+		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
+			continue
+		}
+		if options.LabelSelector != nil {
+			l := labels.Set(obj.GetLabels())
+			if !options.LabelSelector.Matches(l) {
+				continue
+			}
+		}
+		node, ok := obj.(*corev1.Node)
+		if !ok {
+			return errors.Errorf("non-Node stored as Node: %v", obj)
+		}
+		list.Items = append(list.Items, *node)
 	}
 
 	return nil

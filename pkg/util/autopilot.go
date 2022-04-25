@@ -66,12 +66,14 @@ func IsAutopilotManagedNamespace(o client.Object) bool {
 // It exists on Autopilot clusters after GKE 1.20.
 func IsGKEAutopilotCluster(c client.Client) (bool, error) {
 	nodes := &corev1.NodeList{}
-	if err := c.List(context.Background(), nodes); err == nil {
+	nodesErr := c.List(context.Background(), nodes)
+	if nodesErr == nil && len(nodes.Items) > 0 {
 		for _, node := range nodes.Items {
 			if strings.HasPrefix(node.Name, autopilotPrefix) {
 				return true, nil
 			}
 		}
+		return false, nil
 	}
 
 	webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{}
@@ -80,7 +82,7 @@ func IsGKEAutopilotCluster(c client.Client) (bool, error) {
 	if err == nil {
 		return true, nil
 	} else if apierrors.IsNotFound(err) {
-		return false, nil
+		return false, nodesErr
 	}
 	return false, err
 }
