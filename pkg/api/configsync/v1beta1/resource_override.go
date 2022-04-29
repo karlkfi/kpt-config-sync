@@ -54,6 +54,11 @@ type OverrideSpec struct {
 	// Recommended reconcileTimeout range is from "10s" to "1h".
 	// +optional
 	ReconcileTimeout *metav1.Duration `json:"reconcileTimeout,omitempty"`
+
+	// enableShellInRendering specifies whether to enable or disable the shell in rendering process. Default: false.
+	// If set to true, it will enable the shell in rendering process.
+	// +optional
+	EnableShellInRendering *bool `json:"enableShellInRendering,omitempty"`
 }
 
 // ContainerResourcesSpec allows to override the resource requirements for a container

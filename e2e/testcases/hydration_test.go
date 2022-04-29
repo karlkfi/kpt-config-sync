@@ -29,10 +29,12 @@ import (
 	nomosstatus "kpt.dev/configsync/cmd/nomos/status"
 	"kpt.dev/configsync/e2e/nomostest"
 	"kpt.dev/configsync/e2e/nomostest/ntopts"
+	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
 	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
 	"kpt.dev/configsync/pkg/metadata"
+	"kpt.dev/configsync/pkg/reconcilermanager"
 	"kpt.dev/configsync/pkg/status"
 	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -291,6 +293,76 @@ func TestHydrateHelmOverlay(t *testing.T) {
 		if err := verifyRootSyncRepoState(latestCommit, rsCommit, expectedStatus, rsStatus, rsErrorSummary); err != nil {
 			nt.T.Errorf("%v\nExpected errors: group and kind should be deprecated.\n", err)
 		}
+	}
+}
+
+func TestHydrateRemoteResources(t *testing.T) {
+	nt := nomostest.New(t,
+		ntopts.SkipMonoRepo,
+		ntopts.Unstructured,
+	)
+
+	nt.T.Log("Check hydration controller default image name")
+	err := nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{},
+		nomostest.HasExactlyImageName(reconcilermanager.HydrationController, reconcilermanager.HydrationController))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Log("Add the remote-base root directory")
+	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-base", ".")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add DRY configs to the repository")
+	nt.T.Log("Update RootSync to sync from the remote-base directory without enable shell in hydration controller")
+	rs := fake.RootSyncObjectV1Beta1(configsync.RootSyncName)
+	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "remote-base"}}}`)
+	nt.WaitForRootSyncRenderingError(configsync.RootSyncName, status.ActionableHydrationErrorCode, "")
+
+	nt.T.Log("Enable shell in hydration controller")
+	nt.MustMergePatch(rs, `{"spec": {"override": {"enableShellInRendering": true}}}`)
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
+	err = nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{},
+		nomostest.HasExactlyImageName(reconcilermanager.HydrationController, reconcilermanager.HydrationControllerWithShell))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	expectedOrigin := "path: base/namespace.yaml\nrepo: https://github.com/config-sync-examples/kustomize-components\nref: main\n"
+	nt.T.Log("Validate resources are synced")
+	var expectedNamespaces = []string{"tenant-a"}
+	validateNamespaces(nt, expectedNamespaces, expectedOrigin)
+
+	nt.T.Log("Update kustomization.yaml to use a remote overlay")
+	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-overlay-kustomization.yaml", "./remote-base/kustomization.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use a remote overlay")
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
+
+	nt.T.Log("Validate resources are synced")
+	expectedNamespaces = []string{"tenant-b"}
+	validateNamespaces(nt, expectedNamespaces, expectedOrigin)
+
+	// Update kustomization.yaml to use remote resources
+	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-resources-kustomization.yaml", "./remote-base/kustomization.yaml")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update kustomization.yaml to use remote resources")
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "remote-base"}))
+
+	nt.T.Log("Validate resources are synced")
+	expectedNamespaces = []string{"tenant-a", "tenant-b", "tenant-c"}
+	expectedOrigin = "path: notCloned/base/namespace.yaml\nrepo: https://github.com/config-sync-examples/kustomize-components\nref: main\n"
+	validateNamespaces(nt, expectedNamespaces, expectedOrigin)
+
+	nt.RootRepos[configsync.RootSyncName].Remove("./remote-base")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Remove remote-base repository")
+	nt.T.Log("Disable shell in hydration controller")
+	nt.MustMergePatch(rs, `{"spec": {"override": {"enableShellInRendering": false}, "git": {"dir": "acme"}}}`)
+	nt.WaitForRepoSyncs()
+	nt.RootRepos[configsync.RootSyncName].Copy("../testdata/hydration/remote-base", ".")
+	nt.RootRepos[configsync.RootSyncName].CommitAndPush("add DRY configs to the repository")
+	nt.T.Log("Update RootSync to sync from the remote-base directory when disable shell in hydration controller")
+	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "remote-base"}}}`)
+	nt.WaitForRootSyncRenderingError(configsync.RootSyncName, status.ActionableHydrationErrorCode, "")
+	err = nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, &appsv1.Deployment{},
+		nomostest.HasExactlyImageName(reconcilermanager.HydrationController, reconcilermanager.HydrationController))
+	if err != nil {
+		nt.T.Fatal(err)
 	}
 }
 

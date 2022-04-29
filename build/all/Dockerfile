@@ -89,6 +89,24 @@ USER 1000
 
 ENTRYPOINT ["/oci-sync"]
 
+# Hydration controller image with shell
+FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.10.0 as hydration-controller-with-shell
+WORKDIR /
+COPY --from=bins /go/bin/hydration-controller .
+COPY --from=bins /go/bin/render-helm-chart /usr/local/bin/render-helm-chart
+COPY --from=bins /usr/local/bin/helm /usr/local/bin/helm
+COPY --from=bins /usr/local/bin/kustomize /usr/local/bin/kustomize
+RUN apt-get update && apt-get install -y git
+
+# License file required for on-prem release.
+COPY LICENSE LICENSE
+COPY LICENSES.txt LICENSES.txt
+
+# Switch to non-root user
+USER 1000
+
+ENTRYPOINT ["/hydration-controller"]
+
 # Reconciler image
 FROM gcr.io/distroless/static:nonroot as reconciler
 WORKDIR /

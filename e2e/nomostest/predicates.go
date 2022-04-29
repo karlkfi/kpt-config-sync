@@ -17,6 +17,7 @@ package nomostest
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
@@ -161,6 +162,26 @@ func HasExactlyLabelKeys(wantKeys ...string) Predicate {
 		}
 		return nil
 	}
+}
+
+//HasExactlyImageName ensures a container has the expected image name
+func HasExactlyImageName(containerName string, expectImageName string) Predicate {
+	return func(o client.Object) error {
+		dep, ok := o.(*appsv1.Deployment)
+		if !ok {
+			return WrongTypeErr(dep, &appsv1.Deployment{})
+		}
+		for _, container := range dep.Spec.Template.Spec.Containers {
+			if containerName == container.Name {
+				if !strings.Contains(container.Image, "/"+expectImageName+":") {
+					return errors.Errorf(" Expected %q container image name is %q, however the actual image is %q", container.Name, expectImageName, container.Image)
+				}
+				return nil
+			}
+		}
+		return errors.Errorf("Container %q not found", containerName)
+	}
+
 }
 
 // HasCorrectResourceRequestsLimits verify a root/namespace reconciler container has the correct resource requests and limits.

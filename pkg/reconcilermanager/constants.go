@@ -62,6 +62,9 @@ const (
 	// HydrationController is the name of the hydration-controller container in reconciler pods.
 	HydrationController = "hydration-controller"
 
+	//HydrationControllerWithShell is the name of the hydration-controller image that has shell
+	HydrationControllerWithShell = "hydration-controller-with-shell"
+
 	// Reconciler is a common building block for many resource names associated
 	// with reconciling resources.
 	Reconciler = "reconciler"

@@ -35,6 +35,7 @@ echo "+++ Building and pushing images"
 NOMOS_TAG="gcr.io/${GCP_PROJECT}/configsync/nomos:${TAG}"
 MGR_TAG="gcr.io/${GCP_PROJECT}/configsync/reconciler-manager:${TAG}"
 HC_TAG="gcr.io/${GCP_PROJECT}/configsync/hydration-controller:${TAG}"
+HC_WITH_SHELL_TAG="gcr.io/${GCP_PROJECT}/configsync/hydration-controller-with-shell:${TAG}"
 REC_TAG="gcr.io/${GCP_PROJECT}/configsync/reconciler:${TAG}"
 WEBHOOK_TAG="gcr.io/${GCP_PROJECT}/configsync/admission-webhook:${TAG}"
 OCI_TAG="gcr.io/${GCP_PROJECT}/configsync/oci-sync:${TAG}"
@@ -43,11 +44,13 @@ make -C "${REPO_DIR}" image-nomos \
   NOMOS_TAG="${NOMOS_TAG}" \
   RECONCILER_TAG="${REC_TAG}" \
   HYDRATION_CONTROLLER_TAG="${HC_TAG}" \
+  HYDRATION_CONTROLLER_WITH_SHELL_TAG="${HC_WITH_SHELL_TAG}"\
   RECONCILER_MANAGER_TAG="${MGR_TAG}" \
   ADMISSION_WEBHOOK_TAG="${WEBHOOK_TAG}" \
   OCI_SYNC_TAG="${OCI_TAG}"
 docker push "${MGR_TAG}"
 docker push "${HC_TAG}"
+docker push "${HC_WITH_SHELL_TAG}"
 docker push "${REC_TAG}"
 docker push "${WEBHOOK_TAG}"
 docker push "${OCI_TAG}"

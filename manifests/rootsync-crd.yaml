@@ -182,6 +182,11 @@ spec:
                 description: override allows to override the settings for a reconciler.
                 nullable: true
                 properties:
+                  enableShellInRendering:
+                    description: 'enableShellInRendering specifies whether to enable
+                      or disable the shell in rendering process. Default: false. If
+                      set to true, it will enable the shell in rendering process.'
+                    type: boolean
                   gitSyncDepth:
                     description: gitSyncDepth allows one to override the number of
                       git commits to fetch. Must be no less than 0. Config Sync would
@@ -994,6 +999,11 @@ spec:
                 description: override allows to override the settings for a root reconciler.
                 nullable: true
                 properties:
+                  enableShellInRendering:
+                    description: 'enableShellInRendering specifies whether to enable
+                      or disable the shell in rendering process. Default: false. If
+                      set to true, it will enable the shell in rendering process.'
+                    type: boolean
                   gitSyncDepth:
                     description: gitSyncDepth allows one to override the number of
                       git commits to fetch. Must be no less than 0. Config Sync would

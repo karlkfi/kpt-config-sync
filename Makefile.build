@@ -81,6 +81,13 @@ image-nomos: license
 		-f build/all/Dockerfile \
 		--build-arg VERSION=${VERSION} \
 		.
+	@echo "+++ Building the Hydration Controller image with shell"
+	@docker build $(DOCKER_BUILD_QUIET) \
+		--target $(HYDRATION_CONTROLLER_WITH_SHELL_IMAGE) \
+		-t $(HYDRATION_CONTROLLER_WITH_SHELL_TAG) \
+		-f build/all/Dockerfile \
+		--build-arg VERSION=${VERSION} \
+		.
 	@echo "+++ Building the OCI-sync image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target $(OCI_SYNC_IMAGE) \
@@ -88,6 +95,7 @@ image-nomos: license
 		-f build/all/Dockerfile \
 		--build-arg VERSION=${VERSION} \
 		.
+
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-nomos: image-nomos
@@ -100,6 +108,7 @@ push-to-gcr-nomos: image-nomos
 	docker push $(RECONCILER_MANAGER_TAG)
 	docker push $(ADMISSION_WEBHOOK_TAG)
 	docker push $(HYDRATION_CONTROLLER_TAG)
+	docker push $(HYDRATION_CONTROLLER_WITH_SHELL_TAG)
 	docker push $(OCI_SYNC_TAG)
 
 ###################################
