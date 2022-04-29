@@ -50,6 +50,12 @@ cluster (from the Config Sync directory):
 kubectl apply -f .output/oss/manifests
 ```
 
+The following make target builds Config Sync and installs it into your cluster:
+
+```
+make run-oss
+```
+
 
 [go]: https://go.dev/doc/install
 [git]: https://docs.github.com/en/get-started/quickstart/set-up-git

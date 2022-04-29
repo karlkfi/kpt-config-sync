@@ -1,7 +1,13 @@
 # How to Contribute
 
-We'd love to accept your patches and contributions to this project. There are
-just a few small guidelines you need to follow.
+Config Sync is currently being mirrored from internal Google systems to Github,
+but we are working on migrating all the infrastructure for the project onto
+github. Our goal is that all development of Config Sync will happen in this
+repository. We expect to complete this effort in a couple of months, so stay tuned.
+
+In the meantime, we will try to upstream any PRs made against this github repo
+on a best-effort basis. If you run into any issues using Config Sync or have
+any suggestions or questions to the Config Sync team, file an issue.
 
 When you are ready, take a look at our [developer guide] to get started.
 
