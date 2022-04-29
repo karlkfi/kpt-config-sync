@@ -53,7 +53,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
     ./cmd/git-importer \
     ./cmd/hydration-controller \
     ./cmd/nomos \
-    ./cmd/admission-webhook
+    ./cmd/admission-webhook \
+    ./cmd/oci-sync
 
 # Hydration controller image
 FROM gcr.io/distroless/static:nonroot as hydration-controller
@@ -71,6 +72,22 @@ COPY LICENSES.txt LICENSES.txt
 USER 1000
 
 ENTRYPOINT ["/hydration-controller"]
+
+# OCI-sync image
+FROM gcr.io/distroless/static:nonroot as oci-sync
+# Setting HOME ensures that whatever UID this ultimately runs as can write files.
+ENV HOME=/tmp
+WORKDIR /
+COPY --from=bins /go/bin/oci-sync .
+
+# License file required for on-prem release.
+COPY LICENSE LICENSE
+COPY LICENSES.txt LICENSES.txt
+
+# Switch to non-root user
+USER 1000
+
+ENTRYPOINT ["/oci-sync"]
 
 # Reconciler image
 FROM gcr.io/distroless/static:nonroot as reconciler

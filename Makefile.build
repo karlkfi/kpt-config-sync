@@ -81,6 +81,13 @@ image-nomos: license
 		-f build/all/Dockerfile \
 		--build-arg VERSION=${VERSION} \
 		.
+	@echo "+++ Building the OCI-sync image"
+	@docker build $(DOCKER_BUILD_QUIET) \
+		--target $(OCI_SYNC_IMAGE) \
+		-t $(OCI_SYNC_TAG) \
+		-f build/all/Dockerfile \
+		--build-arg VERSION=${VERSION} \
+		.
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-nomos: image-nomos
@@ -93,6 +100,7 @@ push-to-gcr-nomos: image-nomos
 	docker push $(RECONCILER_MANAGER_TAG)
 	docker push $(ADMISSION_WEBHOOK_TAG)
 	docker push $(HYDRATION_CONTROLLER_TAG)
+	docker push $(OCI_SYNC_TAG)
 
 ###################################
 # Deployment generation
@@ -133,6 +141,7 @@ $(GEN_DEPLOYMENT_DIR)/reconciler-manager-configmap.yaml: \
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|RECONCILER_IMAGE_NAME|$(RECONCILER_TAG)|' \
+		-e 's|OCI_SYNC_IMAGE_NAME|$(OCI_SYNC_TAG)|' \
 		-e 's|HYDRATION_CONTROLLER_IMAGE_NAME|$(HYDRATION_CONTROLLER_TAG)|' < $< > $@
 
 .PHONY: $(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml

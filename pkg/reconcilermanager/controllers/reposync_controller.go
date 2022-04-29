@@ -572,6 +572,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 		var updatedContainers []corev1.Container
 		// Mutate spec.Containers to update name, configmap references and volumemounts.
 		for _, container := range templateSpec.Containers {
+			addContainer := true
 			switch container.Name {
 			case reconcilermanager.Reconciler:
 				container.Env = append(container.Env, containerEnvs[container.Name]...)
@@ -579,19 +580,30 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 			case reconcilermanager.HydrationController:
 				container.Env = append(container.Env, containerEnvs[container.Name]...)
 				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
-			case reconcilermanager.GitSync:
-				container.Env = append(container.Env, containerEnvs[container.Name]...)
-				// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
-				container.VolumeMounts = volumeMounts(rs.Spec.Auth,
-					container.VolumeMounts)
-				// Update Environment variables for `token` Auth, which
-				// passes the credentials as the Username and Password.
-				if authTypeToken(rs.Spec.Auth) {
-					container.Env = append(container.Env, gitSyncTokenAuthEnv(secretName)...)
+			case reconcilermanager.OciSync:
+				if v1beta1.SourceType(rs.Spec.SourceType) != v1beta1.OciSource {
+					addContainer = false
+				} else {
+					// TODO (b/230148297): Configure the oci-sync container with credentials.
+					addContainer = false
 				}
-				keys := GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
-				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
-				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
+			case reconcilermanager.GitSync:
+				if v1beta1.SourceType(rs.Spec.SourceType) != v1beta1.GitSource {
+					addContainer = false
+				} else {
+					container.Env = append(container.Env, containerEnvs[container.Name]...)
+					// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
+					container.VolumeMounts = volumeMounts(rs.Spec.Auth,
+						container.VolumeMounts)
+					// Update Environment variables for `token` Auth, which
+					// passes the credentials as the Username and Password.
+					if authTypeToken(rs.Spec.Auth) {
+						container.Env = append(container.Env, gitSyncTokenAuthEnv(secretName)...)
+					}
+					keys := GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
+					container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
+					mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
+				}
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.
@@ -602,7 +614,9 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 			default:
 				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 			}
-			updatedContainers = append(updatedContainers, container)
+			if addContainer {
+				updatedContainers = append(updatedContainers, container)
+			}
 		}
 
 		// Add container spec for the "gcenode-askpass-sidecar" (defined as

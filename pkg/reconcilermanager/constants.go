@@ -56,6 +56,9 @@ const (
 	// GitSync is the name of the git-sync container in reconciler pods.
 	GitSync = "git-sync"
 
+	// OciSync is the name of the oci-sync container in reconciler pods.
+	OciSync = "oci-sync"
+
 	// HydrationController is the name of the hydration-controller container in reconciler pods.
 	HydrationController = "hydration-controller"
 

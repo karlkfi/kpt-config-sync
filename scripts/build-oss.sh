@@ -37,17 +37,20 @@ MGR_TAG="gcr.io/${GCP_PROJECT}/configsync/reconciler-manager:${TAG}"
 HC_TAG="gcr.io/${GCP_PROJECT}/configsync/hydration-controller:${TAG}"
 REC_TAG="gcr.io/${GCP_PROJECT}/configsync/reconciler:${TAG}"
 WEBHOOK_TAG="gcr.io/${GCP_PROJECT}/configsync/admission-webhook:${TAG}"
+OCI_TAG="gcr.io/${GCP_PROJECT}/configsync/oci-sync:${TAG}"
 
 make -C "${REPO_DIR}" image-nomos \
   NOMOS_TAG="${NOMOS_TAG}" \
   RECONCILER_TAG="${REC_TAG}" \
   HYDRATION_CONTROLLER_TAG="${HC_TAG}" \
   RECONCILER_MANAGER_TAG="${MGR_TAG}" \
-  ADMISSION_WEBHOOK_TAG="${WEBHOOK_TAG}"
+  ADMISSION_WEBHOOK_TAG="${WEBHOOK_TAG}" \
+  OCI_SYNC_TAG="${OCI_TAG}"
 docker push "${MGR_TAG}"
 docker push "${HC_TAG}"
 docker push "${REC_TAG}"
 docker push "${WEBHOOK_TAG}"
+docker push "${OCI_TAG}"
 
 echo "+++ Generating manifests"
 cp "${REPO_DIR}"/manifests/test-resources/00-namespace.yaml "${MANIFEST_DIR}"/00-namespace.yaml
@@ -58,7 +61,9 @@ cp "${REPO_DIR}"/manifests/reconciler-manager-service-account.yaml "${MANIFEST_D
 cp "${REPO_DIR}"/manifests/otel-agent-cm.yaml "${MANIFEST_DIR}"/otel-agent-cm.yaml
 cp "${REPO_DIR}"/manifests/test-resources/resourcegroup-manifest.yaml "${MANIFEST_DIR}"/resourcegroup-manifest.yaml
 
-sed -e "s|RECONCILER_IMAGE_NAME|$REC_TAG|" -e "s|HYDRATION_CONTROLLER_IMAGE_NAME|$HC_TAG|" \
+sed -e "s|RECONCILER_IMAGE_NAME|$REC_TAG|" \
+  -e "s|OCI_SYNC_IMAGE_NAME|$OCI_TAG|" \
+  -e "s|HYDRATION_CONTROLLER_IMAGE_NAME|$HC_TAG|" \
   "${REPO_DIR}"/manifests/templates/reconciler-manager-configmap.yaml \
   > "${MANIFEST_DIR}"/reconciler-manager-configmap.yaml
 
