@@ -162,13 +162,13 @@ buildenv-dirs:
 ##### TARGETS #####
 
 include Makefile.build
-include Makefile.docs
+-include Makefile.docs
 include Makefile.e2e
-include Makefile.prow
+-include Makefile.prow
 include Makefile.gen
 include Makefile.oss
 include Makefile.reconcilermanager
-include Makefile.release
+-include Makefile.release
 
 # Cleans all artifacts.
 clean:
@@ -207,6 +207,7 @@ lint-go: pull-buildenv buildenv-dirs
 lint-bash:
 	@./scripts/lint-bash.sh
 
+.PHONY: license
 license:
 	@./scripts/prepare-licenses.sh
 
