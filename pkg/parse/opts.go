@@ -48,7 +48,7 @@ type opts struct {
 	// For tests, use zero as it will poll continuously.
 	pollingFrequency time.Duration
 
-	// ResyncPeriod is the period of time between forced re-sync from Git (even
+	// ResyncPeriod is the period of time between forced re-sync from source (even
 	// without a new commit).
 	resyncPeriod time.Duration
 
@@ -70,11 +70,10 @@ type opts struct {
 	updater
 }
 
-// Parser represents a parser that can be pointed at and continuously parse
-// a git repository.
+// Parser represents a parser that can be pointed at and continuously parse a source.
 type Parser interface {
-	parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError)
-	setSourceStatus(ctx context.Context, newStatus gitStatus) error
+	parseSource(ctx context.Context, state sourceState) ([]ast.FileObject, status.MultiError)
+	setSourceStatus(ctx context.Context, newStatus sourceStatus) error
 	setRenderingStatus(ctx context.Context, oldStatus, newStatus renderingStatus) error
 	SetSyncStatus(ctx context.Context, errs status.MultiError) error
 	options() *opts

@@ -279,8 +279,8 @@ spec:
                     at a certain point.
                   properties:
                     commit:
-                      description: commit is the hash of the commit in the source
-                        of truth.
+                      description: hash of the source of truth. It can be a git commit
+                        hash, or an OCI image digest.
                       type: string
                     errorSourceRefs:
                       description: errorSourceRefs track the origination(s) of errors
@@ -406,8 +406,9 @@ spec:
                   type: object
                 type: array
               lastSyncedCommit:
-                description: lastSyncedCommit describes the most recent commit hash
-                  that is successfully synced.
+                description: lastSyncedCommit describes the most recent hash that
+                  is successfully synced. It can be a git commit hash, or an OCI image
+                  digest.
                 type: string
               observedGeneration:
                 description: observedGeneration is the most recent generation observed
@@ -424,8 +425,8 @@ spec:
                   resources from the source of truth.
                 properties:
                   commit:
-                    description: commit is the hash of the commit in the source of
-                      truth that is rendered.
+                    description: hash of the source of truth that is rendered. It
+                      can be a git commit hash, or an OCI image digest.
                     type: string
                   errorSummary:
                     description: errorSummary summarizes the errors encountered during
@@ -543,14 +544,31 @@ spec:
                     description: Human-readable message describes details about the
                       rendering status.
                     type: string
+                  ociStatus:
+                    description: ociStatus contains fields describing the status of
+                      an OCI source of truth.
+                    properties:
+                      dir:
+                        description: 'dir is the absolute path of the directory that
+                          contains the local resources. Default: the root directory
+                          of the repository'
+                        type: string
+                      image:
+                        description: image is the OCI image repository URL for the
+                          package to sync from.
+                        type: string
+                    required:
+                    - dir
+                    - image
+                    type: object
                 type: object
               source:
                 description: source contains fields describing the status of a *Sync's
                   source of truth.
                 properties:
                   commit:
-                    description: commit is the hash of the most recent commit seen
-                      in the source of truth.
+                    description: hash of the source of truth that is rendered. It
+                      can be a git commit hash, or an OCI image digest.
                     type: string
                   errorSummary:
                     description: errorSummary summarizes the errors encountered during
@@ -664,15 +682,31 @@ spec:
                     format: date-time
                     nullable: true
                     type: string
+                  ociStatus:
+                    description: ociStatus contains fields describing the status of
+                      an OCI source of truth.
+                    properties:
+                      dir:
+                        description: 'dir is the absolute path of the directory that
+                          contains the local resources. Default: the root directory
+                          of the repository'
+                        type: string
+                      image:
+                        description: image is the OCI image repository URL for the
+                          package to sync from.
+                        type: string
+                    required:
+                    - dir
+                    - image
+                    type: object
                 type: object
               sync:
                 description: sync contains fields describing the status of syncing
                   resources from the source of truth to the cluster.
                 properties:
                   commit:
-                    description: commit is the hash of the most recent commit that
-                      was synced to the cluster. This value is updated even when a
-                      commit is only partially synced due to an  error.
+                    description: hash of the source of truth that is rendered. It
+                      can be a git commit hash, or an OCI image digest.
                     type: string
                   errorSummary:
                     description: errorSummary summarizes the errors encountered during
@@ -786,6 +820,23 @@ spec:
                     format: date-time
                     nullable: true
                     type: string
+                  ociStatus:
+                    description: ociStatus contains fields describing the status of
+                      an OCI source of truth.
+                    properties:
+                      dir:
+                        description: 'dir is the absolute path of the directory that
+                          contains the local resources. Default: the root directory
+                          of the repository'
+                        type: string
+                      image:
+                        description: image is the OCI image repository URL for the
+                          package to sync from.
+                        type: string
+                    required:
+                    - dir
+                    - image
+                    type: object
                 type: object
             type: object
         type: object
@@ -1040,8 +1091,8 @@ spec:
                     at a certain point.
                   properties:
                     commit:
-                      description: Commit is the hash of the commit in the source
-                        of truth.
+                      description: hash of the source of truth. It can be a git commit
+                        hash, or an OCI image digest.
                       type: string
                     errorSourceRefs:
                       description: errorSourceRefs track the origination(s) of errors
@@ -1167,8 +1218,9 @@ spec:
                   type: object
                 type: array
               lastSyncedCommit:
-                description: lastSyncedCommit describes the most recent commit hash
-                  that is successfully synced.
+                description: lastSyncedCommit describes the most recent hash that
+                  is successfully synced. It can be a git commit hash, or an OCI image
+                  digest.
                 type: string
               observedGeneration:
                 description: observedGeneration is the most recent generation observed
@@ -1185,8 +1237,8 @@ spec:
                   resources from the source of truth.
                 properties:
                   commit:
-                    description: commit is the hash of the commit in the source of
-                      truth that is rendered.
+                    description: hash of the source of truth that is rendered. It
+                      can be a git commit hash, or an OCI image digest.
                     type: string
                   errorSummary:
                     description: errorSummary summarizes the errors encountered during
@@ -1304,14 +1356,31 @@ spec:
                     description: Human-readable message describes details about the
                       rendering status.
                     type: string
+                  ociStatus:
+                    description: ociStatus contains fields describing the status of
+                      an OCI source of truth.
+                    properties:
+                      dir:
+                        description: 'dir is the absolute path of the directory that
+                          contains the local resources. Default: the root directory
+                          of the repository'
+                        type: string
+                      image:
+                        description: image is the OCI image repository URL for the
+                          package to sync from.
+                        type: string
+                    required:
+                    - dir
+                    - image
+                    type: object
                 type: object
               source:
                 description: source contains fields describing the status of a *Sync's
                   source of truth.
                 properties:
                   commit:
-                    description: commit is the hash of the most recent commit seen
-                      in the source of truth.
+                    description: hash of the source of truth that is rendered. It
+                      can be a git commit hash, or an OCI image digest.
                     type: string
                   errorSummary:
                     description: errorSummary summarizes the errors encountered during
@@ -1425,15 +1494,31 @@ spec:
                     format: date-time
                     nullable: true
                     type: string
+                  ociStatus:
+                    description: ociStatus contains fields describing the status of
+                      an OCI source of truth.
+                    properties:
+                      dir:
+                        description: 'dir is the absolute path of the directory that
+                          contains the local resources. Default: the root directory
+                          of the repository'
+                        type: string
+                      image:
+                        description: image is the OCI image repository URL for the
+                          package to sync from.
+                        type: string
+                    required:
+                    - dir
+                    - image
+                    type: object
                 type: object
               sync:
                 description: sync contains fields describing the status of syncing
                   resources from the source of truth to the cluster.
                 properties:
                   commit:
-                    description: commit is the hash of the most recent commit that
-                      was synced to the cluster. This value is updated even when a
-                      commit is only partially synced due to an  error.
+                    description: hash of the source of truth that is rendered. It
+                      can be a git commit hash, or an OCI image digest.
                     type: string
                   errorSummary:
                     description: errorSummary summarizes the errors encountered during
@@ -1547,6 +1632,23 @@ spec:
                     format: date-time
                     nullable: true
                     type: string
+                  ociStatus:
+                    description: ociStatus contains fields describing the status of
+                      an OCI source of truth.
+                    properties:
+                      dir:
+                        description: 'dir is the absolute path of the directory that
+                          contains the local resources. Default: the root directory
+                          of the repository'
+                        type: string
+                      image:
+                        description: image is the OCI image repository URL for the
+                          package to sync from.
+                        type: string
+                    required:
+                    - dir
+                    - image
+                    type: object
                 type: object
             type: object
         type: object

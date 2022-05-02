@@ -25,27 +25,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func withSyncStatus(status v1beta1.SyncStatus) core.MetaMutator {
+func withSyncStatus(status v1beta1.Status) core.MetaMutator {
 	return func(o client.Object) {
 		rs := o.(*v1beta1.RepoSync)
-		rs.Status.SyncStatus = status
+		rs.Status.Status = status
 	}
 }
 
-func fakeSyncStatus() v1beta1.SyncStatus {
-	return v1beta1.SyncStatus{
+func fakeSyncStatus() v1beta1.Status {
+	return v1beta1.Status{
 		Rendering: v1beta1.RenderingStatus{
 			Errors: []v1beta1.ConfigSyncError{
 				{Code: "1061", ErrorMessage: "rendering-error-message"},
 			},
 		},
-		Source: v1beta1.GitSourceStatus{
+		Source: v1beta1.SourceStatus{
 			Errors: []v1beta1.ConfigSyncError{
 				{Code: "1021", ErrorMessage: "1021-error-message"},
 				{Code: "1022", ErrorMessage: "1022-error-message"},
 			},
 		},
-		Sync: v1beta1.GitSyncStatus{
+		Sync: v1beta1.SyncStatus{
 			Errors: []v1beta1.ConfigSyncError{
 				{Code: "2009", ErrorMessage: "apiserver error"},
 				{Code: "2009", ErrorMessage: "webhook error"},

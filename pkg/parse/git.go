@@ -26,7 +26,6 @@ import (
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/hydrate"
 	"kpt.dev/configsync/pkg/importer/filesystem/cmpath"
-	"kpt.dev/configsync/pkg/importer/git"
 	"kpt.dev/configsync/pkg/metadata"
 	"kpt.dev/configsync/pkg/reconcilermanager"
 	"kpt.dev/configsync/pkg/status"
@@ -34,7 +33,7 @@ import (
 
 // FileSource includes all settings to configure where a Parser reads files from.
 type FileSource struct {
-	// GitDir is the path to the symbolic link of the git repository.
+	// GitDir is the path to the symbolic link of the source repository.
 	GitDir cmpath.Absolute
 	// HydratedRoot is the path to the root of the hydrated directory.
 	HydratedRoot string
@@ -44,11 +43,11 @@ type FileSource struct {
 	HydratedLink string
 	// SyncDir is the path to the directory of policies within the source repository.
 	SyncDir cmpath.Relative
-	// GitRepo is the git repo to sync.
+	// GitRepo is the source repo to sync.
 	GitRepo string
-	// GitBranch is the branch of the git repo to sync.
+	// GitBranch is the branch of the source repo to sync.
 	GitBranch string
-	// GitRev is the revision of the git repo to sync.
+	// GitRev is the revision of the source repo to sync.
 	GitRev string
 }
 
@@ -57,13 +56,14 @@ type FileSource struct {
 type files struct {
 	FileSource
 
-	// currentSyncDir is the directory (including git commit hash) last seen by the Parser.
+	// currentSyncDir is the directory (including git commit hash or OCI image digest)
+	// last seen by the Parser.
 	currentSyncDir string
 }
 
-// gitState contains all state read from the mounted Git repo.
-type gitState struct {
-	// commit is the Git commit hash read from the Git repo.
+// sourceState contains all state read from the mounted Git repo.
+type sourceState struct {
+	// commit is the commit read from the source of truth.
 	commit string
 	// syncDir is the absolute path to the sync directory that includes the configurations.
 	syncDir cmpath.Absolute
@@ -74,10 +74,10 @@ type gitState struct {
 // readConfigFiles reads all the files under state.syncDir and sets state.files.
 // - if rendered is true, state.syncDir contains the hydrated files.
 // - if rendered is false, state.syncDir contains the source files.
-// readConfigFiles should be called after gitState is populated.
-func (o *files) readConfigFiles(state *gitState) status.Error {
+// readConfigFiles should be called after sourceState is populated.
+func (o *files) readConfigFiles(state *sourceState) status.Error {
 	if state == nil || state.commit == "" || state.syncDir.OSPath() == "" {
-		return status.InternalError("gitState is not populated yet")
+		return status.InternalError("sourceState is not populated yet")
 	}
 	syncDir := state.syncDir
 	if syncDir.OSPath() == o.currentSyncDir {
@@ -105,9 +105,9 @@ func (o *files) gitContext() gitContext {
 	}
 }
 
-// readHydratedDir returns a gitState object whose `commit` and `syncDir` fields are set if succeeded.
-func (o *files) readHydratedDir(hydratedRoot cmpath.Absolute, link, reconciler string) (gitState, hydrate.HydrationError) {
-	result := gitState{}
+// readHydratedDir returns a sourceState object whose `commit` and `syncDir` fields are set if succeeded.
+func (o *files) readHydratedDir(hydratedRoot cmpath.Absolute, link, reconciler string) (sourceState, hydrate.HydrationError) {
+	result := sourceState{}
 	errorFile := hydratedRoot.Join(cmpath.RelativeSlash(hydrate.ErrorFile))
 	if _, err := os.Stat(errorFile.OSPath()); err == nil {
 		return result, hydratedError(errorFile.OSPath(),
@@ -120,11 +120,7 @@ func (o *files) readHydratedDir(hydratedRoot cmpath.Absolute, link, reconciler s
 		return result, hydrate.NewInternalError(errors.Wrapf(err, "unable to load the hydrated configs under %s", hydratedRoot.OSPath()))
 	}
 
-	commit, err := git.CommitHash(hydratedDir.OSPath())
-	if err != nil {
-		return result, hydrate.NewInternalError(errors.Wrapf(err, "unable to parse commit hash from the hydrated directory: %s", hydratedDir.OSPath()))
-	}
-	result.commit = commit
+	result.commit = filepath.Base(hydratedDir.OSPath())
 
 	relSyncDir := hydratedDir.Join(o.SyncDir)
 	syncDir, err := relSyncDir.EvalSymlinks()

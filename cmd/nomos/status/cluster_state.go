@@ -283,7 +283,7 @@ func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, sy
 		} else {
 			// The new status condition is not available in older versions, use the
 			// existing logic to compute the status.
-			repostate.status = multiRepoSyncStatus(rs.Status.SyncStatus)
+			repostate.status = multiRepoSyncStatus(rs.Status.Status)
 			repostate.commit = commitHash(rs.Status.Sync.Commit)
 			repostate.errors = repoSyncErrors(rs)
 			totalErrorCount := len(repostate.errors)
@@ -375,7 +375,7 @@ func RootRepoStatus(rs *v1beta1.RootSync, rg *unstructured.Unstructured, syncing
 		} else {
 			// The new status condition is not available in older versions, use the
 			// existing logic to compute the status.
-			repostate.status = multiRepoSyncStatus(rs.Status.SyncStatus)
+			repostate.status = multiRepoSyncStatus(rs.Status.Status)
 			repostate.commit = commitHash(rs.Status.Sync.Commit)
 			repostate.errors = rootSyncErrors(rs)
 			totalErrorCount := len(repostate.errors)
@@ -444,7 +444,7 @@ func commitHash(commit string) string {
 	return commit
 }
 
-func multiRepoSyncStatus(status v1beta1.SyncStatus) string {
+func multiRepoSyncStatus(status v1beta1.Status) string {
 	if len(status.Source.Errors) > 0 || len(status.Sync.Errors) > 0 || len(status.Rendering.Errors) > 0 {
 		return util.ErrorMsg
 	}
@@ -470,7 +470,7 @@ func repoSyncErrors(rs *v1beta1.RepoSync) []string {
 	if reposync.IsStalled(rs) {
 		return []string{reposync.StalledMessage(rs)}
 	}
-	return multiRepoSyncStatusErrors(rs.Status.SyncStatus)
+	return multiRepoSyncStatusErrors(rs.Status.Status)
 }
 
 // rootSyncErrors returns all errors reported in the given RootSync as a single array.
@@ -478,10 +478,10 @@ func rootSyncErrors(rs *v1beta1.RootSync) []string {
 	if rootsync.IsStalled(rs) {
 		return []string{rootsync.StalledMessage(rs)}
 	}
-	return multiRepoSyncStatusErrors(rs.Status.SyncStatus)
+	return multiRepoSyncStatusErrors(rs.Status.Status)
 }
 
-func multiRepoSyncStatusErrors(status v1beta1.SyncStatus) []string {
+func multiRepoSyncStatusErrors(status v1beta1.Status) []string {
 	var errs []string
 	for _, err := range status.Rendering.Errors {
 		errs = append(errs, err.ErrorMessage)

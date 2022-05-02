@@ -349,8 +349,8 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 	}
 }
 
-func toGitStatus(git *v1beta1.Git) v1beta1.GitStatus {
-	return v1beta1.GitStatus{
+func toGitStatus(git *v1beta1.Git) *v1beta1.GitStatus {
+	return &v1beta1.GitStatus{
 		Repo:     git.Repo,
 		Revision: git.Revision,
 		Branch:   git.Branch,
@@ -402,9 +402,9 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		syncingConditionSupported bool
 		gitSpec                   *v1beta1.Git
 		conditions                []v1beta1.RepoSyncCondition
-		sourceStatus              v1beta1.GitSourceStatus
+		sourceStatus              v1beta1.SourceStatus
 		renderingStatus           v1beta1.RenderingStatus
-		syncStatus                v1beta1.GitSyncStatus
+		syncStatus                v1beta1.SyncStatus
 		resourceGroup             *unstructured.Unstructured
 		want                      *RepoState
 	}{
@@ -431,11 +431,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -471,11 +471,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -522,11 +522,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -553,11 +553,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -574,7 +574,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has import error",
 			gitSpec:    git,
 			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
@@ -600,7 +600,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				reconciledCondition,
 				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
@@ -624,12 +624,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -660,12 +660,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -729,11 +729,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -765,11 +765,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -836,11 +836,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -872,11 +872,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -940,11 +940,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -976,11 +976,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1002,7 +1002,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
@@ -1032,7 +1032,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
@@ -1056,12 +1056,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1092,12 +1092,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1121,7 +1121,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1149,7 +1149,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1170,11 +1170,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1206,11 +1206,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1232,12 +1232,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1265,12 +1265,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1294,12 +1294,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1327,12 +1327,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1357,11 +1357,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1388,11 +1388,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1466,9 +1466,9 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		syncingConditionSupported bool
 		gitSpec                   *v1beta1.Git
 		conditions                []v1beta1.RootSyncCondition
-		sourceStatus              v1beta1.GitSourceStatus
+		sourceStatus              v1beta1.SourceStatus
 		renderingStatus           v1beta1.RenderingStatus
-		syncStatus                v1beta1.GitSyncStatus
+		syncStatus                v1beta1.SyncStatus
 		want                      *RepoState
 	}{
 		{
@@ -1494,11 +1494,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1534,11 +1534,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1585,11 +1585,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1616,11 +1616,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1637,7 +1637,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has import error",
 			gitSpec:    git,
 			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
@@ -1663,7 +1663,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				reconciledCondition,
 				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
@@ -1687,12 +1687,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1723,12 +1723,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1792,11 +1792,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1828,11 +1828,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1899,11 +1899,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -1935,11 +1935,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2003,11 +2003,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2039,11 +2039,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2065,7 +2065,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
@@ -2095,7 +2095,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
@@ -2119,12 +2119,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2155,12 +2155,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2184,7 +2184,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -2212,7 +2212,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -2233,11 +2233,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2269,11 +2269,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2295,12 +2295,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2328,12 +2328,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2357,12 +2357,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2390,12 +2390,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
@@ -2419,11 +2419,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -2448,11 +2448,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},

@@ -26,17 +26,17 @@ import (
 	"kpt.dev/configsync/pkg/status"
 )
 
-// cacheForCommit tracks the progress made by the reconciler for a git commit.
+// cacheForCommit tracks the progress made by the reconciler for a source commit (a source commit or an oci image digest).
 //
-// The reconciler resets the whole cache when a new git commit is detected.
+// The reconciler resets the whole cache when a new commit is detected.
 //
-// The reconciler resets the whole cache except for the cached gitState when:
+// The reconciler resets the whole cache except for the cached sourceState when:
 //   * a force-resync happens, or
 //   * one of the watchers noticed a management conflict.
 type cacheForCommit struct {
-	// git tracks the state of the git repo.
-	// This field is only set after the reconciler successfully reads all the git files.
-	git gitState
+	// source tracks the state of the source repo.
+	// This field is only set after the reconciler successfully reads all the source files.
+	source sourceState
 
 	// hasParserResult indicates whether the cache includes the parser result.
 	hasParserResult bool
@@ -59,7 +59,7 @@ type cacheForCommit struct {
 	//
 	// An alternative is to determining whether the cache includes the parser result by
 	// checking whether the `applierResult` field is empty. However, an empty `applierResult`
-	// field may also indicate that the git repo is empty and there is nothing to be applied.
+	// field may also indicate that the source repo is empty and there is nothing to be applied.
 	hasApplierResult bool
 
 	// applierResult contains the applier result.

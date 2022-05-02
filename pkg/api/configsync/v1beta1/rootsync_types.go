@@ -77,7 +77,7 @@ type RootSyncSpec struct {
 
 // RootSyncStatus defines the observed state of RootSync
 type RootSyncStatus struct {
-	SyncStatus `json:",inline"`
+	Status `json:",inline"`
 
 	// conditions represents the latest available observations of the RootSync's
 	// current state.
@@ -100,7 +100,7 @@ const (
 	// RootSyncStalled means that the RootSync controller has not been able to
 	// make progress towards reconciling the RootSync.
 	RootSyncStalled RootSyncConditionType = "Stalled"
-	// RootSyncSyncing means that the root reconciler is processing a commit.
+	// RootSyncSyncing means that the root reconciler is processing a hash (git commit hash or OCI image digest).
 	RootSyncSyncing RootSyncConditionType = "Syncing"
 )
 
@@ -124,7 +124,7 @@ type RootSyncCondition struct {
 	// A human readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
-	// Commit is the hash of the commit in the source of truth.
+	// hash of the source of truth. It can be a git commit hash, or an OCI image digest.
 	// +optional
 	Commit string `json:"commit,omitempty"`
 	// errors is a list of errors that occurred in the process.

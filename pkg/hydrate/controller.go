@@ -286,7 +286,7 @@ func deleteErrorFile(file string) error {
 	return nil
 }
 
-// SourceCommitAndDir returns the source commit hash, the absolute path of the sync directory, and source errors.
+// SourceCommitAndDir returns the source hash (a git commit hash or an OCI image digest), the absolute path of the sync directory, and source errors.
 func SourceCommitAndDir(sourceRoot cmpath.Absolute, syncDir cmpath.Relative, reconcilerName string) (string, cmpath.Absolute, status.Error) {
 	// Check if the source configs are synced successfully.
 	errFilePath := filepath.Join(path.Dir(sourceRoot.OSPath()), git.ErrorFile)
@@ -311,10 +311,7 @@ func SourceCommitAndDir(sourceRoot cmpath.Absolute, syncDir cmpath.Relative, rec
 		return "", cmpath.Absolute{}, toSourceError(err)
 	}
 
-	commit, e := git.CommitHash(gitDir.OSPath())
-	if e != nil {
-		return "", cmpath.Absolute{}, status.SourceError.Wrap(e).Sprintf("unable to parse commit hash from source path: %s", gitDir.OSPath()).Build()
-	}
+	commit := filepath.Base(gitDir.OSPath())
 
 	// The hydration controller might pull remote Helm charts locally, which makes the source directory dirty.
 	// Hence, we don't check if the source directory is clean before the hydration.

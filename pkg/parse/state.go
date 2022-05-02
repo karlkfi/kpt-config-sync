@@ -28,13 +28,13 @@ const (
 	maxRetryInterval             = time.Duration(5) * time.Minute
 )
 
-type gitStatus struct {
+type sourceStatus struct {
 	commit     string
 	errs       status.MultiError
 	lastUpdate metav1.Time
 }
 
-func (gs gitStatus) equal(other gitStatus) bool {
+func (gs sourceStatus) equal(other sourceStatus) bool {
 	return gs.commit == other.commit && status.DeepEqual(gs.errs, other.errs)
 }
 
@@ -54,23 +54,23 @@ type reconcilerState struct {
 	lastApplied string
 
 	// sourceStatus tracks info from the `Status.Source` field of a RepoSync/RootSync.
-	sourceStatus gitStatus
+	sourceStatus
 
 	// renderingStatus tracks info from the `Status.Rendering` field of a RepoSync/RootSync.
-	renderingStatus renderingStatus
+	renderingStatus
 
 	// syncStatus tracks info from the `Status.Sync` field of a RepoSync/RootSync.
-	syncStatus gitStatus
+	syncStatus sourceStatus
 
 	// syncingConditionLastUpdate tracks when the `Syncing` condition was updated most recently.
 	syncingConditionLastUpdate metav1.Time
 
-	// cache tracks the progress made by the reconciler for a git commit.
+	// cache tracks the progress made by the reconciler for a source commit.
 	cache cacheForCommit
 }
 
 func (s *reconcilerState) checkpoint() {
-	applied := s.cache.git.syncDir.OSPath()
+	applied := s.cache.source.syncDir.OSPath()
 	if applied == s.lastApplied {
 		return
 	}
@@ -130,28 +130,28 @@ func calculateNextRetryTime(retries int) time.Time {
 
 // resetCache resets the whole cache.
 //
-// resetCache is called when a new git commit is detected.
+// resetCache is called when a new source commit is detected.
 func (s *reconcilerState) resetCache() {
 	s.cache = cacheForCommit{}
 }
 
-// resetAllButGitState resets the whole cache except for the cached gitState.
+// resetAllButGitState resets the whole cache except for the cached sourceState.
 //
 // resetAllButGitState is called when:
 //   * a force-resync happens, or
 //   * one of the watchers noticed a management conflict.
 func (s *reconcilerState) resetAllButGitState() {
-	git := s.cache.git
+	git := s.cache.source
 	s.cache = cacheForCommit{}
-	s.cache.git = git
+	s.cache.source = git
 }
 
 // needToSetSourceStatus returns true if `p.setSourceStatus` should be called.
-func (s *reconcilerState) needToSetSourceStatus(newStatus gitStatus) bool {
+func (s *reconcilerState) needToSetSourceStatus(newStatus sourceStatus) bool {
 	return !newStatus.equal(s.sourceStatus) || s.sourceStatus.lastUpdate.IsZero() || s.sourceStatus.lastUpdate.Before(&s.syncingConditionLastUpdate)
 }
 
 // needToSetSyncStatus returns true if `p.SetSyncStatus` should be called.
-func (s *reconcilerState) needToSetSyncStatus(newStatus gitStatus) bool {
+func (s *reconcilerState) needToSetSyncStatus(newStatus sourceStatus) bool {
 	return !newStatus.equal(s.syncStatus) || s.syncStatus.lastUpdate.IsZero() || s.syncStatus.lastUpdate.Before(&s.syncingConditionLastUpdate)
 }

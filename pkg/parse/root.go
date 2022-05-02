@@ -93,7 +93,7 @@ func (p *root) options() *opts {
 }
 
 // parseSource implements the Parser interface
-func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError) {
+func (p *root) parseSource(ctx context.Context, state sourceState) ([]ast.FileObject, status.MultiError) {
 	wantFiles := state.files
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
 		// We're using hierarchical mode for the root repository, so ignore files
@@ -113,7 +113,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 	}
 	builder := utildiscovery.ScoperBuilder(p.discoveryInterface)
 
-	klog.Infof("Parsing files from git dir: %s", state.syncDir.OSPath())
+	klog.Infof("Parsing files from source dir: %s", state.syncDir.OSPath())
 	objs, err := p.parser.Parse(filePaths)
 	if err != nil {
 		return nil, err
@@ -151,13 +151,13 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 }
 
 // setSourceStatus implements the Parser interface
-func (p *root) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
+func (p *root) setSourceStatus(ctx context.Context, newStatus sourceStatus) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 	return p.setSourceStatusWithRetries(ctx, newStatus, defaultDenominator)
 }
 
-func (p *root) setSourceStatusWithRetries(ctx context.Context, newStatus gitStatus, denominator int) error {
+func (p *root) setSourceStatusWithRetries(ctx context.Context, newStatus sourceStatus, denominator int) error {
 	if denominator <= 0 {
 		return fmt.Errorf("The denominator must be a positive number")
 	}
@@ -189,10 +189,10 @@ func (p *root) setSourceStatusWithRetries(ctx context.Context, newStatus gitStat
 	return nil
 }
 
-func setSourceStatus(source *v1beta1.GitSourceStatus, p Parser, newStatus gitStatus, denominator int) {
+func setSourceStatus(source *v1beta1.SourceStatus, p Parser, newStatus sourceStatus, denominator int) {
 	cse := status.ToCSE(newStatus.errs)
 	source.Commit = newStatus.commit
-	source.Git = v1beta1.GitStatus{
+	source.Git = &v1beta1.GitStatus{
 		Repo:     p.options().GitRepo,
 		Revision: p.options().GitRev,
 		Branch:   p.options().GitBranch,
@@ -262,7 +262,7 @@ func (p *root) setRenderingStatusWithRetires(ctx context.Context, newStatus rend
 func setRenderingStatus(rendering *v1beta1.RenderingStatus, p Parser, newStatus renderingStatus, denominator int) {
 	cse := status.ToCSE(newStatus.errs)
 	rendering.Commit = newStatus.commit
-	rendering.Git = v1beta1.GitStatus{
+	rendering.Git = &v1beta1.GitStatus{
 		Repo:     p.options().GitRepo,
 		Revision: p.options().GitRev,
 		Branch:   p.options().GitBranch,
@@ -307,7 +307,7 @@ func (p *root) setSyncStatusWithRetries(ctx context.Context, errs status.MultiEr
 	// syncing indicates whether the applier is syncing.
 	syncing := p.applier.Syncing()
 
-	setSyncStatus(&rs.Status.SyncStatus, status.ToCSE(errs), denominator)
+	setSyncStatus(&rs.Status.Status, status.ToCSE(errs), denominator)
 
 	metrics.RecordReconcilerErrors(ctx, "sync", status.ToCSE(errs))
 	metrics.RecordPipelineError(ctx, configsync.RootSyncName, "sync", rs.Status.Sync.ErrorSummary.TotalCount)
@@ -336,7 +336,7 @@ func (p *root) setSyncStatusWithRetries(ctx context.Context, errs status.MultiEr
 	return nil
 }
 
-func setSyncStatus(syncStatus *v1beta1.SyncStatus, syncErrs []v1beta1.ConfigSyncError, denominator int) {
+func setSyncStatus(syncStatus *v1beta1.Status, syncErrs []v1beta1.ConfigSyncError, denominator int) {
 	syncStatus.Sync.Commit = syncStatus.Source.Commit
 	syncStatus.Sync.Git = syncStatus.Source.Git
 	syncStatus.Sync.ErrorSummary = &v1beta1.ErrorSummary{
@@ -348,7 +348,7 @@ func setSyncStatus(syncStatus *v1beta1.SyncStatus, syncErrs []v1beta1.ConfigSync
 }
 
 // summarizeErrors summarizes the errors from `sourceStatus` and `syncStatus`, and returns an ErrorSource slice and an ErrorSummary.
-func summarizeErrors(sourceStatus v1beta1.GitSourceStatus, syncStatus v1beta1.GitSyncStatus) ([]v1beta1.ErrorSource, v1beta1.ErrorSummary) {
+func summarizeErrors(sourceStatus v1beta1.SourceStatus, syncStatus v1beta1.SyncStatus) ([]v1beta1.ErrorSource, v1beta1.ErrorSummary) {
 	errorSources := []v1beta1.ErrorSource{}
 	if len(sourceStatus.Errors) > 0 {
 		errorSources = append(errorSources, v1beta1.SourceError)
@@ -484,7 +484,7 @@ func prependRootSyncRemediatorStatus(ctx context.Context, client client.Client, 
 
 	// Add the remeditor conflict errors before other sync errors for more visibility.
 	errs = append(errs, rs.Status.Sync.Errors...)
-	setSyncStatus(&rs.Status.SyncStatus, errs, denominator)
+	setSyncStatus(&rs.Status.Status, errs, denominator)
 	if err := client.Status().Update(ctx, &rs); err != nil {
 		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
 		if isRequestTooLargeError(err) {

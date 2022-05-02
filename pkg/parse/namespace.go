@@ -85,7 +85,7 @@ func (p *namespace) options() *opts {
 }
 
 // parseSource implements the Parser interface
-func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError) {
+func (p *namespace) parseSource(ctx context.Context, state sourceState) ([]ast.FileObject, status.MultiError) {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
@@ -100,7 +100,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	}
 	builder := utildiscovery.ScoperBuilder(p.discoveryInterface)
 
-	klog.Infof("Parsing files from git dir: %s", state.syncDir.OSPath())
+	klog.Infof("Parsing files from source dir: %s", state.syncDir.OSPath())
 	objs, err := p.parser.Parse(filePaths)
 	if err != nil {
 		return nil, err
@@ -134,20 +134,20 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 
 // setSourceStatus implements the Parser interface
 //
-// setSourceStatus sets the source status with a given git state and set of errors.  If errs is empty, all errors
+// setSourceStatus sets the source status with a given source state and set of errors.  If errs is empty, all errors
 // will be removed from the status.
-func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
+func (p *namespace) setSourceStatus(ctx context.Context, newStatus sourceStatus) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 	return p.setSourceStatusWithRetries(ctx, newStatus, defaultDenominator)
 }
 
-func (p *namespace) setSourceStatusWithRetries(ctx context.Context, newStatus gitStatus, denominator int) error {
+func (p *namespace) setSourceStatusWithRetries(ctx context.Context, newStatus sourceStatus, denominator int) error {
 	if denominator <= 0 {
 		return fmt.Errorf("The denominator must be a positive number")
 	}
 	// The main idea here is an error-robust way of surfacing to the user that
-	// we're having problems reading from our local clone of their git repository.
+	// we're having problems reading from our local clone of their source repository.
 	// This can happen when Kubernetes does weird things with mounted filesystems,
 	// or if an attacker tried to maliciously change the cluster's record of the
 	// source of truth.
@@ -251,7 +251,7 @@ func (p *namespace) setSyncStatusWithRetries(ctx context.Context, errs status.Mu
 	// syncing indicates whether the applier is syncing.
 	syncing := p.applier.Syncing()
 
-	setSyncStatus(&rs.Status.SyncStatus, status.ToCSE(errs), denominator)
+	setSyncStatus(&rs.Status.Status, status.ToCSE(errs), denominator)
 
 	metrics.RecordReconcilerErrors(ctx, "sync", status.ToCSE(errs))
 	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "sync", rs.Status.Sync.ErrorSummary.TotalCount)

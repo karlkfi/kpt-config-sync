@@ -239,7 +239,7 @@ func TestRoot_Parse(t *testing.T) {
 				fake.RootSyncV1Beta1("test", gitSpec("https://github.com/test/test.git", "none"),
 					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
 					core.Label(metadata.DeclaredVersionLabel, "v1beta1"),
-					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:spec":{".":{},"f:git":{".":{},"f:auth":{},"f:period":{},"f:repo":{},"f:secretRef":{}},"f:override":{}},"f:status":{".":{},"f:rendering":{".":{},"f:gitStatus":{".":{},"f:branch":{},"f:dir":{},"f:repo":{},"f:revision":{}},"f:lastUpdate":{}},"f:source":{".":{},"f:gitStatus":{".":{},"f:branch":{},"f:dir":{},"f:repo":{},"f:revision":{}},"f:lastUpdate":{}},"f:sync":{".":{},"f:gitStatus":{".":{},"f:branch":{},"f:dir":{},"f:repo":{},"f:revision":{}},"f:lastUpdate":{}}}}`),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:spec":{".":{},"f:git":{".":{},"f:auth":{},"f:period":{},"f:repo":{},"f:secretRef":{}},"f:override":{}},"f:status":{".":{},"f:rendering":{".":{},"f:lastUpdate":{}},"f:source":{".":{},"f:lastUpdate":{}},"f:sync":{".":{},"f:lastUpdate":{}}}}`),
 					core.Annotation(metadata.SourcePathAnnotationKey, fmt.Sprintf("namespaces/%s/test.yaml", configsync.ControllerNamespace)),
 					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
 					core.Annotation(metadata.GitContextKey, nilGitContext),
@@ -690,21 +690,21 @@ func (a *fakeApplier) Syncing() bool {
 func TestSummarizeErrors(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		sourceStatus         v1beta1.GitSourceStatus
-		syncStatus           v1beta1.GitSyncStatus
+		sourceStatus         v1beta1.SourceStatus
+		syncStatus           v1beta1.SyncStatus
 		expectedErrorSources []v1beta1.ErrorSource
 		expectedErrorSummary v1beta1.ErrorSummary
 	}{
 		{
 			name:                 "both sourceStatus and syncStatus are empty",
-			sourceStatus:         v1beta1.GitSourceStatus{},
-			syncStatus:           v1beta1.GitSyncStatus{},
+			sourceStatus:         v1beta1.SourceStatus{},
+			syncStatus:           v1beta1.SyncStatus{},
 			expectedErrorSources: []v1beta1.ErrorSource{},
 			expectedErrorSummary: v1beta1.ErrorSummary{},
 		},
 		{
 			name: "sourceStatus is not empty (no trucation), syncStatus is empty",
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "1021", ErrorMessage: "1021-error-message"},
 					{Code: "1022", ErrorMessage: "1022-error-message"},
@@ -715,7 +715,7 @@ func TestSummarizeErrors(t *testing.T) {
 					ErrorCountAfterTruncation: 2,
 				},
 			},
-			syncStatus:           v1beta1.GitSyncStatus{},
+			syncStatus:           v1beta1.SyncStatus{},
 			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError},
 			expectedErrorSummary: v1beta1.ErrorSummary{
 				TotalCount:                2,
@@ -725,7 +725,7 @@ func TestSummarizeErrors(t *testing.T) {
 		},
 		{
 			name: "sourceStatus is not empty and trucates errors, syncStatus is empty",
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "1021", ErrorMessage: "1021-error-message"},
 					{Code: "1022", ErrorMessage: "1022-error-message"},
@@ -736,7 +736,7 @@ func TestSummarizeErrors(t *testing.T) {
 					ErrorCountAfterTruncation: 2,
 				},
 			},
-			syncStatus:           v1beta1.GitSyncStatus{},
+			syncStatus:           v1beta1.SyncStatus{},
 			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError},
 			expectedErrorSummary: v1beta1.ErrorSummary{
 				TotalCount:                100,
@@ -746,8 +746,8 @@ func TestSummarizeErrors(t *testing.T) {
 		},
 		{
 			name:         "sourceStatus is empty, syncStatus is not empty (no trucation)",
-			sourceStatus: v1beta1.GitSourceStatus{},
-			syncStatus: v1beta1.GitSyncStatus{
+			sourceStatus: v1beta1.SourceStatus{},
+			syncStatus: v1beta1.SyncStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "2009", ErrorMessage: "apiserver error"},
 					{Code: "2009", ErrorMessage: "webhook error"},
@@ -767,8 +767,8 @@ func TestSummarizeErrors(t *testing.T) {
 		},
 		{
 			name:         "sourceStatus is empty, syncStatus is not empty and trucates errors",
-			sourceStatus: v1beta1.GitSourceStatus{},
-			syncStatus: v1beta1.GitSyncStatus{
+			sourceStatus: v1beta1.SourceStatus{},
+			syncStatus: v1beta1.SyncStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "2009", ErrorMessage: "apiserver error"},
 					{Code: "2009", ErrorMessage: "webhook error"},
@@ -788,7 +788,7 @@ func TestSummarizeErrors(t *testing.T) {
 		},
 		{
 			name: "neither sourceStatus nor syncStatus is empty or trucates errors",
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "1021", ErrorMessage: "1021-error-message"},
 					{Code: "1022", ErrorMessage: "1022-error-message"},
@@ -799,7 +799,7 @@ func TestSummarizeErrors(t *testing.T) {
 					ErrorCountAfterTruncation: 2,
 				},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "2009", ErrorMessage: "apiserver error"},
 					{Code: "2009", ErrorMessage: "webhook error"},
@@ -819,7 +819,7 @@ func TestSummarizeErrors(t *testing.T) {
 		},
 		{
 			name: "neither sourceStatus nor syncStatus is empty, sourceStatus trucates errors",
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "1021", ErrorMessage: "1021-error-message"},
 					{Code: "1022", ErrorMessage: "1022-error-message"},
@@ -830,7 +830,7 @@ func TestSummarizeErrors(t *testing.T) {
 					ErrorCountAfterTruncation: 2,
 				},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "2009", ErrorMessage: "apiserver error"},
 					{Code: "2009", ErrorMessage: "webhook error"},
@@ -850,7 +850,7 @@ func TestSummarizeErrors(t *testing.T) {
 		},
 		{
 			name: "neither sourceStatus nor syncStatus is empty, syncStatus trucates errors",
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "1021", ErrorMessage: "1021-error-message"},
 					{Code: "1022", ErrorMessage: "1022-error-message"},
@@ -861,7 +861,7 @@ func TestSummarizeErrors(t *testing.T) {
 					ErrorCountAfterTruncation: 2,
 				},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "2009", ErrorMessage: "apiserver error"},
 					{Code: "2009", ErrorMessage: "webhook error"},
@@ -882,7 +882,7 @@ func TestSummarizeErrors(t *testing.T) {
 		},
 		{
 			name: "neither sourceStatus nor syncStatus is empty, both trucates errors",
-			sourceStatus: v1beta1.GitSourceStatus{
+			sourceStatus: v1beta1.SourceStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "1021", ErrorMessage: "1021-error-message"},
 					{Code: "1022", ErrorMessage: "1022-error-message"},
@@ -893,7 +893,7 @@ func TestSummarizeErrors(t *testing.T) {
 					ErrorCountAfterTruncation: 2,
 				},
 			},
-			syncStatus: v1beta1.GitSyncStatus{
+			syncStatus: v1beta1.SyncStatus{
 				Errors: []v1beta1.ConfigSyncError{
 					{Code: "2009", ErrorMessage: "apiserver error"},
 					{Code: "2009", ErrorMessage: "webhook error"},

@@ -32,9 +32,11 @@ const (
 	ErrorFile = "error.json"
 )
 
+// Deprecated: Only used by the legacy mono-repo mode.
 var gitSyncDirPattern = regexp.MustCompile(`^[a-f|0-9]{40}$`)
 
 // CommitHash parses the Git commit hash from the given directory path.
+// Deprecated: Only used by the legacy mono-repo mode.
 func CommitHash(dirPath string) (string, error) {
 	dirName := filepath.Base(dirPath)
 
@@ -46,6 +48,7 @@ func CommitHash(dirPath string) (string, error) {
 
 // CheckClean returns an error if the repo pointed to by dir is not clean, or there was an error invoking Git while
 // checking.
+// Deprecated: Only used by the legacy mono-repo mode.
 func CheckClean(dir string) error {
 	cmd := exec.Command("git", "-C", dir, "status", "--short")
 	outBytes, err := cmd.CombinedOutput()
@@ -61,6 +64,7 @@ func CheckClean(dir string) error {
 
 // ListFiles returns a list of all files tracked by git in the specified
 // repo directory.
+// Deprecated: Only used by the legacy mono-repo mode.
 func ListFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
 	out, err := exec.Command("git", "-C", dir.OSPath(), "ls-files").CombinedOutput()
 	if err != nil {

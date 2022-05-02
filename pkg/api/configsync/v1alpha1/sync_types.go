@@ -18,8 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// SyncSpec provides a common type that is embedded in RepoSyncSpec and RootSyncSpec.
-type SyncSpec struct {
+// Spec provides a common type that is embedded in RepoSyncSpec and RootSyncSpec.
+type Spec struct {
 	// sourceFormat specifies how the repository is formatted.
 	// See documentation for specifics of what these options do.
 	//
@@ -53,8 +53,8 @@ type SyncSpec struct {
 	Override OverrideSpec `json:"override,omitempty"`
 }
 
-// SyncStatus provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.
-type SyncStatus struct {
+// Status provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.
+type Status struct {
 	// observedGeneration is the most recent generation observed for the sync resource.
 	// It corresponds to the it's generation, which is updated on mutation by the API Server.
 	// +optional
@@ -65,14 +65,15 @@ type SyncStatus struct {
 	// +optional
 	Reconciler string `json:"reconciler,omitempty"`
 
-	// lastSyncedCommit describes the most recent commit hash that is successfully synced.
+	// lastSyncedCommit describes the most recent hash that is successfully synced.
+	// It can be a git commit hash, or an OCI image digest.
 	// +optional
 	LastSyncedCommit string `json:"lastSyncedCommit,omitempty"`
 
 	// source contains fields describing the status of a *Sync's source of
 	// truth.
 	// +optional
-	Source GitSourceStatus `json:"source,omitempty"`
+	Source SourceStatus `json:"source,omitempty"`
 
 	// rendering contains fields describing the status of rendering resources from
 	// the source of truth.
@@ -82,16 +83,21 @@ type SyncStatus struct {
 	// sync contains fields describing the status of syncing resources from the
 	// source of truth to the cluster.
 	// +optional
-	Sync GitSyncStatus `json:"sync,omitempty"`
+	Sync SyncStatus `json:"sync,omitempty"`
 }
 
-// GitSourceStatus describes the status of a git source-of-truth
-type GitSourceStatus struct {
+// SourceStatus describes the source status of a source-of-truth.
+type SourceStatus struct {
 	// gitStatus contains fields describing the status of a Git source of truth.
 	// +optional
-	Git GitStatus `json:"gitStatus,omitempty"`
+	Git *GitStatus `json:"gitStatus,omitempty"`
 
-	// commit is the hash of the most recent commit seen in the source of truth.
+	// ociStatus contains fields describing the status of an OCI source of truth.
+	// +optional
+	Oci *OciStatus `json:"ociStatus,omitempty"`
+
+	// hash of the source of truth that is rendered.
+	// It can be a git commit hash, or an OCI image digest.
 	// +optional
 	Commit string `json:"commit,omitempty"`
 
@@ -114,9 +120,14 @@ type GitSourceStatus struct {
 type RenderingStatus struct {
 	// gitStatus contains fields describing the status of a Git source of truth.
 	// +optional
-	Git GitStatus `json:"gitStatus,omitempty"`
+	Git *GitStatus `json:"gitStatus,omitempty"`
 
-	// commit is the hash of the commit in the source of truth that is rendered.
+	// ociStatus contains fields describing the status of an OCI source of truth.
+	// +optional
+	Oci *OciStatus `json:"ociStatus,omitempty"`
+
+	// hash of the source of truth that is rendered.
+	// It can be a git commit hash, or an OCI image digest.
 	// +optional
 	Commit string `json:"commit,omitempty"`
 
@@ -138,14 +149,18 @@ type RenderingStatus struct {
 	ErrorSummary *ErrorSummary `json:"errorSummary,omitempty"`
 }
 
-// GitSyncStatus provides the status of the syncing of resources from a git source-of-truth on to the cluster
-type GitSyncStatus struct {
+// SyncStatus provides the status of the syncing of resources from a source-of-truth on to the cluster.
+type SyncStatus struct {
 	// gitStatus contains fields describing the status of a Git source of truth.
 	// +optional
-	Git GitStatus `json:"gitStatus,omitempty"`
-	// commit is the hash of the most recent commit that was synced to the
-	// cluster. This value is updated even when a commit is only partially synced
-	// due to an  error.
+	Git *GitStatus `json:"gitStatus,omitempty"`
+
+	// ociStatus contains fields describing the status of an OCI source of truth.
+	// +optional
+	Oci *OciStatus `json:"ociStatus,omitempty"`
+
+	// hash of the source of truth that is rendered.
+	// It can be a git commit hash, or an OCI image digest.
 	// +optional
 	Commit string `json:"commit,omitempty"`
 
@@ -177,6 +192,16 @@ type GitStatus struct {
 	Branch string `json:"branch"`
 
 	// dir is the path within the Git repository that represents the top level of the repo to sync.
+	// Default: the root directory of the repository
+	Dir string `json:"dir"`
+}
+
+// OciStatus describes the status of the source of truth of an OCI image.
+type OciStatus struct {
+	// image is the OCI image repository URL for the package to sync from.
+	Image string `json:"image"`
+
+	// dir is the absolute path of the directory that contains the local resources.
 	// Default: the root directory of the repository
 	Dir string `json:"dir"`
 }
