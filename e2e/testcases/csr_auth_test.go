@@ -84,6 +84,7 @@ func TestWorkloadIdentity(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.Unstructured, ntopts.RequireGKE(t))
 
 	origRepoURL := nt.GitProvider.SyncURL(nt.RootRepos[configsync.RootSyncName].RemoteRepoName)
+	crossProjectFleetProjectID := "cs-dev-hub"
 	gcpProject := os.Getenv("GCP_PROJECT")
 	if gcpProject == "" {
 		t.Fatal("Environment variable 'GCP_PROJECT' is required for this test case")
@@ -113,10 +114,27 @@ func TestWorkloadIdentity(t *testing.T) {
 	} else {
 		gkeURI += fmt.Sprintf("/zones/%s/clusters/%s", gkeZone, gcpCluster)
 	}
+
+	nt.T.Cleanup(func() {
+		// Change the rs back so that the remaining tests can run in the shared test environment.
+		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "%s", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`, origRepoURL))
+		// Unregister the cluster in the same project.
+		if err := unregisterCluster(fleetMembership, gcpProject, gkeURI); err != nil {
+			nt.T.Log(err)
+		}
+		// Unregister the cluster in a different fleet host project.
+		if err := unregisterCluster(fleetMembership, crossProjectFleetProjectID, gkeURI); err != nil {
+			nt.T.Log(err)
+		}
+	})
+
+	nt.T.Log("Unregister the cluster if it is registered")
+	if err := unregisterCluster(fleetMembership, gcpProject, gkeURI); err != nil {
+		nt.T.Log(err)
+	}
 	nt.T.Log("Register the cluster to a fleet in the same project")
-	out, err := exec.Command("gcloud", "beta", "container", "hub", "memberships", "register", fleetMembership, "--project", gcpProject, "--gke-uri", gkeURI, "--enable-workload-identity").CombinedOutput()
-	if err != nil {
-		nt.T.Fatalf("%s: %v", string(out), err)
+	if err := registerCluster(fleetMembership, gcpProject, gkeURI); err != nil {
+		nt.T.Fatal(err)
 	}
 	nt.T.Log("Restart the reconciler-manager to pick up the Membership")
 	nomostest.DeletePodByLabel(nt, "app", reconcilermanager.ManagerName)
@@ -127,9 +145,8 @@ func TestWorkloadIdentity(t *testing.T) {
 	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationExists)
 
 	nt.T.Log("Unregister the cluster from the fleet in the same project")
-	out, err = exec.Command("gcloud", "beta", "container", "hub", "memberships", "unregister", fleetMembership, "--project", gcpProject, "--gke-uri", gkeURI).CombinedOutput()
-	if err != nil {
-		nt.T.Fatalf("%s: %v", string(out), err)
+	if err := unregisterCluster(fleetMembership, gcpProject, gkeURI); err != nil {
+		nt.T.Fatal(err)
 	}
 	tenant = "tenant-b"
 	nt.T.Logf("Update RootSync to sync %s from a CSR repo", tenant)
@@ -140,11 +157,11 @@ func TestWorkloadIdentity(t *testing.T) {
 	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationAbsent)
 
 	nt.T.Log("Register the cluster to a fleet in a different project")
-	crossProjectFleetProjectID := "cs-dev-hub"
-	out, err = exec.Command("gcloud", "beta", "container", "hub", "memberships", "register",
-		fleetMembership, "--project", crossProjectFleetProjectID, "--gke-uri", gkeURI, "--enable-workload-identity").CombinedOutput()
-	if err != nil {
-		nt.T.Fatalf("%s: %v", string(out), err)
+	if err := unregisterCluster(fleetMembership, crossProjectFleetProjectID, gkeURI); err != nil {
+		nt.T.Log(err)
+	}
+	if err := registerCluster(fleetMembership, crossProjectFleetProjectID, gkeURI); err != nil {
+		nt.T.Fatal(err)
 	}
 	tenant = "tenant-c"
 	nt.T.Logf("Update RootSync to sync %s from a CSR repo", tenant)
@@ -155,10 +172,8 @@ func TestWorkloadIdentity(t *testing.T) {
 	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationExists)
 
 	nt.T.Log("Unregister the cluster from the fleet in a different project")
-	out, err = exec.Command("gcloud", "beta", "container", "hub", "memberships",
-		"unregister", fleetMembership, "--gke-uri", gkeURI, "--project", crossProjectFleetProjectID).CombinedOutput()
-	if err != nil {
-		nt.T.Fatalf("%s: %v", string(out), err)
+	if err := unregisterCluster(fleetMembership, crossProjectFleetProjectID, gkeURI); err != nil {
+		nt.T.Fatal(err)
 	}
 	tenant = "tenant-d"
 	nt.T.Logf("Update RootSync to sync %s from a CSR repo", tenant)
@@ -167,9 +182,6 @@ func TestWorkloadIdentity(t *testing.T) {
 		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: tenant}))
 	validateTenant(nt, string(declared.RootReconciler), tenant)
 	validateFWICredentials(nt, nomostest.DefaultRootReconcilerName, fwiAnnotationAbsent)
-
-	// Change the rs back so that it works in the shared test environment.
-	nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "%s", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`, origRepoURL))
 }
 
 // validateTenant validates if the tenant resources are created and managed by the reonciler.
@@ -218,6 +230,24 @@ func fwiAnnotationExists(pod corev1.Pod) error {
 func fwiAnnotationAbsent(pod corev1.Pod) error {
 	if _, found := pod.GetAnnotations()[metadata.FleetWorkloadIdentityCredentials]; found {
 		return fmt.Errorf("object %s/%s has annotation %q", pod.GetNamespace(), pod.GetName(), metadata.FleetWorkloadIdentityCredentials)
+	}
+	return nil
+}
+
+// unregisterCluster unregisters a cluster from a fleet.
+func unregisterCluster(fleetMembership, gcpProject, gkeURI string) error {
+	out, err := exec.Command("gcloud", "container", "hub", "memberships", "unregister", fleetMembership, "--project", gcpProject, "--gke-uri", gkeURI).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %v", string(out), err)
+	}
+	return nil
+}
+
+// registerCluster registers a cluster in a fleet.
+func registerCluster(fleetMembership, gcpProject, gkeURI string) error {
+	out, err := exec.Command("gcloud", "container", "hub", "memberships", "register", fleetMembership, "--project", gcpProject, "--gke-uri", gkeURI, "--enable-workload-identity").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %v", string(out), err)
 	}
 	return nil
 }
