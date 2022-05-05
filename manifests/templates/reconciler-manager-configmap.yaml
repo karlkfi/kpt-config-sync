@@ -148,6 +148,7 @@ data:
              capabilities:
                drop:
                - NET_RAW
+             runAsUser: 65533
            resources:
              limits:
                cpu: "1"

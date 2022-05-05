@@ -74,7 +74,7 @@ USER 1000
 ENTRYPOINT ["/hydration-controller"]
 
 # OCI-sync image
-FROM gcr.io/distroless/static:nonroot as oci-sync
+FROM gcr.io/distroless/static:latest as oci-sync
 # Setting HOME ensures that whatever UID this ultimately runs as can write files.
 ENV HOME=/tmp
 WORKDIR /
