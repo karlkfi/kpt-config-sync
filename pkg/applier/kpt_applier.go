@@ -38,7 +38,7 @@ import (
 	"kpt.dev/configsync/pkg/syncer/differ"
 	"kpt.dev/configsync/pkg/syncer/metrics"
 	"kpt.dev/configsync/pkg/util"
-	"sigs.k8s.io/cli-utils/pkg/apply"
+	"kpt.dev/configsync/third_party/cli-utils/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/common"

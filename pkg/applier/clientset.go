@@ -29,7 +29,7 @@ import (
 	"kpt.dev/configsync/pkg/metadata"
 	"kpt.dev/configsync/pkg/status"
 	nomosutil "kpt.dev/configsync/pkg/util"
-	"sigs.k8s.io/cli-utils/pkg/apply"
+	"kpt.dev/configsync/third_party/cli-utils/apply"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
