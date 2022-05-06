@@ -201,7 +201,7 @@ fmt-go: pull-buildenv buildenv-dirs
 	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w $(NOMOS_CODE_DIRS)
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
 
-lint: lint-go lint-bash lint-yaml lint-license
+lint: lint-go lint-bash lint-yaml lint-license lint-license-headers
 
 lint-go: pull-buildenv buildenv-dirs
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-go.sh $(NOMOS_GO_PKG)
@@ -215,6 +215,9 @@ license:
 
 lint-license: pull-buildenv buildenv-dirs
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
+
+lint-license-headers:
+	@./scripts/lint-license-headers.sh
 
 lint-yaml:
 	@./scripts/lint-yaml.sh
