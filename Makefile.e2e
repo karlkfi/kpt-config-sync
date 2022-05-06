@@ -175,9 +175,6 @@ __test-e2e-go-nobuild-prow:
 	@./scripts/e2e-go.sh --timeout 60m --parallel 12 --image-tag=$(LATEST_IMAGE_TAG)
 
 # The target to be run by Prow for e2e tests.
-# Called by the nomos-ci-raw-go target in the test-infra repository:
-# https://gke-internal.googlesource.com/test-infra/+/refs/heads/master/prow/gob/config/team-review.googlesource.com/gke-kubernetes-enterprise-control/prototype/team-gke-kubernetes-enterprise-control-prototype.yaml#601
-#
 # Delete all kind clusters before tests to prevent leaking resources after
 # failed tests where cleanup is unsuccessful. This only deletes clusters in the
 # current Kind network, so other Prow jobs running in the same

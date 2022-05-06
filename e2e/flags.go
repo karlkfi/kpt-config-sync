@@ -72,7 +72,7 @@ const DefaultImagePrefix = "localhost:5000"
 
 // ImagePrefix is where the Docker images are stored.
 var ImagePrefix = flag.String("image-prefix", DefaultImagePrefix,
-	"The prefix to use for Docker images. Defaults to the local Docker registry. Omit the trailing slash. For example, 'gcr.io/stolos-dev/willbeason/1604693819'")
+	"The prefix to use for Docker images. Defaults to the local Docker registry. Omit the trailing slash.")
 
 // ImageTag is the tag to use for Docker images.
 var ImageTag = flag.String("image-tag", "latest",
