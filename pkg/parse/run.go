@@ -109,7 +109,7 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 
 	var syncDir cmpath.Absolute
 	gs := gitStatus{}
-	gs.commit, syncDir, gs.errs = hydrate.SourceCommitAndDir(p.options().GitDir, p.options().PolicyDir, p.options().reconcilerName)
+	gs.commit, syncDir, gs.errs = hydrate.SourceCommitAndDir(p.options().GitDir, p.options().SyncDir, p.options().reconcilerName)
 
 	// If failed to fetch the source commit and directory, set `.status.source` to fail early.
 	// Otherwise, set `.status.rendering` before `.status.source` because the parser needs to
@@ -162,25 +162,25 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	}
 
 	// rendering is done, starts to read the source or hydrated configs.
-	oldPolicyDir := state.cache.git.policyDir
+	oldSyncDir := state.cache.git.syncDir
 	// `read` is called no matter what the trigger is.
 	sourceState := gitState{
-		commit:    gs.commit,
-		policyDir: syncDir,
+		commit:  gs.commit,
+		syncDir: syncDir,
 	}
 	if errs := read(ctx, p, trigger, state, sourceState); errs != nil {
 		state.invalidate(errs)
 		return
 	}
 
-	newPolicyDir := state.cache.git.policyDir
+	newSyncDir := state.cache.git.syncDir
 	// The parse-apply-watch sequence will be skipped if the trigger type is `triggerReimport` and
 	// there is no new git changes. The reasons are:
-	//   * If a former parse-apply-watch sequence for policyDir succeeded, there is no need to run the sequence again;
-	//   * If all the former parse-apply-watch sequences for policyDir failed, the next retry will call the sequence;
+	//   * If a former parse-apply-watch sequence for syncDir succeeded, there is no need to run the sequence again;
+	//   * If all the former parse-apply-watch sequences for syncDir failed, the next retry will call the sequence;
 	//   * The retry logic tracks the number of reconciliation attempts failed with the same errors, and when
 	//     the next retry should happen. Calling the parse-apply-watch sequence here makes the retry logic meaningless.
-	if trigger == triggerReimport && oldPolicyDir == newPolicyDir {
+	if trigger == triggerReimport && oldSyncDir == newSyncDir {
 		return
 	}
 
@@ -270,16 +270,16 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 		hydrationStatus.message = RenderingSkipped
 	}
 
-	if sourceState.policyDir == state.cache.git.policyDir {
+	if sourceState.syncDir == state.cache.git.syncDir {
 		return hydrationStatus, sourceStatus
 	}
 
-	klog.Infof("New git changes (%s) detected, reset the cache", sourceState.policyDir.OSPath())
+	klog.Infof("New git changes (%s) detected, reset the cache", sourceState.syncDir.OSPath())
 
 	// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 	state.resetCache()
 
-	// Read all the files under state.policyDir
+	// Read all the files under state.syncDir
 	sourceStatus.errs = opts.readConfigFiles(&sourceState)
 	if sourceStatus.errs == nil {
 		// Set `state.cache.git` after `readConfigFiles` succeeded

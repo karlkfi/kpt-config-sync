@@ -42,8 +42,8 @@ type FileSource struct {
 	RepoRoot cmpath.Absolute
 	// HydratedLink is the relative path to the symbolic link of the hydrated configs.
 	HydratedLink string
-	// PolicyDir is the path to the directory of policies within the git repository.
-	PolicyDir cmpath.Relative
+	// SyncDir is the path to the directory of policies within the source repository.
+	SyncDir cmpath.Relative
 	// GitRepo is the git repo to sync.
 	GitRepo string
 	// GitBranch is the branch of the git repo to sync.
@@ -57,41 +57,41 @@ type FileSource struct {
 type files struct {
 	FileSource
 
-	// currentPolicyDir is the directory (including git commit hash) last seen by the Parser.
-	currentPolicyDir string
+	// currentSyncDir is the directory (including git commit hash) last seen by the Parser.
+	currentSyncDir string
 }
 
 // gitState contains all state read from the mounted Git repo.
 type gitState struct {
 	// commit is the Git commit hash read from the Git repo.
 	commit string
-	// policyDir is the absolute path to the policy directory.
-	policyDir cmpath.Absolute
-	// files is the list of all observed files in the policy directory (recursively).
+	// syncDir is the absolute path to the sync directory that includes the configurations.
+	syncDir cmpath.Absolute
+	// files is the list of all observed files in the sync directory (recursively).
 	files []cmpath.Absolute
 }
 
-// readConfigFiles reads all the files under state.policyDir and sets state.files.
-// - if rendered is true, state.policyDir contains the hydrated files.
-// - if rendered is false, state.policyDir contains the source files.
+// readConfigFiles reads all the files under state.syncDir and sets state.files.
+// - if rendered is true, state.syncDir contains the hydrated files.
+// - if rendered is false, state.syncDir contains the source files.
 // readConfigFiles should be called after gitState is populated.
 func (o *files) readConfigFiles(state *gitState) status.Error {
-	if state == nil || state.commit == "" || state.policyDir.OSPath() == "" {
+	if state == nil || state.commit == "" || state.syncDir.OSPath() == "" {
 		return status.InternalError("gitState is not populated yet")
 	}
-	policyDir := state.policyDir
-	if policyDir.OSPath() == o.currentPolicyDir {
-		klog.V(4).Infof("The configs directory is unchanged: %s", policyDir.OSPath())
+	syncDir := state.syncDir
+	if syncDir.OSPath() == o.currentSyncDir {
+		klog.V(4).Infof("The configs directory is unchanged: %s", syncDir.OSPath())
 	} else {
-		klog.Infof("Reading updated configs dir: %s", policyDir.OSPath())
-		o.currentPolicyDir = policyDir.OSPath()
+		klog.Infof("Reading updated configs dir: %s", syncDir.OSPath())
+		o.currentSyncDir = syncDir.OSPath()
 	}
 
 	var fileList []cmpath.Absolute
 	var err error
-	fileList, err = listFiles(policyDir, map[string]bool{".git": true})
+	fileList, err = listFiles(syncDir, map[string]bool{".git": true})
 	if err != nil {
-		return status.PathWrapError(errors.Wrap(err, "listing files in the configs directory"), policyDir.OSPath())
+		return status.PathWrapError(errors.Wrap(err, "listing files in the configs directory"), syncDir.OSPath())
 	}
 	state.files = fileList
 	return nil
@@ -105,7 +105,7 @@ func (o *files) gitContext() gitContext {
 	}
 }
 
-// readHydratedDir returns a gitState object whose `commit` and `policyDir` fields are set if succeeded.
+// readHydratedDir returns a gitState object whose `commit` and `syncDir` fields are set if succeeded.
 func (o *files) readHydratedDir(hydratedRoot cmpath.Absolute, link, reconciler string) (gitState, hydrate.HydrationError) {
 	result := gitState{}
 	errorFile := hydratedRoot.Join(cmpath.RelativeSlash(hydrate.ErrorFile))
@@ -126,12 +126,12 @@ func (o *files) readHydratedDir(hydratedRoot cmpath.Absolute, link, reconciler s
 	}
 	result.commit = commit
 
-	relSyncDir := hydratedDir.Join(o.PolicyDir)
+	relSyncDir := hydratedDir.Join(o.SyncDir)
 	syncDir, err := relSyncDir.EvalSymlinks()
 	if err != nil {
 		return result, hydrate.NewInternalError(errors.Wrapf(err, "unable to evaluate symbolic link to the hydrated sync directory: %s", relSyncDir.OSPath()))
 	}
-	result.policyDir = syncDir
+	result.syncDir = syncDir
 	return result, nil
 }
 

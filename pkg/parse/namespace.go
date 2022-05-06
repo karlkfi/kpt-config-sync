@@ -90,8 +90,8 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	defer p.mux.Unlock()
 
 	filePaths := reader.FilePaths{
-		RootDir:   state.policyDir,
-		PolicyDir: p.PolicyDir,
+		RootDir:   state.syncDir,
+		PolicyDir: p.SyncDir,
 		Files:     state.files,
 	}
 	crds, err := p.declaredCRDs()
@@ -100,7 +100,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	}
 	builder := utildiscovery.ScoperBuilder(p.discoveryInterface)
 
-	klog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	klog.Infof("Parsing files from git dir: %s", state.syncDir.OSPath())
 	objs, err := p.parser.Parse(filePaths)
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 
 	options := validate.Options{
 		ClusterName:  p.clusterName,
-		PolicyDir:    p.PolicyDir,
+		PolicyDir:    p.SyncDir,
 		PreviousCRDs: crds,
 		BuildScoper:  builder,
 		Converter:    p.converter,

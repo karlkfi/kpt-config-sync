@@ -55,8 +55,8 @@ var (
 		"The branch of the git repo being synced.")
 	gitRev = flag.String("git-rev", os.Getenv("GIT_REV"),
 		"The git reference we're syncing to in the git repo. Could be a specific commit.")
-	policyDir = flag.String("policy-dir", os.Getenv("POLICY_DIR"),
-		"The relative path of the root policy directory within the repo.")
+	syncDir = flag.String("sync-dir", os.Getenv("POLICY_DIR"),
+		"The relative path of the root configuration directory within the repo.")
 
 	// Performance tuning flags.
 	gitDir = flag.String(flags.gitDir, "/repo/source/rev",
@@ -140,12 +140,12 @@ func main() {
 		klog.Fatalf("%s must be an absolute path: %v", flags.repoRootDir, err)
 	}
 
-	// Normalize policyDirRelative.
+	// Normalize syncDirRelative.
 	// Some users specify the directory as if the root of the repository is "/".
 	// Strip this from the front of the passed directory so behavior is as
 	// expected.
-	dir := strings.TrimPrefix(*policyDir, "/")
-	relPolicyDir := cmpath.RelativeOS(dir)
+	dir := strings.TrimPrefix(*syncDir, "/")
+	relSyncDir := cmpath.RelativeOS(dir)
 	absGitDir, err := cmpath.AbsoluteOS(*gitDir)
 	if err != nil {
 		klog.Fatalf("%s must be an absolute path: %v", flags.gitDir, err)
@@ -175,7 +175,7 @@ func main() {
 		GitRev:                     *gitRev,
 		GitBranch:                  *gitBranch,
 		GitRepo:                    *gitRepo,
-		PolicyDir:                  relPolicyDir,
+		SyncDir:                    relSyncDir,
 		DiscoveryClient:            dc,
 		SyncName:                   *syncName,
 		ReconcilerName:             *reconcilerName,

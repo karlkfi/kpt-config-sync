@@ -86,8 +86,8 @@ type Options struct {
 	GitBranch string
 	// GitRepo is the git repo being synced.
 	GitRepo string
-	// PolicyDir is the relative path to the policies within the Git repository.
-	PolicyDir cmpath.Relative
+	// SyncDir is the relative path to the configurations in the source.
+	SyncDir cmpath.Relative
 	// StatusMode controls the kpt applier to inject the actuation status data or not
 	StatusMode string
 	// ReconcileTimeout controls the reconcile/prune Timeout in kpt applier
@@ -186,7 +186,7 @@ func Run(opts Options) {
 		RepoRoot:     opts.RepoRoot,
 		HydratedRoot: opts.HydratedRoot,
 		HydratedLink: opts.HydratedLink,
-		PolicyDir:    opts.PolicyDir,
+		SyncDir:      opts.SyncDir,
 		GitRepo:      opts.GitRepo,
 		GitBranch:    opts.GitBranch,
 		GitRev:       opts.GitRev,

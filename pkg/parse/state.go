@@ -50,7 +50,7 @@ func (rs renderingStatus) equal(other renderingStatus) bool {
 }
 
 type reconcilerState struct {
-	// lastApplied keeps the state for the last successful-applied policyDir.
+	// lastApplied keeps the state for the last successful-applied syncDir.
 	lastApplied string
 
 	// sourceStatus tracks info from the `Status.Source` field of a RepoSync/RootSync.
@@ -70,7 +70,7 @@ type reconcilerState struct {
 }
 
 func (s *reconcilerState) checkpoint() {
-	applied := s.cache.git.policyDir.OSPath()
+	applied := s.cache.git.syncDir.OSPath()
 	if applied == s.lastApplied {
 		return
 	}

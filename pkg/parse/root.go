@@ -98,12 +98,12 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
 		// We're using hierarchical mode for the root repository, so ignore files
 		// outside of the allowed directories.
-		wantFiles = filesystem.FilterHierarchyFiles(state.policyDir, wantFiles)
+		wantFiles = filesystem.FilterHierarchyFiles(state.syncDir, wantFiles)
 	}
 
 	filePaths := reader.FilePaths{
-		RootDir:   state.policyDir,
-		PolicyDir: p.PolicyDir,
+		RootDir:   state.syncDir,
+		PolicyDir: p.SyncDir,
 		Files:     wantFiles,
 	}
 
@@ -113,7 +113,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 	}
 	builder := utildiscovery.ScoperBuilder(p.discoveryInterface)
 
-	klog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	klog.Infof("Parsing files from git dir: %s", state.syncDir.OSPath())
 	objs, err := p.parser.Parse(filePaths)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 
 	options := validate.Options{
 		ClusterName:  p.clusterName,
-		PolicyDir:    p.PolicyDir,
+		PolicyDir:    p.SyncDir,
 		PreviousCRDs: crds,
 		BuildScoper:  builder,
 		Converter:    p.converter,
@@ -196,7 +196,7 @@ func setSourceStatus(source *v1beta1.GitSourceStatus, p Parser, newStatus gitSta
 		Repo:     p.options().GitRepo,
 		Revision: p.options().GitRev,
 		Branch:   p.options().GitBranch,
-		Dir:      p.options().PolicyDir.SlashPath(),
+		Dir:      p.options().SyncDir.SlashPath(),
 	}
 	errorSummary := &v1beta1.ErrorSummary{
 		TotalCount:                len(cse),
@@ -266,7 +266,7 @@ func setRenderingStatus(rendering *v1beta1.RenderingStatus, p Parser, newStatus 
 		Repo:     p.options().GitRepo,
 		Revision: p.options().GitRev,
 		Branch:   p.options().GitBranch,
-		Dir:      p.options().PolicyDir.SlashPath(),
+		Dir:      p.options().SyncDir.SlashPath(),
 	}
 	rendering.Message = newStatus.message
 	errorSummary := &v1beta1.ErrorSummary{
