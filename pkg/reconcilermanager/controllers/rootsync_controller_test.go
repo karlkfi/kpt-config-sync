@@ -245,12 +245,12 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
+		secretMutator(rootsyncSSHKey),
 		containerResourcesMutator(overrideAllContainerResources),
-		containerEnvMutator(mutations, rootReconcilerName),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -290,9 +290,9 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
+		secretMutator(rootsyncSSHKey),
 		containerResourcesMutator(overrideSelectedResources),
-		containerEnvMutator(mutations, rootReconcilerName),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -313,8 +313,8 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -337,12 +337,12 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -389,9 +389,9 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
+		secretMutator(rootsyncSSHKey),
 		containerResourcesMutator(overrideAllContainerResources),
-		containerEnvMutator(mutations, rootReconcilerName),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 
@@ -431,9 +431,9 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
+		secretMutator(rootsyncSSHKey),
 		containerResourcesMutator(overrideReconcilerAndHydrationResources),
-		containerEnvMutator(mutations, rootReconcilerName),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -463,9 +463,9 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
+		secretMutator(rootsyncSSHKey),
 		containerResourcesMutator(overrideGitSyncResources),
-		containerEnvMutator(mutations, rootReconcilerName),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -486,8 +486,8 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -510,12 +510,12 @@ func TestRootSyncCreateWithNoSSLVerify(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -543,8 +543,8 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -581,8 +581,8 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 	rootContainerEnv = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	updatedRootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv),
 	)
 	wantDeployments[core.IDOf(updatedRootDeployment)] = updatedRootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -621,12 +621,12 @@ func TestRootSyncCreateWithOverrideGitSyncDepth(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -654,8 +654,8 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -678,8 +678,8 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	rootContainerEnv = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	updatedRootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv),
 	)
 	wantDeployments[core.IDOf(updatedRootDeployment)] = updatedRootDeployment
 
@@ -702,8 +702,8 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	rootContainerEnv = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	updatedRootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv),
 	)
 	wantDeployments[core.IDOf(updatedRootDeployment)] = updatedRootDeployment
 
@@ -758,12 +758,12 @@ func TestRootSyncCreateWithOverrideReconcileTimeout(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -789,8 +789,8 @@ func TestRootSyncUpdateOverrideReconcileTimeout(t *testing.T) {
 	rootContainerEnv := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -812,8 +812,8 @@ func TestRootSyncUpdateOverrideReconcileTimeout(t *testing.T) {
 	rootContainerEnv = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	updatedRootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv),
 	)
 
 	wantDeployments[core.IDOf(updatedRootDeployment)] = updatedRootDeployment
@@ -879,12 +879,12 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		core.Label(metadata.SyncNameLabel, rootsyncName),
 	)
 
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		gceNodeMutator(rootReconcilerName, gcpSAEmail),
-		containerEnvMutator(mutations, rootReconcilerName),
+		gceNodeMutator(gcpSAEmail),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -910,11 +910,11 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	mutations = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -933,11 +933,11 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	mutations = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		noneMutator(rootReconcilerName),
-		containerEnvMutator(mutations, rootReconcilerName),
+		noneMutator(),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 
@@ -960,12 +960,12 @@ func TestRootSyncReconcilerRestart(t *testing.T) {
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -1056,8 +1056,8 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootContainerEnv1 := testReconciler.populateContainerEnvs(ctx, rs1, rootReconcilerName)
 	rootDeployment1 := rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv1, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv1),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment1): rootDeployment1}
 
@@ -1087,8 +1087,8 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootContainerEnv2 := testReconciler.populateContainerEnvs(ctx, rs2, rootReconcilerName2)
 	rootDeployment2 := rootSyncDeployment(rootReconcilerName2,
 		setServiceAccountName(rootReconcilerName2),
-		gceNodeMutator(rootReconcilerName2, ""),
-		containerEnvMutator(rootContainerEnv2, rootReconcilerName2),
+		gceNodeMutator(""),
+		containerEnvMutator(rootContainerEnv2),
 	)
 	wantDeployments[core.IDOf(rootDeployment2)] = rootDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1132,8 +1132,8 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootContainerEnv3 := testReconciler.populateContainerEnvs(ctx, rs3, rootReconcilerName3)
 	rootDeployment3 := rootSyncDeployment(rootReconcilerName3,
 		setServiceAccountName(rootReconcilerName3),
-		gceNodeMutator(rootReconcilerName3, gcpSAEmail),
-		containerEnvMutator(rootContainerEnv3, rootReconcilerName3),
+		gceNodeMutator(gcpSAEmail),
+		containerEnvMutator(rootContainerEnv3),
 	)
 	wantDeployments[core.IDOf(rootDeployment3)] = rootDeployment3
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1178,12 +1178,12 @@ func TestMultipleRootSyncs(t *testing.T) {
 		metadata.SyncNameLabel:      rs4.Name,
 	}
 
-	mutations4 := testReconciler.populateContainerEnvs(ctx, rs4, rootReconcilerName4)
+	rootContainerEnvs4 := testReconciler.populateContainerEnvs(ctx, rs4, rootReconcilerName4)
 	rootDeployment4 := rootSyncDeployment(rootReconcilerName4,
 		setServiceAccountName(rootReconcilerName4),
-		secretMutator(rootReconcilerName4, reposyncCookie),
+		secretMutator(reposyncCookie),
 		envVarMutator("HTTPS_PROXY", reposyncCookie, "https_proxy"),
-		containerEnvMutator(mutations4, rootReconcilerName4),
+		containerEnvMutator(rootContainerEnvs4),
 	)
 	wantDeployments[core.IDOf(rootDeployment4)] = rootDeployment4
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1227,14 +1227,14 @@ func TestMultipleRootSyncs(t *testing.T) {
 		metadata.SyncNameLabel:      rs5.Name,
 	}
 
-	mutations5 := testReconciler.populateContainerEnvs(ctx, rs5, rootReconcilerName5)
+	rootContainerEnvs5 := testReconciler.populateContainerEnvs(ctx, rs5, rootReconcilerName5)
 	rootDeployment5 := rootSyncDeployment(rootReconcilerName5,
 		setServiceAccountName(rootReconcilerName5),
-		secretMutator(rootReconcilerName5, secretName),
+		secretMutator(secretName),
 		envVarMutator("HTTPS_PROXY", secretName, "https_proxy"),
 		envVarMutator(gitSyncName, secretName, GitSecretConfigKeyTokenUsername),
 		envVarMutator(gitSyncPassword, secretName, GitSecretConfigKeyToken),
-		containerEnvMutator(mutations5, rootReconcilerName5),
+		containerEnvMutator(rootContainerEnvs5),
 	)
 	wantDeployments[core.IDOf(rootDeployment5)] = rootDeployment5
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1275,8 +1275,8 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootContainerEnv1 = testReconciler.populateContainerEnvs(ctx, rs1, rootReconcilerName)
 	rootDeployment1 = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(rootContainerEnv1, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnv1),
 	)
 	wantDeployments[core.IDOf(rootDeployment1)] = rootDeployment1
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1296,8 +1296,8 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootContainerEnv2 = testReconciler.populateContainerEnvs(ctx, rs2, rootReconcilerName2)
 	rootDeployment2 = rootSyncDeployment(rootReconcilerName2,
 		setServiceAccountName(rootReconcilerName2),
-		gceNodeMutator(rootReconcilerName2, ""),
-		containerEnvMutator(rootContainerEnv2, rootReconcilerName2),
+		gceNodeMutator(""),
+		containerEnvMutator(rootContainerEnv2),
 	)
 	wantDeployments[core.IDOf(rootDeployment2)] = rootDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1318,8 +1318,8 @@ func TestMultipleRootSyncs(t *testing.T) {
 	rootContainerEnv3 = testReconciler.populateContainerEnvs(ctx, rs3, rootReconcilerName3)
 	rootDeployment3 = rootSyncDeployment(rootReconcilerName3,
 		setServiceAccountName(rootReconcilerName3),
-		gceNodeMutator(rootReconcilerName3, gcpSAEmail),
-		containerEnvMutator(rootContainerEnv3, rootReconcilerName3),
+		gceNodeMutator(gcpSAEmail),
+		containerEnvMutator(rootContainerEnv3),
 	)
 	wantDeployments[core.IDOf(rootDeployment3)] = rootDeployment3
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1498,15 +1498,15 @@ func TestInjectFleetWorkloadIdentityCredentialsToRootSync(t *testing.T) {
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
-	mutations := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs := testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 
 	rootDeployment := rootSyncDeployment(rootReconcilerName,
 		setAnnotations(map[string]string{
 			metadata.FleetWorkloadIdentityCredentials: `{"audience":"identitynamespace:test-gke-dev.svc.id.goog:https://container.googleapis.com/v1/projects/test-gke-dev/locations/us-central1-c/clusters/fleet-workload-identity-test-cluster","credential_source":{"file":"/var/run/secrets/tokens/gcp-ksa/token"},"service_account_impersonation_url":"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/config-sync@cs-project.iam.gserviceaccount.com:generateAccessToken","subject_token_type":"urn:ietf:params:oauth:token-type:jwt","token_url":"https://sts.googleapis.com/v1/token","type":"external_account"}`,
 		}),
 		setServiceAccountName(rootReconcilerName),
-		fleetWorkloadIdentityMutator(rootReconcilerName, workloadIdentityPool, gcpSAEmail),
-		containerEnvMutator(mutations, rootReconcilerName),
+		fleetWorkloadIdentityMutator(workloadIdentityPool, gcpSAEmail),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(rootDeployment): rootDeployment}
 
@@ -1527,11 +1527,11 @@ func TestInjectFleetWorkloadIdentityCredentialsToRootSync(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	mutations = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		secretMutator(rootReconcilerName, rootsyncSSHKey),
-		containerEnvMutator(mutations, rootReconcilerName),
+		secretMutator(rootsyncSSHKey),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1550,11 +1550,11 @@ func TestInjectFleetWorkloadIdentityCredentialsToRootSync(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
-	mutations = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
+	rootContainerEnvs = testReconciler.populateContainerEnvs(ctx, rs, rootReconcilerName)
 	rootDeployment = rootSyncDeployment(rootReconcilerName,
 		setServiceAccountName(rootReconcilerName),
-		noneMutator(rootReconcilerName),
-		containerEnvMutator(mutations, rootReconcilerName),
+		noneMutator(),
+		containerEnvMutator(rootContainerEnvs),
 	)
 	wantDeployments[core.IDOf(rootDeployment)] = rootDeployment
 
@@ -1586,10 +1586,10 @@ func setServiceAccountName(name string) depMutator {
 	}
 }
 
-func secretMutator(reconcilerName, secretName string) depMutator {
+func secretMutator(secretName string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Spec.Volumes = deploymentSecretVolumes(secretName)
-		dep.Spec.Template.Spec.Containers = secretMountContainers(reconcilerName)
+		dep.Spec.Template.Spec.Containers = secretMountContainers()
 	}
 }
 
@@ -1613,7 +1613,7 @@ func envVarMutator(envName, secretName, key string) depMutator {
 	}
 }
 
-func containerEnvMutator(containerEnvs map[string][]corev1.EnvVar, cmName string) depMutator {
+func containerEnvMutator(containerEnvs map[string][]corev1.EnvVar) depMutator {
 	return func(dep *appsv1.Deployment) {
 		for i, con := range dep.Spec.Template.Spec.Containers {
 			dep.Spec.Template.Spec.Containers[i].Env = append(dep.Spec.Template.Spec.Containers[i].Env, containerEnvs[con.Name]...)
@@ -1621,14 +1621,14 @@ func containerEnvMutator(containerEnvs map[string][]corev1.EnvVar, cmName string
 	}
 }
 
-func gceNodeMutator(reconcilerName, gsaEmail string) depMutator {
+func gceNodeMutator(gsaEmail string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Spec.Volumes = []corev1.Volume{{Name: "repo"}}
-		dep.Spec.Template.Spec.Containers = gceNodeContainers(reconcilerName, gsaEmail)
+		dep.Spec.Template.Spec.Containers = gceNodeContainers(gsaEmail)
 	}
 }
 
-func fleetWorkloadIdentityMutator(reconcilerName, workloadIdentityPool, gsaEmail string) depMutator {
+func fleetWorkloadIdentityMutator(workloadIdentityPool, gsaEmail string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Spec.Volumes = []corev1.Volume{
 			{Name: "repo"},
@@ -1660,12 +1660,12 @@ func fleetWorkloadIdentityMutator(reconcilerName, workloadIdentityPool, gsaEmail
 				},
 			},
 		}
-		dep.Spec.Template.Spec.Containers = fleetWorkloadIdentityContainers(reconcilerName, gsaEmail)
+		dep.Spec.Template.Spec.Containers = fleetWorkloadIdentityContainers(gsaEmail)
 	}
 }
 
-func fleetWorkloadIdentityContainers(reconcilerName, gsaEmail string) []corev1.Container {
-	containers := noneContainers(reconcilerName)
+func fleetWorkloadIdentityContainers(gsaEmail string) []corev1.Container {
+	containers := noneContainers()
 	containers = append(containers, corev1.Container{
 		Name: GceNodeAskpassSidecarName,
 		Env: []corev1.EnvVar{{
@@ -1684,10 +1684,10 @@ func fleetWorkloadIdentityContainers(reconcilerName, gsaEmail string) []corev1.C
 	return containers
 }
 
-func noneMutator(reconcilerName string) depMutator {
+func noneMutator() depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Spec.Volumes = []corev1.Volume{{Name: "repo"}}
-		dep.Spec.Template.Spec.Containers = noneContainers(reconcilerName)
+		dep.Spec.Template.Spec.Containers = noneContainers()
 	}
 }
 
@@ -1771,7 +1771,7 @@ func defaultContainers() []corev1.Container {
 	}
 }
 
-func secretMountContainers(reconcilerName string) []corev1.Container {
+func secretMountContainers() []corev1.Container {
 	return []corev1.Container{
 		{
 			Name:      reconcilermanager.Reconciler,
@@ -1792,30 +1792,27 @@ func secretMountContainers(reconcilerName string) []corev1.Container {
 	}
 }
 
-func noneContainers(reconcilerName string) []corev1.Container {
+func noneContainers() []corev1.Container {
 	return []corev1.Container{
 		{
 			Name:      reconcilermanager.Reconciler,
 			Resources: defaultResourceRequirements(),
-			//EnvFrom:   reconcilerContainerEnvFrom(reconcilerName),
 		},
 		{
 			Name:      reconcilermanager.HydrationController,
 			Resources: defaultResourceRequirements(),
-			//EnvFrom:   hydrationContainerEnvFrom(reconcilerName),
 		},
 		{
 			Name:      reconcilermanager.GitSync,
 			Resources: defaultResourceRequirements(),
-			//EnvFrom:   gitSyncContainerEnvFrom(reconcilerName),
 			VolumeMounts: []corev1.VolumeMount{
 				{Name: "repo", MountPath: "/repo"},
 			}},
 	}
 }
 
-func gceNodeContainers(reconcilerName, gsaEmail string) []corev1.Container {
-	containers := noneContainers(reconcilerName)
+func gceNodeContainers(gsaEmail string) []corev1.Container {
+	containers := noneContainers()
 	containers = append(containers, corev1.Container{
 		Name: GceNodeAskpassSidecarName,
 		Env:  []corev1.EnvVar{{Name: gsaEmailEnvKey, Value: gsaEmail}},

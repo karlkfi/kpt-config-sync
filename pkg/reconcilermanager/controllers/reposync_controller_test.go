@@ -260,9 +260,9 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
 		containerResourcesMutator(overrideReconcilerAndGitSyncResourceLimits),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -304,9 +304,9 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
 		containerResourcesMutator(overrideReconcilerCPUAndGitSyncMemResources),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
@@ -328,8 +328,8 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -356,8 +356,8 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -405,9 +405,9 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
 		containerResourcesMutator(overrideReconcilerAndGitSyncResources),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -447,9 +447,9 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
 		containerResourcesMutator(overrideReconcilerResources),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
@@ -481,9 +481,9 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
 		containerResourcesMutator(overrideGitSyncResources),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -504,8 +504,8 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -532,8 +532,8 @@ func TestRepoSyncCreateWithNoSSLVerify(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -561,8 +561,8 @@ func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -600,8 +600,8 @@ func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
 	updatedRepoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(updatedRepoDeployment)] = updatedRepoDeployment
 
@@ -645,8 +645,8 @@ func TestRepoSyncCreateWithOverrideGitSyncDepth(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -674,8 +674,8 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -699,8 +699,8 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	updatedRepoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = updatedRepoDeployment
 
@@ -724,8 +724,8 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	updatedRepoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = updatedRepoDeployment
 
@@ -784,8 +784,8 @@ func TestRepoSyncCreateWithOverrideReconcileTimeout(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -813,8 +813,8 @@ func TestRepoSyncUpdateOverrideReconcileTimeout(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -838,8 +838,8 @@ func TestRepoSyncUpdateOverrideReconcileTimeout(t *testing.T) {
 	updatedRepoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = updatedRepoDeployment
 
@@ -919,8 +919,8 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		gceNodeMutator(nsReconcilerName, gcpSAEmail),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		gceNodeMutator(gcpSAEmail),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -950,8 +950,8 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
@@ -975,8 +975,8 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		noneMutator(nsReconcilerName),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		noneMutator(),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
@@ -1004,8 +1004,8 @@ func TestRepoSyncReconcilerRestart(t *testing.T) {
 	repoDeployment := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -1107,8 +1107,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment1 := repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv1, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv1),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment1): repoDeployment1}
 
@@ -1145,8 +1145,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment2 := repoSyncDeployment(
 		nsReconcilerName2,
 		setServiceAccountName(nsReconcilerName2),
-		gceNodeMutator(nsReconcilerName2, ""),
-		containerEnvMutator(repoContainerEnv2, nsReconcilerName2),
+		gceNodeMutator(""),
+		containerEnvMutator(repoContainerEnv2),
 	)
 	wantDeployments[core.IDOf(repoDeployment2)] = repoDeployment2
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1196,8 +1196,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment3 := repoSyncDeployment(
 		nsReconcilerName3,
 		setServiceAccountName(nsReconcilerName3),
-		gceNodeMutator(nsReconcilerName3, gcpSAEmail),
-		containerEnvMutator(repoContainerEnv3, nsReconcilerName3),
+		gceNodeMutator(gcpSAEmail),
+		containerEnvMutator(repoContainerEnv3),
 	)
 	wantDeployments[core.IDOf(repoDeployment3)] = repoDeployment3
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1250,9 +1250,9 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment4 := repoSyncDeployment(
 		nsReconcilerName4,
 		setServiceAccountName(nsReconcilerName4),
-		secretMutator(nsReconcilerName4, nsReconcilerName4+"-"+reposyncCookie),
+		secretMutator(nsReconcilerName4+"-"+reposyncCookie),
 		envVarMutator("HTTPS_PROXY", nsReconcilerName4+"-"+reposyncCookie, "https_proxy"),
-		containerEnvMutator(repoContainerEnv4, nsReconcilerName4),
+		containerEnvMutator(repoContainerEnv4),
 	)
 	wantDeployments[core.IDOf(repoDeployment4)] = repoDeployment4
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1304,11 +1304,11 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment5 := repoSyncDeployment(
 		nsReconcilerName5,
 		setServiceAccountName(nsReconcilerName5),
-		secretMutator(nsReconcilerName5, nsReconcilerName5+"-"+secretName),
+		secretMutator(nsReconcilerName5+"-"+secretName),
 		envVarMutator("HTTPS_PROXY", nsReconcilerName5+"-"+secretName, "https_proxy"),
 		envVarMutator(gitSyncName, nsReconcilerName5+"-"+secretName, GitSecretConfigKeyTokenUsername),
 		envVarMutator(gitSyncPassword, nsReconcilerName5+"-"+secretName, GitSecretConfigKeyToken),
-		containerEnvMutator(repoContainerEnv5, nsReconcilerName5),
+		containerEnvMutator(repoContainerEnv5),
 	)
 	wantDeployments[core.IDOf(repoDeployment5)] = repoDeployment5
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1348,8 +1348,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment1 = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv1, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv1),
 	)
 	wantDeployments[core.IDOf(repoDeployment1)] = repoDeployment1
 
@@ -1372,8 +1372,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment2 = repoSyncDeployment(
 		nsReconcilerName2,
 		setServiceAccountName(nsReconcilerName2),
-		gceNodeMutator(nsReconcilerName2, ""),
-		containerEnvMutator(repoContainerEnv2, nsReconcilerName2),
+		gceNodeMutator(""),
+		containerEnvMutator(repoContainerEnv2),
 	)
 	wantDeployments[core.IDOf(repoDeployment2)] = repoDeployment2
 
@@ -1396,8 +1396,8 @@ func TestMultipleRepoSyncs(t *testing.T) {
 	repoDeployment3 = repoSyncDeployment(
 		nsReconcilerName3,
 		setServiceAccountName(nsReconcilerName3),
-		gceNodeMutator(nsReconcilerName3, gcpSAEmail),
-		containerEnvMutator(repoContainerEnv3, nsReconcilerName3),
+		gceNodeMutator(gcpSAEmail),
+		containerEnvMutator(repoContainerEnv3),
 	)
 	wantDeployments[core.IDOf(repoDeployment3)] = repoDeployment3
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
@@ -1769,8 +1769,8 @@ func TestInjectFleetWorkloadIdentityCredentialsToRepoSync(t *testing.T) {
 			metadata.FleetWorkloadIdentityCredentials: `{"audience":"identitynamespace:test-gke-dev.svc.id.goog:https://container.googleapis.com/v1/projects/test-gke-dev/locations/us-central1-c/clusters/fleet-workload-identity-test-cluster","credential_source":{"file":"/var/run/secrets/tokens/gcp-ksa/token"},"service_account_impersonation_url":"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/config-sync@cs-project.iam.gserviceaccount.com:generateAccessToken","subject_token_type":"urn:ietf:params:oauth:token-type:jwt","token_url":"https://sts.googleapis.com/v1/token","type":"external_account"}`,
 		}),
 		setServiceAccountName(nsReconcilerName),
-		fleetWorkloadIdentityMutator(nsReconcilerName, workloadIdentityPool, gcpSAEmail),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		fleetWorkloadIdentityMutator(workloadIdentityPool, gcpSAEmail),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments := map[core.ID]*appsv1.Deployment{core.IDOf(repoDeployment): repoDeployment}
 
@@ -1796,8 +1796,8 @@ func TestInjectFleetWorkloadIdentityCredentialsToRepoSync(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		secretMutator(nsReconcilerName+"-"+reposyncSSHKey),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
@@ -1821,8 +1821,8 @@ func TestInjectFleetWorkloadIdentityCredentialsToRepoSync(t *testing.T) {
 	repoDeployment = repoSyncDeployment(
 		nsReconcilerName,
 		setServiceAccountName(nsReconcilerName),
-		noneMutator(nsReconcilerName),
-		containerEnvMutator(repoContainerEnv, nsReconcilerName),
+		noneMutator(),
+		containerEnvMutator(repoContainerEnv),
 	)
 	wantDeployments[core.IDOf(repoDeployment)] = repoDeployment
 
