@@ -35,7 +35,7 @@ import (
 	"kpt.dev/configsync/pkg/status"
 	testingfake "kpt.dev/configsync/pkg/syncer/syncertest/fake"
 	"kpt.dev/configsync/pkg/testing/fake"
-	"kpt.dev/configsync/third_party/cli-utils/apply"
+	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/inventory"

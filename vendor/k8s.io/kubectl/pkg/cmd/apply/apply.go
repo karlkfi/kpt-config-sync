@@ -22,7 +22,6 @@ import (
 	"net/http"
 
 	"github.com/spf13/cobra"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -43,7 +42,6 @@ import (
 	"k8s.io/kubectl/pkg/util"
 	"k8s.io/kubectl/pkg/util/i18n"
 	"k8s.io/kubectl/pkg/util/openapi"
-	"k8s.io/kubectl/pkg/util/prune"
 	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubectl/pkg/validation"
 )
@@ -62,7 +60,7 @@ type ApplyFlags struct {
 	FieldManager   string
 	Selector       string
 	Prune          bool
-	PruneResources []prune.Resource
+	PruneResources []pruneResource
 	All            bool
 	Overwrite      bool
 	OpenAPIPatch   bool
@@ -80,27 +78,25 @@ type ApplyOptions struct {
 
 	DeleteOptions *delete.DeleteOptions
 
-	ServerSideApply         bool
-	ForceConflicts          bool
-	FieldManager            string
-	Selector                string
-	DryRunStrategy          cmdutil.DryRunStrategy
-	DryRunVerifier          *resource.QueryParamVerifier
-	FieldValidationVerifier *resource.QueryParamVerifier
-	Prune                   bool
-	PruneResources          []prune.Resource
-	cmdBaseName             string
-	All                     bool
-	Overwrite               bool
-	OpenAPIPatch            bool
-	PruneWhitelist          []string
+	ServerSideApply bool
+	ForceConflicts  bool
+	FieldManager    string
+	Selector        string
+	DryRunStrategy  cmdutil.DryRunStrategy
+	DryRunVerifier  *resource.DryRunVerifier
+	Prune           bool
+	PruneResources  []pruneResource
+	cmdBaseName     string
+	All             bool
+	Overwrite       bool
+	OpenAPIPatch    bool
+	PruneWhitelist  []string
 
-	ValidationDirective string
-	Validator           validation.Schema
-	Builder             *resource.Builder
-	Mapper              meta.RESTMapper
-	DynamicClient       dynamic.Interface
-	OpenAPISchema       openapi.Resources
+	Validator     validation.Schema
+	Builder       *resource.Builder
+	Mapper        meta.RESTMapper
+	DynamicClient dynamic.Interface
+	OpenAPISchema openapi.Resources
 
 	Namespace        string
 	EnforceNamespace bool
@@ -150,9 +146,6 @@ var (
 
 		# Apply the JSON passed into stdin to a pod
 		cat pod.json | kubectl apply -f -
-
-		# Apply the configuration from all files that end with '.json' - i.e. expand wildcard characters in file names
-		kubectl apply -f '*.json'
 
 		# Note: --prune is still in Alpha
 		# Apply the configuration in manifest.yaml that matches label app=nginx and delete all other resources that are not in the file and match label app=nginx
@@ -219,10 +212,10 @@ func (flags *ApplyFlags) AddFlags(cmd *cobra.Command) {
 	cmdutil.AddDryRunFlag(cmd)
 	cmdutil.AddServerSideApplyFlags(cmd)
 	cmdutil.AddFieldManagerFlagVar(cmd, &flags.FieldManager, FieldManagerClientSideApply)
-	cmdutil.AddLabelSelectorFlagVar(cmd, &flags.Selector)
 
 	cmd.Flags().BoolVar(&flags.Overwrite, "overwrite", flags.Overwrite, "Automatically resolve conflicts between the modified and live configuration by using values from the modified configuration")
 	cmd.Flags().BoolVar(&flags.Prune, "prune", flags.Prune, "Automatically delete resource objects, that do not appear in the configs and are created by either apply or create --save-config. Should be used with either -l or --all.")
+	cmd.Flags().StringVarP(&flags.Selector, "selector", "l", flags.Selector, "Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 	cmd.Flags().BoolVar(&flags.All, "all", flags.All, "Select all resources in the namespace of the specified resource types.")
 	cmd.Flags().StringArrayVar(&flags.PruneWhitelist, "prune-whitelist", flags.PruneWhitelist, "Overwrite the default whitelist with <group/version/kind> for --prune")
 	cmd.Flags().BoolVar(&flags.OpenAPIPatch, "openapi-patch", flags.OpenAPIPatch, "If true, use openapi to calculate diff when the openapi presents and the resource can be found in the openapi spec. Otherwise, fall back to use baked-in types.")
@@ -242,8 +235,7 @@ func (flags *ApplyFlags) ToOptions(cmd *cobra.Command, baseName string, args []s
 		return nil, err
 	}
 
-	dryRunVerifier := resource.NewQueryParamVerifier(dynamicClient, flags.Factory.OpenAPIGetter(), resource.QueryParamDryRun)
-	fieldValidationVerifier := resource.NewQueryParamVerifier(dynamicClient, flags.Factory.OpenAPIGetter(), resource.QueryParamFieldValidation)
+	dryRunVerifier := resource.NewDryRunVerifier(dynamicClient, flags.Factory.OpenAPIGetter())
 	fieldManager := GetApplyFieldManagerFlag(cmd, serverSideApply)
 
 	// allow for a success message operation to be specified at print time
@@ -270,12 +262,7 @@ func (flags *ApplyFlags) ToOptions(cmd *cobra.Command, baseName string, args []s
 	}
 
 	openAPISchema, _ := flags.Factory.OpenAPISchema()
-
-	validationDirective, err := cmdutil.GetValidationDirective(cmd)
-	if err != nil {
-		return nil, err
-	}
-	validator, err := flags.Factory.Validator(validationDirective, fieldValidationVerifier)
+	validator, err := flags.Factory.Validator(cmdutil.GetFlagBool(cmd, "validate"))
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +278,7 @@ func (flags *ApplyFlags) ToOptions(cmd *cobra.Command, baseName string, args []s
 	}
 
 	if flags.Prune {
-		flags.PruneResources, err = prune.ParseResources(mapper, flags.PruneWhitelist)
+		flags.PruneResources, err = parsePruneResources(mapper, flags.PruneWhitelist)
 		if err != nil {
 			return nil, err
 		}
@@ -319,15 +306,14 @@ func (flags *ApplyFlags) ToOptions(cmd *cobra.Command, baseName string, args []s
 		OpenAPIPatch:    flags.OpenAPIPatch,
 		PruneWhitelist:  flags.PruneWhitelist,
 
-		Recorder:            recorder,
-		Namespace:           namespace,
-		EnforceNamespace:    enforceNamespace,
-		Validator:           validator,
-		ValidationDirective: validationDirective,
-		Builder:             builder,
-		Mapper:              mapper,
-		DynamicClient:       dynamicClient,
-		OpenAPISchema:       openAPISchema,
+		Recorder:         recorder,
+		Namespace:        namespace,
+		EnforceNamespace: enforceNamespace,
+		Validator:        validator,
+		Builder:          builder,
+		Mapper:           mapper,
+		DynamicClient:    dynamicClient,
+		OpenAPISchema:    openAPISchema,
 
 		IOStreams: flags.IOStreams,
 
@@ -419,6 +405,7 @@ func (o *ApplyOptions) SetObjects(infos []*resource.Info) {
 
 // Run executes the `apply` command.
 func (o *ApplyOptions) Run() error {
+
 	if o.PreProcessorFn != nil {
 		klog.V(4).Infof("Running apply pre-processor function")
 		if err := o.PreProcessorFn(); err != nil {
@@ -483,8 +470,7 @@ func (o *ApplyOptions) applyOneObject(info *resource.Info) error {
 
 	helper := resource.NewHelper(info.Client, info.Mapping).
 		DryRun(o.DryRunStrategy == cmdutil.DryRunServer).
-		WithFieldManager(o.FieldManager).
-		WithFieldValidation(o.ValidationDirective)
+		WithFieldManager(o.FieldManager)
 
 	if o.DryRunStrategy == cmdutil.DryRunServer {
 		// Ensure the APIServer supports server-side dry-run for the resource,

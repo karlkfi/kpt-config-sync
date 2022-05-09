@@ -5,7 +5,6 @@ package builtins
 
 import (
 	"fmt"
-	"reflect"
 
 	"sigs.k8s.io/kustomize/api/filters/replacement"
 	"sigs.k8s.io/kustomize/api/resmap"
@@ -36,29 +35,11 @@ func (p *ReplacementTransformerPlugin) Config(
 			if err != nil {
 				return err
 			}
-			// find if the path contains a a list of replacements or a single replacement
-			var replacement interface{}
-			err = yaml.Unmarshal(content, &replacement)
-			if err != nil {
+			repl := types.Replacement{}
+			if err := yaml.Unmarshal(content, &repl); err != nil {
 				return err
 			}
-			items := reflect.ValueOf(replacement)
-			switch items.Kind() {
-			case reflect.Slice:
-				repl := []types.Replacement{}
-				if err := yaml.Unmarshal(content, &repl); err != nil {
-					return err
-				}
-				p.Replacements = append(p.Replacements, repl...)
-			case reflect.Map:
-				repl := types.Replacement{}
-				if err := yaml.Unmarshal(content, &repl); err != nil {
-					return err
-				}
-				p.Replacements = append(p.Replacements, repl)
-			default:
-				return fmt.Errorf("unsupported replacement type encountered within replacement path: %v", items.Kind())
-			}
+			p.Replacements = append(p.Replacements, repl)
 		} else {
 			// replacement information is already loaded
 			p.Replacements = append(p.Replacements, r.Replacement)

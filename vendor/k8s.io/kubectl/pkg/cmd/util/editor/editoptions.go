@@ -51,10 +51,7 @@ import (
 	"k8s.io/kubectl/pkg/cmd/util/editor/crlf"
 	"k8s.io/kubectl/pkg/scheme"
 	"k8s.io/kubectl/pkg/util"
-	"k8s.io/kubectl/pkg/util/slice"
 )
-
-var SupportedSubresources = []string{"status"}
 
 // EditOptions contains all the options for running edit cli command.
 type EditOptions struct {
@@ -68,8 +65,6 @@ type EditOptions struct {
 	WindowsLineEndings bool
 
 	cmdutil.ValidateOptions
-	ValidationDirective     string
-	FieldValidationVerifier *resource.QueryParamVerifier
 
 	OriginalResult *resource.Result
 
@@ -89,8 +84,6 @@ type EditOptions struct {
 	updatedResultGetter func(data []byte) *resource.Result
 
 	FieldManager string
-
-	Subresource string
 }
 
 // NewEditOptions returns an initialized EditOptions instance
@@ -191,7 +184,6 @@ func (o *EditOptions) Complete(f cmdutil.Factory, args []string, cmd *cobra.Comm
 	}
 	r := b.NamespaceParam(cmdNamespace).DefaultNamespace().
 		FilenameParam(enforceNamespace, &o.FilenameOptions).
-		Subresource(o.Subresource).
 		ContinueOnError().
 		Flatten().
 		Do()
@@ -206,7 +198,6 @@ func (o *EditOptions) Complete(f cmdutil.Factory, args []string, cmd *cobra.Comm
 		return f.NewBuilder().
 			Unstructured().
 			Stream(bytes.NewReader(data), "edited-file").
-			Subresource(o.Subresource).
 			ContinueOnError().
 			Flatten().
 			Do()
@@ -217,17 +208,6 @@ func (o *EditOptions) Complete(f cmdutil.Factory, args []string, cmd *cobra.Comm
 		return o.PrintFlags.ToPrinter()
 	}
 
-	dynamicClient, err := f.DynamicClient()
-	if err != nil {
-		return err
-	}
-	o.FieldValidationVerifier = resource.NewQueryParamVerifier(dynamicClient, f.OpenAPIGetter(), resource.QueryParamFieldValidation)
-
-	o.ValidationDirective, err = cmdutil.GetValidationDirective(cmd)
-	if err != nil {
-		return err
-	}
-
 	o.CmdNamespace = cmdNamespace
 	o.f = f
 
@@ -236,9 +216,6 @@ func (o *EditOptions) Complete(f cmdutil.Factory, args []string, cmd *cobra.Comm
 
 // Validate checks the EditOptions to see if there is sufficient information to run the command.
 func (o *EditOptions) Validate() error {
-	if len(o.Subresource) > 0 && !slice.ContainsString(SupportedSubresources, o.Subresource, nil) {
-		return fmt.Errorf("invalid subresource value: %q. Must be one of %v", o.Subresource, SupportedSubresources)
-	}
 	return nil
 }
 
@@ -322,7 +299,7 @@ func (o *EditOptions) Run() error {
 			klog.V(4).Infof("User edited:\n%s", string(edited))
 
 			// Apply validation
-			schema, err := o.f.Validator(o.ValidationDirective, o.FieldValidationVerifier)
+			schema, err := o.f.Validator(o.EnableValidation)
 			if err != nil {
 				return preservedFile(err, file, o.ErrOut)
 			}
@@ -584,10 +561,7 @@ func (o *EditOptions) annotationPatch(update *resource.Info) error {
 	if err != nil {
 		return err
 	}
-	helper := resource.NewHelper(client, mapping).
-		WithFieldManager(o.FieldManager).
-		WithFieldValidation(o.ValidationDirective).
-		WithSubresource(o.Subresource)
+	helper := resource.NewHelper(client, mapping).WithFieldManager(o.FieldManager)
 	_, err = helper.Patch(o.CmdNamespace, update.Name, patchType, patch, nil)
 	if err != nil {
 		return err
@@ -726,8 +700,6 @@ func (o *EditOptions) visitToPatch(originalInfos []*resource.Info, patchVisitor 
 
 		patched, err := resource.NewHelper(info.Client, info.Mapping).
 			WithFieldManager(o.FieldManager).
-			WithFieldValidation(o.ValidationDirective).
-			WithSubresource(o.Subresource).
 			Patch(info.Namespace, info.Name, patchType, patch, nil)
 		if err != nil {
 			fmt.Fprintln(o.ErrOut, results.addError(err, info))
@@ -747,7 +719,6 @@ func (o *EditOptions) visitToCreate(createVisitor resource.Visitor) error {
 	err := createVisitor.Visit(func(info *resource.Info, incomingErr error) error {
 		obj, err := resource.NewHelper(info.Client, info.Mapping).
 			WithFieldManager(o.FieldManager).
-			WithFieldValidation(o.ValidationDirective).
 			Create(info.Namespace, true, info.Object)
 		if err != nil {
 			return err
