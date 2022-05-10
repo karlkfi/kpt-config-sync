@@ -95,8 +95,8 @@ func TestListPolicyFiles(t *testing.T) {
 			// may be running in a container without a git config set up.
 			if len(tc.files) > 0 {
 				out, err = exec.Command("git",
-					"-c", "user.name='Nomos Test'",
-					"-c", "user.email='nomos-team@google.comcmpath'",
+					"-c", "user.name='Test'",
+					"-c", "user.email='team@example.comcmpath'",
 					"-C", dir.OSPath(), "commit", "-m", "add files").CombinedOutput()
 				if err != nil {
 					t.Fatal(errors.Wrap(err, string(out)))

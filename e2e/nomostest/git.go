@@ -201,7 +201,7 @@ func (g *Repository) init(privateKey string) {
 	// We have to configure username/email or else committing to the repository
 	// produces errors.
 	g.Git("config", "user.name", "E2E Testing")
-	g.Git("config", "user.email", "nomos-team@google.com")
+	g.Git("config", "user.email", "team@example.com")
 
 	// Use ssh rather than the default that git uses, as the default does not know
 	// how to use private key files.
