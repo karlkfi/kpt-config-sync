@@ -41,7 +41,7 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 	nt.T.Log("sync to the kcc resources from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc", "branch": "main", "repo": "https://source.developers.google.com/p/stolos-dev/r/configsync-ci-cc", "auth": "gcpserviceaccount","gcpServiceAccountEmail": "e2e-test-csr-reader@stolos-dev.iam.gserviceaccount.com", "secretRef": {"name": ""}}, "sourceFormat": "unstructured"}}`)
 
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRootRepoSha1Fn),
 		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kcc"}))
 
 	// Verify that the GCP resources are created.
@@ -73,7 +73,7 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 	// Remove the kcc resources
 	nt.T.Log("sync to an empty directory from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc-empty"}}}`)
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRepoRootSha1Fn),
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(nomostest.RemoteRootRepoSha1Fn),
 		nomostest.WithSyncDirectoryMap(map[types.NamespacedName]string{nomostest.DefaultRootRepoNamespacedName: "kcc-empty"}))
 
 	// Verify that the GCP resources are removed.
