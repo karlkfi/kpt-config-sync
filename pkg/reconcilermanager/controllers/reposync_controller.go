@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,6 +47,7 @@ import (
 	"kpt.dev/configsync/pkg/reposync"
 	"kpt.dev/configsync/pkg/status"
 	"kpt.dev/configsync/pkg/validate/raw/validate"
+	kstatus "sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,9 +62,8 @@ import (
 // RepoSyncReconciler reconciles a RepoSync object.
 type RepoSyncReconciler struct {
 	reconcilerBase
-	// repoSyncs is a cache of the reconciled RepoSync objects.
-	repoSyncs map[types.NamespacedName]struct{}
 
+	// lock ensures that the Reconcile method only runs one at a time.
 	lock sync.Mutex
 }
 
@@ -76,8 +77,8 @@ func NewRepoSyncReconciler(clusterName string, reconcilerPollingPeriod, hydratio
 			scheme:                  scheme,
 			reconcilerPollingPeriod: reconcilerPollingPeriod,
 			hydrationPollingPeriod:  hydrationPollingPeriod,
+			syncs:                   make(map[types.NamespacedName]struct{}),
 		},
-		repoSyncs: make(map[types.NamespacedName]struct{}),
 	}
 }
 
@@ -89,28 +90,42 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	log := r.log.WithValues("reposync", req.NamespacedName)
+	log := r.log.WithValues("reposync", req.NamespacedName.String())
 	start := time.Now()
 	var err error
 	rs := &v1beta1.RepoSync{}
+
+	reconcilerKey := types.NamespacedName{
+		Namespace: v1.NSConfigManagementSystem,
+		Name:      core.NsReconcilerName(req.NamespacedName.Namespace, req.NamespacedName.Name),
+	}
 
 	if err = r.client.Get(ctx, req.NamespacedName, rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
 			r.clearLastReconciled(req.NamespacedName)
-			if _, ok := r.repoSyncs[req.NamespacedName]; !ok {
+			// TODO: Why is this check necessary? What if the RSync is deleted while the reconciler-manager is down?
+			if !r.hasCachedSync(req.Namespace, req.Name) {
 				log.Error(err, "The RepoSync reconciler does not manage a RepoSync object for the namespace", "namespace", req.Namespace, "name", req.Name)
 				// return `controllerruntime.Result{}, nil` here to make sure the request will not be requeued.
 				return controllerruntime.Result{}, nil
 			}
-			// Namespace controller resources are cleaned up when reposync no longer present.
-			//
-			// Note: Update cleanup resources in cleanupNSControllerResources(...) when
-			// resources created by namespace controller changes.
-			cleanupErr := r.cleanupNSControllerResources(ctx, req.Namespace, req.Name)
-			// if cleanupErr != nil, the request will be requeued.
-			return controllerruntime.Result{}, cleanupErr
+			// Cleanup after already deleted RepoSync.
+			// This code path is unlikely, because the custom finalizer should
+			// have already deleted the managed resources and removed the
+			// repoSyncs cache entry. But if we get here, clean up anyway.
+			if err := r.deleteManagedObjects(ctx, log, reconcilerKey, nil, rs, false); err != nil {
+				// Failed to delete a managed object.
+				// Return an error to trigger retry.
+				metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+				return controllerruntime.Result{}, errors.Wrap(err, "failed to delete managed objects")
+			}
+			// cleanup successful
+			r.deleteCachedSync(req.Namespace, req.Name)
+			metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(nil), start)
+			return controllerruntime.Result{}, nil
 		}
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RepoSync")
 	}
 
@@ -124,7 +139,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	currentRS := rs.DeepCopy()
 
 	if err = r.validateNamespaceName(req.NamespacedName.Namespace); err != nil {
-		log.Error(err, "RepoSync namespace name failed validation")
+		log.Error(err, "RepoSync namespace is invalid")
 		reposync.SetStalled(rs, "Validation", err)
 		// Validation errors should not trigger retry (return error),
 		// unless the status update also fails.
@@ -134,11 +149,10 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, updateErr
 	}
 
-	r.repoSyncs[types.NamespacedName{Name: req.Name, Namespace: req.Namespace}] = struct{}{}
-	reconcilerName := core.NsReconcilerName(rs.Namespace, rs.Name)
-	if errs := validation.IsDNS1123Subdomain(reconcilerName); errs != nil {
-		log.Error(err, "RepoSync failed validation")
-		reposync.SetStalled(rs, "Validation", errors.Errorf("Invalid reconciler name %q: %s.", reconcilerName, strings.Join(errs, ", ")))
+	if errs := validation.IsDNS1123Subdomain(reconcilerKey.Name); errs != nil {
+		log.Error(err, "RepoSync reconciler name is invalid")
+		reposync.SetStalled(rs, "Validation",
+			errors.Errorf("Invalid reconciler name %q: %s.", reconcilerKey.Name, strings.Join(errs, ", ")))
 		// Validation errors should not trigger retry (return error),
 		// unless the status update also fails.
 		_, updateErr := r.updateStatus(ctx, currentRS, rs)
@@ -147,8 +161,8 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, updateErr
 	}
 
-	if err = r.validateSpec(ctx, rs, reconcilerName); err != nil {
-		log.Error(err, "RepoSync failed validation")
+	if err = r.validateSpec(ctx, rs, reconcilerKey.Name); err != nil {
+		log.Error(err, "RepoSync spec is invalid")
 		reposync.SetStalled(rs, "Validation", err)
 		// Validation errors should not trigger retry (return error),
 		// unless the status update also fails.
@@ -156,31 +170,106 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		// Use the validation error for metric tagging.
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, updateErr
+	}
+
+	// Create a tombstone, so we know to clean up durring termination.
+	r.addCachedSync(req.Namespace, req.Name)
+
+	finalizerName := v1beta1.SyncFinalizer
+
+	// Cross-namespace owner references are disallowed by Kubernetes.
+	// So we can't rely on Kubernetes' built-in garbage collection to delete
+	// managed objects in the central "config-management-system" namespace, when
+	// the RepoSync is in another namespace.
+	// To avoid leaking managed resources, we use a custom finalizer to force
+	// foreground deletion. This way, the RepoSync will not be fully deleted
+	// until all its managed resources are also deleted.
+
+	if rs.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is NOT being deleted.
+		if !controllerutil.ContainsFinalizer(rs, finalizerName) {
+			// The object is new and doesn't have our finalizer yet.
+			// Add our finalizer and update the object.
+			controllerutil.AddFinalizer(rs, finalizerName)
+			err := r.client.Update(ctx, rs)
+			if err != nil {
+				metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+				return controllerruntime.Result{}, status.APIServerError(err, "failed to patch RepoSync to add finalizer")
+			}
+		}
+	} else {
+		// The object is being deleted.
+		if controllerutil.ContainsFinalizer(rs, finalizerName) {
+			// Our finalizer is present, so delete managed resource objects.
+			if err := r.deleteManagedObjects(ctx, log, reconcilerKey, currentRS, rs, true); err != nil {
+				// Failed to delete a managed object.
+				// Return an error to trigger retry.
+				metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+				return controllerruntime.Result{}, errors.Wrap(err, "failed to delete managed objects")
+			}
+
+			// Remove our finalizer and update the object.
+			controllerutil.RemoveFinalizer(rs, finalizerName)
+			err := r.client.Update(ctx, rs)
+			if err != nil {
+				metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+				return controllerruntime.Result{}, status.APIServerError(err, "failed to patch RepoSync to remove finalizer")
+			}
+
+			// cleanup successful
+			r.deleteCachedSync(req.Namespace, req.Name)
+		}
+
+		// Stop reconciliation as the item is being deleted
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(nil), start)
+		return controllerruntime.Result{}, nil
+	}
+
+	if err := r.upsertManagedObjects(ctx, log, reconcilerKey, currentRS, rs); err != nil {
+		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
+		return controllerruntime.Result{}, errors.Wrap(err, "failed to create/update managed objects")
+	}
+
+	metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(nil), start)
+	return controllerruntime.Result{}, nil
+}
+
+func (r *RepoSyncReconciler) upsertManagedObjects(ctx context.Context, log logr.Logger, reconcilerKey types.NamespacedName, currentRS, rs *v1beta1.RepoSync) error {
+	log = log.WithValues("reconciler", reconcilerKey.String())
+	log.Info("Reconciling managed resources")
+
+	// If Reconciling condition does not exist, initialize it to Initialization.
+	// Avoid updating the timestamps on every retry.
+	cond := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncReconciling)
+	if cond == nil {
+		reposync.SetReconciling(rs, "Initialization", "Setup in progress")
+		if _, err := r.updateStatus(ctx, currentRS, rs); err != nil {
+			return err
+		}
 	}
 
 	// Create secret in config-management-system namespace using the
 	// existing secret in the reposync.namespace.
-	if err := upsertSecret(ctx, rs, r.client, reconcilerName); err != nil {
+	if err := r.upsertSecret(ctx, log, rs, r.client, reconcilerKey); err != nil {
 		var authType configsync.AuthType
 		if rs.Spec.SourceType == string(v1beta1.GitSource) {
 			authType = rs.Spec.Auth
 		} else if rs.Spec.SourceType == string(v1beta1.HelmSource) {
 			authType = rs.Spec.Helm.Auth
 		}
-		log.Error(err, "RepoSync failed secret creation", "auth", authType)
+		log.Error(err, "RepoSync Secret create/update failed", "auth", authType)
 		reposync.SetStalled(rs, "Secret", err)
 		// Upsert errors should always trigger retry (return error),
 		// even if status update is successful.
 		_, updateErr := r.updateStatus(ctx, currentRS, rs)
 		if updateErr != nil {
-			log.Error(updateErr, "failed to update RepoSync status")
+			log.Error(updateErr, "RepoSync status update failed")
 		}
-		// Use the upsert error for metric tagging.
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, errors.Wrap(err, "Secret reconcile failed")
+		// Return the upsertSecret error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync Secret create/update failed")
 	}
 
-	reposyncLabelMap := map[string]string{
+	labelMap := map[string]string{
 		metadata.SyncNamespaceLabel: rs.Namespace,
 		metadata.SyncNameLabel:      rs.Name,
 	}
@@ -198,113 +287,228 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	case v1beta1.HelmSource:
 		auth = rs.Spec.Helm.Auth
 		gcpSAEmail = rs.Spec.Helm.GCPServiceAccountEmail
+	default:
+		// Should have been caught by validation
+		return errors.Errorf("invalid source type: %s", rs.Spec.SourceType)
 	}
-	if err := r.upsertServiceAccount(ctx, reconcilerName, auth, gcpSAEmail, reposyncLabelMap); err != nil {
-		log.Error(err, "Failed to create/update ServiceAccount")
+	if err := r.upsertServiceAccount(ctx, log, reconcilerKey, auth, gcpSAEmail, labelMap); err != nil {
+		log.Error(err, "RepoSync ServiceAccount create/update failed")
 		reposync.SetStalled(rs, "ServiceAccount", err)
 		// Upsert errors should always trigger retry (return error),
 		// even if status update is successful.
 		_, updateErr := r.updateStatus(ctx, currentRS, rs)
 		if updateErr != nil {
-			log.Error(updateErr, "failed to update RepoSync status")
+			log.Error(updateErr, "RepoSync status update failed")
 		}
-		// Use the upsert error for metric tagging.
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, errors.Wrap(err, "ServiceAccount reconcile failed")
+		// Return the upsertServiceAccount error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync ServiceAccount create/update failed")
 	}
 
 	// Overwrite reconciler rolebinding.
 	if err := r.upsertRoleBinding(ctx, rs.Namespace); err != nil {
-		log.Error(err, "Failed to create/update RoleBinding")
+		log.Error(err, "RepoSync RoleBinding create/update failed")
 		reposync.SetStalled(rs, "RoleBinding", err)
 		// Upsert errors should always trigger retry (return error),
 		// even if status update is successful.
 		_, updateErr := r.updateStatus(ctx, currentRS, rs)
 		if updateErr != nil {
-			log.Error(updateErr, "failed to update RepoSync status")
+			log.Error(updateErr, "RepoSync status update failed")
 		}
-		// Use the upsert error for metric tagging.
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, errors.Wrap(err, "RoleBinding reconcile failed")
+		// Return the upsertRoleBinding error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync RoleBinding create/update failed")
 	}
 
-	repoContainerEnvs := r.populateRepoContainerEnvs(ctx, rs, reconcilerName)
-	mut := r.mutationsFor(ctx, rs, repoContainerEnvs)
+	containerEnvs := r.populateContainerEnvs(ctx, rs, reconcilerKey.Name)
+	mut := r.mutationsFor(ctx, rs, containerEnvs)
 
 	// Upsert Namespace reconciler deployment.
-	deployObj, op, err := r.upsertDeployment(ctx, reconcilerName, v1.NSConfigManagementSystem, reposyncLabelMap, mut)
+	deployObj, op, err := r.upsertDeployment(ctx, log, reconcilerKey, labelMap, mut)
 	if err != nil {
-		log.Error(err, "Failed to create/update Deployment")
+		log.Error(err, "RepoSync Deployment create/update failed")
 		reposync.SetStalled(rs, "Deployment", err)
 		// Upsert errors should always trigger retry (return error),
 		// even if status update is successful.
 		_, updateErr := r.updateStatus(ctx, currentRS, rs)
 		if updateErr != nil {
-			log.Error(updateErr, "failed to update RepoSync status")
+			log.Error(updateErr, "RepoSync status update failed")
 		}
-		// Use the upsert error for metric tagging.
-		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
+		// Return the upsertDeployment error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync Deployment create/update failed")
 	}
-	rs.Status.Reconciler = reconcilerName
+	rs.Status.Reconciler = reconcilerKey.Name
 
-	var result *deploymentStatus
 	if op == controllerutil.OperationResultNone {
-		// Get status from server
-		result, err = r.deploymentStatus(ctx, client.ObjectKey{
-			Namespace: v1.NSConfigManagementSystem,
-			Name:      reconcilerName,
-		})
-	} else {
-		// Get status from create/update result
-		result, err = checkDeploymentConditions(deployObj)
+		// No spec change. Get status from server.
+		deployObj, err = r.deployment(ctx, reconcilerKey)
+		if err != nil {
+			log.Error(err, "RepoSync Deployment get failed")
+			reposync.SetStalled(rs, "Deployment", err)
+			// Get errors should always trigger retry (return error),
+			// even if status update is successful.
+			_, updateErr := r.updateStatus(ctx, currentRS, rs)
+			if updateErr != nil {
+				log.Error(updateErr, "RepoSync status update failed")
+			}
+			return err
+		}
 	}
+
+	result, err := checkDeploymentConditions(deployObj)
 	if err != nil {
-		log.Error(err, "Failed to check reconciler deployment conditions")
+		log.Error(err, "RepoSync Deployment status check failed")
 		reposync.SetStalled(rs, "Deployment", err)
 		// Get errors should always trigger retry (return error),
 		// even if status update is successful.
 		_, updateErr := r.updateStatus(ctx, currentRS, rs)
 		if updateErr != nil {
-			log.Error(updateErr, "failed to update RepoSync status")
+			log.Error(updateErr, "RepoSync status update failed")
 		}
-		return controllerruntime.Result{}, err
+		return err
 	}
 
+	log.Info("Deployment status",
+		"resourceVersion", deployObj.ResourceVersion,
+		"status", result.Status,
+		"message", result.Message)
+
 	// Update RepoSync status based on reconciler deployment condition result.
-	switch result.status {
-	case statusInProgress:
+	switch result.Status {
+	case kstatus.InProgressStatus:
 		// inProgressStatus indicates that the deployment is not yet
 		// available. Hence update the Reconciling status condition.
-		reposync.SetReconciling(rs, "Deployment", result.message)
+		reposync.SetReconciling(rs, "Deployment", result.Message)
 		// Clear Stalled condition.
 		reposync.ClearCondition(rs, v1beta1.RepoSyncStalled)
-	case statusFailed:
+	case kstatus.FailedStatus, kstatus.TerminatingStatus:
 		// statusFailed indicates that the deployment failed to reconcile. Update
 		// Reconciling status condition with appropriate message specifying the
 		// reason for failure.
-		reposync.SetReconciling(rs, "Deployment", result.message)
+		reposync.SetReconciling(rs, "Deployment", result.Message)
 		// Set Stalled condition with the deployment statusFailed.
-		reposync.SetStalled(rs, "Deployment", errors.New(string(result.status)))
-	case statusCurrent:
+		reposync.SetStalled(rs, "Deployment", errors.New(string(result.Status)))
+	case kstatus.CurrentStatus:
 		// currentStatus indicates that the deployment is available, which qualifies
 		// to clear the Reconciling status condition in RepoSync.
 		reposync.ClearCondition(rs, v1beta1.RepoSyncReconciling)
 		// Since there were no errors, we can clear any previous Stalled condition.
 		reposync.ClearCondition(rs, v1beta1.RepoSyncStalled)
+	default:
+		return errors.Errorf("invalid deployment status: %v: %s", result.Status, result.Message)
 	}
 
 	updated, err := r.updateStatus(ctx, currentRS, rs)
-	// Use the status update error for metric tagging, if no other errors.
-	metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 	if err != nil {
-		return controllerruntime.Result{}, err
+		return err
 	}
 
-	if updated && result.status == statusCurrent {
-		r.log.Info("Deployment successfully reconciled", operationSubjectName, reconcilerName, executedOperation, op)
+	if updated && result.Status == kstatus.CurrentStatus {
+		log.Info("Deployment fully available", executedOperation, op)
 	}
-	return controllerruntime.Result{}, nil
+	return nil
+}
+
+// deleteManagedObjects deletes objects managed by the reconciler-manager for
+// this RepoSync. If updateStatus is true, the RepoSync status will be updated
+// to reflect the teardown progress.
+func (r *RepoSyncReconciler) deleteManagedObjects(ctx context.Context, log logr.Logger, reconcilerKey types.NamespacedName, currentRS, rs *v1beta1.RepoSync, updateStatus bool) error {
+	log = log.WithValues("reconciler", reconcilerKey.String())
+	log.Info("Deleting managed resources")
+
+	if updateStatus {
+		// If no Reconciling condition is not already Termination, set it to Termination.
+		// Avoid updating the timestamps on every retry.
+		cond := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncReconciling)
+		if cond == nil || cond.Reason != "Termination" {
+			reposync.SetReconciling(rs, "Termination", "Teardown in progress")
+			if _, err := r.updateStatus(ctx, currentRS, rs); err != nil {
+				return err
+			}
+		}
+	}
+
+	err := r.deleteDeployment(ctx, reconcilerKey)
+	if err != nil {
+		log.Error(err, "RepoSync Deployment delete failed")
+		if updateStatus {
+			reposync.SetStalled(rs, "Deployment", err)
+			// Delete errors should always trigger retry (return error),
+			// even if status update is successful.
+			if _, updateErr := r.updateStatus(ctx, currentRS, rs); updateErr != nil {
+				log.Error(updateErr, "RepoSync status update failed")
+			}
+		}
+		// Return the upsertDeployment error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync Deployment delete failed")
+	}
+
+	// Note: ConfigMaps have been replaced by Deployment env vars.
+	// Using env vars auto-updates the Deployment when they change.
+	// This deletion remains to clean up after users upgrade.
+
+	if err := r.deleteConfigmap(ctx, reconcilerKey); err != nil {
+		log.Error(err, "RepoSync ConfigMap delete failed")
+		if updateStatus {
+			reposync.SetStalled(rs, "ConfigMap", err)
+			// Delete errors should always trigger retry (return error),
+			// even if status update is successful.
+			if _, updateErr := r.updateStatus(ctx, currentRS, rs); updateErr != nil {
+				log.Error(updateErr, "RepoSync status update failed")
+			}
+		}
+		// Return the upsertDeployment error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync ConfigMap delete failed")
+	}
+
+	if err := r.deleteSecret(ctx, reconcilerKey); err != nil {
+		log.Error(err, "RepoSync Secret delete failed", "auth", rs.Spec.Auth)
+		if updateStatus {
+			reposync.SetStalled(rs, "Secret", err)
+			// Delete errors should always trigger retry (return error),
+			// even if status update is successful.
+			if _, updateErr := r.updateStatus(ctx, currentRS, rs); updateErr != nil {
+				log.Error(updateErr, "RepoSync status update failed")
+			}
+		}
+		// Return the deleteSecret error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync Secret delete failed")
+	}
+
+	if err := r.deleteRoleBinding(ctx, rs.Namespace, reconcilerKey); err != nil {
+		log.Error(err, "RepoSync RoleBinding delete failed")
+		if updateStatus {
+			reposync.SetStalled(rs, "RoleBinding", err)
+			// Delete errors should always trigger retry (return error),
+			// even if status update is successful.
+			if _, updateErr := r.updateStatus(ctx, currentRS, rs); updateErr != nil {
+				log.Error(updateErr, "RepoSync status update failed")
+			}
+		}
+		// Return the deleteRoleBinding error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync RoleBinding delete failed")
+	}
+
+	if err := r.deleteServiceAccount(ctx, reconcilerKey); err != nil {
+		log.Error(err, "RepoSync ServiceAccount delete failed")
+		if updateStatus {
+			reposync.SetStalled(rs, "ServiceAccount", err)
+			// Delete errors should always trigger retry (return error),
+			// even if status update is successful.
+			if _, updateErr := r.updateStatus(ctx, currentRS, rs); updateErr != nil {
+				log.Error(updateErr, "RepoSync status update failed")
+			}
+		}
+		// Return the upsertServiceAccount error, not the updateStatus error.
+		return errors.Wrap(err, "RepoSync ServiceAccount delete failed")
+	}
+
+	if updateStatus {
+		reposync.SetReconciling(rs, "Termination", "Teardown complete")
+		if _, err := r.updateStatus(ctx, currentRS, rs); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // SetupWithManager registers RepoSync controller with reconciler-manager.
@@ -339,13 +543,19 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager, wat
 		Watches(&source.Kind{Type: &corev1.Secret{}},
 			handler.EnqueueRequestsFromMapFunc(r.mapSecretToRepoSyncs),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Watches(&source.Kind{Type: &appsv1.Deployment{}},
+		Watches(&source.Kind{Type: &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Namespace: configsync.ControllerNamespace},
+		}},
 			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Watches(&source.Kind{Type: &corev1.ServiceAccount{}},
+		Watches(&source.Kind{Type: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Namespace: configsync.ControllerNamespace},
+		}},
 			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}},
+		Watches(&source.Kind{Type: &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Namespace: configsync.ControllerNamespace},
+		}},
 			handler.EnqueueRequestsFromMapFunc(r.mapObjectToRepoSync),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
 
@@ -395,10 +605,7 @@ func (r *RepoSyncReconciler) requeueAllRepoSyncs() []reconcile.Request {
 	requests := make([]reconcile.Request, len(allRepoSyncs.Items))
 	for i, rs := range allRepoSyncs.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      rs.GetName(),
-				Namespace: rs.GetNamespace(),
-			},
+			NamespacedName: client.ObjectKeyFromObject(&rs),
 		}
 	}
 	if len(requests) > 0 {
@@ -486,10 +693,7 @@ func (r *RepoSyncReconciler) mapSecretToRepoSyncs(secret client.Object) []reconc
 	for i, rs := range attachedRepoSyncs.Items {
 		attachedRSNames[i] = rs.GetName()
 		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      rs.GetName(),
-				Namespace: rs.GetNamespace(),
-			},
+			NamespacedName: client.ObjectKeyFromObject(&rs),
 		}
 	}
 	if len(requests) > 0 {
@@ -501,12 +705,6 @@ func (r *RepoSyncReconciler) mapSecretToRepoSyncs(secret client.Object) []reconc
 // mapObjectToRepoSync define a mapping from an object in 'config-management-system'
 // namespace to a RepoSync to be reconciled.
 func (r *RepoSyncReconciler) mapObjectToRepoSync(obj client.Object) []reconcile.Request {
-	// Ignore changes from other namespaces because all the generated resources
-	// exist in the config-management-system namespace.
-	if obj.GetNamespace() != configsync.ControllerNamespace {
-		return nil
-	}
-
 	// Ignore changes from resources without the ns-reconciler prefix or configsync.gke.io:ns-reconciler
 	// because all the generated resources have the prefix.
 	nsRoleBindingName := RepoSyncPermissionsName()
@@ -526,7 +724,7 @@ func (r *RepoSyncReconciler) mapObjectToRepoSync(obj client.Object) []reconcile.
 	}
 
 	// Most of the resources are mapped to a single RepoSync object except RoleBinding.
-	// All RepoSync objects share the same RoleBinding object, so requeue all RepoSync objects the RoleBinding is changed.
+	// All RepoSync objects share the same RoleBinding object, so requeue all RepoSync objects if the RoleBinding is changed.
 	// For other resources, requeue the mapping RepoSync object and then return.
 	var requests []reconcile.Request
 	var attachedRSNames []string
@@ -536,10 +734,7 @@ func (r *RepoSyncReconciler) mapObjectToRepoSync(obj client.Object) []reconcile.
 		case *rbacv1.RoleBinding:
 			if obj.GetName() == nsRoleBindingName {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      rs.GetName(),
-						Namespace: rs.GetNamespace(),
-					}})
+					NamespacedName: client.ObjectKeyFromObject(&rs)})
 				attachedRSNames = append(attachedRSNames, rs.GetName())
 			}
 		default: // Deployment and ServiceAccount
@@ -555,43 +750,17 @@ func (r *RepoSyncReconciler) mapObjectToRepoSync(obj client.Object) []reconcile.
 	return requests
 }
 
-// addTypeInformationToObject adds TypeMeta information to a runtime.Object based upon the loaded scheme.Scheme
-// inspired by: https://github.com/kubernetes/cli-runtime/blob/v0.19.2/pkg/printers/typesetter.go#L41.
-// Note: The function only works for GVKs registered with the local scheme with exact version matching.
-func (r *RepoSyncReconciler) addTypeInformationToObject(obj runtime.Object) error {
-	gvks, _, err := r.scheme.ObjectKinds(obj)
-	if err != nil {
-		return fmt.Errorf("missing apiVersion or kind and cannot assign it; %w", err)
-	}
-
-	for _, gvk := range gvks {
-		if len(gvk.Kind) == 0 {
-			continue
-		}
-		if len(gvk.Version) == 0 || gvk.Version == runtime.APIVersionInternal {
-			continue
-		}
-		obj.GetObjectKind().SetGroupVersionKind(gvk)
-		break
-	}
-
-	return nil
-}
-
 func requeueRepoSyncRequest(obj client.Object, rs *v1beta1.RepoSync) []reconcile.Request {
 	klog.Infof("Changes to %s (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object %q in the same namespace.",
 		obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), obj.GetNamespace(), rs.GetName())
 	return []reconcile.Request{
 		{
-			NamespacedName: types.NamespacedName{
-				Name:      rs.GetName(),
-				Namespace: rs.GetNamespace(),
-			},
+			NamespacedName: client.ObjectKeyFromObject(rs),
 		},
 	}
 }
 
-func (r *RepoSyncReconciler) populateRepoContainerEnvs(ctx context.Context, rs *v1beta1.RepoSync, reconcilerName string) map[string][]corev1.EnvVar {
+func (r *RepoSyncReconciler) populateContainerEnvs(ctx context.Context, rs *v1beta1.RepoSync, reconcilerName string) map[string][]corev1.EnvVar {
 	result := map[string][]corev1.EnvVar{
 		reconcilermanager.HydrationController: hydrationEnvs(rs.Spec.SourceType, rs.Spec.Git, rs.Spec.Oci, declared.Scope(rs.Namespace), reconcilerName, r.hydrationPollingPeriod.String()),
 		reconcilermanager.Reconciler:          reconcilerEnvs(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), rs.Spec.SourceType, rs.Spec.Git, rs.Spec.Oci, rs.Spec.Helm, r.reconcilerPollingPeriod.String(), rs.Spec.Override.StatusMode, v1beta1.GetReconcileTimeout(rs.Spec.Override.ReconcileTimeout)),
@@ -613,7 +782,6 @@ func (r *RepoSyncReconciler) populateRepoContainerEnvs(ctx context.Context, rs *
 		result[reconcilermanager.OciSync] = ociSyncEnvs(rs.Spec.Oci.Image, rs.Spec.Oci.Auth, v1beta1.GetPeriodSecs(rs.Spec.Oci.Period))
 	case v1beta1.HelmSource:
 		result[reconcilermanager.HelmSync] = helmSyncEnvs(rs.Spec.Helm.Repo, rs.Spec.Helm.Chart, rs.Spec.Helm.Version, rs.Spec.Helm.ReleaseName, rs.Spec.Helm.Namespace, rs.Spec.Helm.Auth, v1beta1.GetPeriodSecs(rs.Spec.Helm.Period))
-
 	}
 	return result
 }
@@ -708,7 +876,8 @@ func (r *RepoSyncReconciler) mutateRoleBinding(ctx context.Context, namespace st
 	if err := r.client.List(ctx, reposyncList, client.InNamespace(namespace)); err != nil {
 		return errors.Wrapf(err, "failed to list the RepoSync objects in namespace %q", namespace)
 	}
-	return r.updateRoleBindingSubjects(rb, reposyncList)
+	r.updateRoleBindingSubjects(rb, reposyncList)
+	return nil
 }
 
 func (r *RepoSyncReconciler) updateStatus(ctx context.Context, currentRS, rs *v1beta1.RepoSync) (bool, error) {
@@ -716,13 +885,15 @@ func (r *RepoSyncReconciler) updateStatus(ctx context.Context, currentRS, rs *v1
 
 	// Avoid unnecessary status updates.
 	if cmp.Equal(currentRS.Status, rs.Status, diff.IgnoreTimestampUpdates) {
-		klog.V(5).Infof("Skipping status update for RepoSync %s/%s", rs.Namespace, rs.Name)
+		klog.V(3).Infof("Skipping status update for RepoSync %s/%s (ResourceVersion: %s)",
+			rs.Namespace, rs.Name, rs.ResourceVersion)
 		return false, nil
 	}
 
 	if klog.V(5).Enabled() {
-		klog.Infof("Updating status for RepoSync %s/%s:\nDiff (- Expected, + Actual):\n%s",
-			rs.Namespace, rs.Name, cmp.Diff(currentRS.Status, rs.Status))
+		klog.Infof("Updating status for RepoSync %s/%s (ResourceVersion: %s):\nDiff (- Expected, + Actual):\n%s",
+			rs.Namespace, rs.Name, rs.ResourceVersion,
+			cmp.Diff(currentRS.Status, rs.Status))
 	}
 
 	resourceVersion := rs.ResourceVersion

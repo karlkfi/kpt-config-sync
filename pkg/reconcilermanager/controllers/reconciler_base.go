@@ -30,11 +30,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
 	hubv1 "kpt.dev/configsync/pkg/api/hub/v1"
 	"kpt.dev/configsync/pkg/core"
+	"kpt.dev/configsync/pkg/kinds"
 	"kpt.dev/configsync/pkg/metadata"
 	"kpt.dev/configsync/pkg/metrics"
 	"kpt.dev/configsync/pkg/util"
@@ -81,12 +81,30 @@ type reconcilerBase struct {
 	// if it's the latest or not. So this is just an optimization, not a guarantee.
 	// https://kubernetes.io/docs/reference/using-api/api-concepts/#resource-versions
 	lastReconciledResourceVersions map[types.NamespacedName]string
+
+	// syncs is a cache of the reconciled RepoSync/RootSync objects.
+	syncs map[types.NamespacedName]struct{}
 }
 
-func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, auth configsync.AuthType, email string, labelMap map[string]string, refs ...metav1.OwnerReference) error {
+func (r *reconcilerBase) upsertSecret(ctx context.Context, log logr.Logger, rs *v1beta1.RepoSync, c client.Client, reconcilerKey types.NamespacedName) error {
+	log = log.WithValues("object", reconcilerKey.String(), "kind", kinds.Secret())
+
+	op, err := upsertSecret(ctx, rs, r.client, reconcilerKey)
+	if err != nil {
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		log.Info("Secret successfully reconciled", executedOperation, op)
+	}
+	return nil
+}
+
+func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, log logr.Logger, reconcilerKey types.NamespacedName, auth configsync.AuthType, email string, labelMap map[string]string, refs ...metav1.OwnerReference) error {
+	log = log.WithValues("object", reconcilerKey.String(), "kind", kinds.ServiceAccount())
+
 	var childSA corev1.ServiceAccount
-	childSA.Name = name
-	childSA.Namespace = v1.NSConfigManagementSystem
+	childSA.Name = reconcilerKey.Name
+	childSA.Namespace = reconcilerKey.Namespace
 	r.addLabels(&childSA, labelMap)
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
@@ -108,21 +126,23 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, 
 		return err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.log.Info("ServiceAccount successfully reconciled", operationSubjectName, name, executedOperation, op)
+		log.Info("ServiceAccount successfully reconciled", executedOperation, op)
 	}
 	return nil
 }
 
 type mutateFn func(client.Object) error
 
-func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, labelMap map[string]string, mutateObject mutateFn) (*appsv1.Deployment, controllerutil.OperationResult, error) {
+func (r *reconcilerBase) upsertDeployment(ctx context.Context, log logr.Logger, reconcilerKey types.NamespacedName, labelMap map[string]string, mutateObject mutateFn) (*appsv1.Deployment, controllerutil.OperationResult, error) {
+	log = log.WithValues("object", reconcilerKey.String(), "kind", kinds.Deployment())
+
 	reconcilerDeployment := &appsv1.Deployment{}
 	if err := parseDeployment(reconcilerDeployment); err != nil {
 		return nil, controllerutil.OperationResultNone, errors.Wrap(err, "failed to parse reconciler Deployment manifest from ConfigMap")
 	}
 
-	reconcilerDeployment.Name = name
-	reconcilerDeployment.Namespace = namespace
+	reconcilerDeployment.Name = reconcilerKey.Name
+	reconcilerDeployment.Namespace = reconcilerKey.Namespace
 
 	// Add common deployment labels.
 	// This enables label selecting deployment by R*Sync name & namespace.
@@ -135,27 +155,34 @@ func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace s
 	// Add deployment name to the pod template.
 	// This enables label selecting deployment pods by deployment name.
 	r.addTemplateLabels(reconcilerDeployment, map[string]string{
-		metadata.DeploymentNameLabel: name,
+		metadata.DeploymentNameLabel: reconcilerKey.Name,
 	})
 
 	// Add deployment name to the pod selector.
 	// This enables label selecting deployment pods by deployment name.
 	r.addSelectorLabels(reconcilerDeployment, map[string]string{
-		metadata.DeploymentNameLabel: name,
+		metadata.DeploymentNameLabel: reconcilerKey.Name,
 	})
 
 	if err := mutateObject(reconcilerDeployment); err != nil {
 		return nil, controllerutil.OperationResultNone, err
 	}
-	result, err := r.createOrPatchDeployment(ctx, reconcilerDeployment)
-	return reconcilerDeployment, result, err
+	op, err := r.createOrUpdateDeployment(ctx, log, reconcilerDeployment)
+	if err != nil {
+		return nil, op, err
+	}
+	if op != controllerutil.OperationResultNone {
+		log.Info("Deployment successfully reconciled", executedOperation, op)
+	}
+	return reconcilerDeployment, op, nil
 }
 
-// createOrPatchDeployment() first call Get() on the object. If the
-// object does not exist, Create() will be called. If it does exist, Patch()
+// createOrUpdateDeployment() first call Get() on the object. If the
+// object does not exist, Create() will be called. If it does exist, Update()
 // will be called.
-func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, declared *appsv1.Deployment) (controllerutil.OperationResult, error) {
+func (r *reconcilerBase) createOrUpdateDeployment(ctx context.Context, log logr.Logger, declared *appsv1.Deployment) (controllerutil.OperationResult, error) {
 	key := client.ObjectKeyFromObject(declared)
+	log = log.WithValues("object", key.String(), "kind", kinds.Deployment())
 
 	current := &appsv1.Deployment{}
 
@@ -163,7 +190,7 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, declared *
 		if !apierrors.IsNotFound(err) {
 			return controllerutil.OperationResultNone, err
 		}
-		r.log.Info("Resource not found, creating one", "Resource", declared.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
+		log.Info("Deployment not found, creating")
 		if err := r.client.Create(ctx, declared); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
@@ -190,21 +217,22 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, declared *
 		if !vpaEnabled {
 			mutator = "Autopilot"
 		}
-		r.log.V(3).Info("The resources of the containers in the declared Deployment is updated", "mutator", mutator)
+		log.V(3).Info("The resources of the containers in the declared Deployment is updated", "mutator", mutator)
 	}
 
 	if reflect.DeepEqual(current.Labels, declared.Labels) && reflect.DeepEqual(current.Spec, declared.Spec) {
+		log.Info("Deployment found, no changes required")
 		return controllerutil.OperationResultNone, nil
 	}
 
-	r.log.Info("The Deployment needs to be updated", "name", declared.Name)
+	log.Info("Deployment found, updating")
 	if err := r.client.Update(ctx, declared); err != nil {
 		// Let the next reconciliation retry the patch operation for valid request.
 		if !apierrors.IsInvalid(err) {
 			return controllerutil.OperationResultNone, err
 		}
 		// The provided data is invalid (e.g. http://b/196922619), so delete and re-create the resource.
-		r.log.Error(err, "Failed to patch resource, deleting and re-creating the resource", "Resource", declared.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
+		log.Error(err, "Deployment update failed, deleting and re-creating")
 		if err := r.client.Delete(ctx, declared); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
@@ -301,13 +329,8 @@ func keepCurrentContainerResources(declared, current *appsv1.Deployment) bool {
 	return resourceChanged
 }
 
-// deploymentStatus return standardized status for Deployment.
-//
-// For Deployments, we look at .status.conditions as well as the other properties
-// under .status. Status will be Failed if the progress deadline has been exceeded.
-// Code Reference: https://github.com/kubernetes-sigs/cli-utils/blob/v0.22.0/pkg/kstatus/status/core.go
-// TODO (akulkapoor) Update to use the library kstatus once available.
-func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.ObjectKey) (*deploymentStatus, error) {
+// deployment returns a Deployment from the server.
+func (r *reconcilerBase) deployment(ctx context.Context, key client.ObjectKey) (*appsv1.Deployment, error) {
 	var depObj appsv1.Deployment
 	if err := r.client.Get(ctx, key, &depObj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -316,7 +339,7 @@ func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.Object
 		}
 		return nil, errors.Wrapf(err, "error while retrieving deployment")
 	}
-	return checkDeploymentConditions(&depObj)
+	return &depObj, nil
 }
 
 func mutateContainerResource(ctx context.Context, c *corev1.Container, override v1beta1.OverrideSpec, reconcilerType string) {
@@ -448,4 +471,40 @@ func (r *reconcilerBase) isLastReconciled(nn types.NamespacedName, resourceVersi
 		return false
 	}
 	return resourceVersion == lastReconciled
+}
+
+func (r *reconcilerBase) hasCachedSync(namespace, name string) bool {
+	_, ok := r.syncs[types.NamespacedName{Namespace: namespace, Name: name}]
+	return ok
+}
+
+func (r *reconcilerBase) addCachedSync(namespace, name string) {
+	r.syncs[types.NamespacedName{Namespace: namespace, Name: name}] = struct{}{}
+}
+
+func (r *reconcilerBase) deleteCachedSync(namespace, name string) {
+	delete(r.syncs, types.NamespacedName{Namespace: namespace, Name: name})
+}
+
+// addTypeInformationToObject adds TypeMeta information to a runtime.Object based upon the loaded scheme.Scheme
+// inspired by: https://github.com/kubernetes/cli-runtime/blob/v0.19.2/pkg/printers/typesetter.go#L41.
+// Note: The function only works for GVKs registered with the local scheme with exact version matching.
+func (r *reconcilerBase) addTypeInformationToObject(obj runtime.Object) error {
+	gvks, _, err := r.scheme.ObjectKinds(obj)
+	if err != nil {
+		return fmt.Errorf("missing apiVersion or kind and cannot assign it; %w", err)
+	}
+
+	for _, gvk := range gvks {
+		if len(gvk.Kind) == 0 {
+			continue
+		}
+		if len(gvk.Version) == 0 || gvk.Version == runtime.APIVersionInternal {
+			continue
+		}
+		obj.GetObjectKind().SetGroupVersionKind(gvk)
+		break
+	}
+
+	return nil
 }

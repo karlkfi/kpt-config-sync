@@ -257,6 +257,7 @@ func validateDeleteOptions(opts []client.DeleteOption) error {
 	var unsupported []client.DeleteOption
 	for _, opt := range opts {
 		switch opt {
+		case client.PropagationPolicy(metav1.DeletePropagationForeground):
 		case client.PropagationPolicy(metav1.DeletePropagationBackground):
 		default:
 			unsupported = append(unsupported, opt)
@@ -273,6 +274,8 @@ func validateDeleteOptions(opts []client.DeleteOption) error {
 // Delete implements client.Client.
 func (c *Client) Delete(_ context.Context, obj client.Object, opts ...client.DeleteOption) error {
 	err := validateDeleteOptions(opts)
+	options := client.DeleteOptions{}
+	options.ApplyOptions(opts)
 	if err != nil {
 		return err
 	}
@@ -284,7 +287,31 @@ func (c *Client) Delete(_ context.Context, obj client.Object, opts ...client.Del
 		return newNotFound(id)
 	}
 
-	// Delete objects whose ownerRef is the current obj.
+	// Default to background deletion propagation, if unspecified
+	if options.PropagationPolicy == nil {
+		pp := metav1.DeletePropagationBackground
+		options.PropagationPolicy = &pp
+	}
+
+	switch *options.PropagationPolicy {
+	case metav1.DeletePropagationForeground:
+		c.deleteManagedObjects(id)
+		delete(c.Objects, id)
+	case metav1.DeletePropagationBackground:
+		// TODO: impliment thread-safe background deletion propagation.
+		// TODO: once background deletion propagation is implimented, add tests for async reconciler cleanup.
+		// For now, just emulate foreground deletion propagation instead.
+		c.deleteManagedObjects(id)
+		delete(c.Objects, id)
+	default:
+		return errors.Errorf("unsupported PropagationPolicy: %v", *options.PropagationPolicy)
+	}
+
+	return nil
+}
+
+// deleteManagedObjects deletes objects whose ownerRef is the specified obj.
+func (c *Client) deleteManagedObjects(id core.ID) {
 	for _, o := range c.Objects {
 		for _, ownerRef := range o.GetOwnerReferences() {
 			if ownerRef.Name == id.Name && ownerRef.Kind == id.Kind {
@@ -292,9 +319,6 @@ func (c *Client) Delete(_ context.Context, obj client.Object, opts ...client.Del
 			}
 		}
 	}
-	delete(c.Objects, id)
-
-	return nil
 }
 
 func toUnstructured(obj client.Object) (unstructured.Unstructured, error) {
@@ -421,7 +445,7 @@ func (s *statusWriter) Update(_ context.Context, obj client.Object, opts ...clie
 
 	id := core.IDOf(obj)
 
-	_, found := s.Client.Objects[id]
+	cachedObj, found := s.Client.Objects[id]
 	if !found {
 		return newNotFound(id)
 	}
@@ -436,7 +460,7 @@ func (s *statusWriter) Update(_ context.Context, obj client.Object, opts ...clie
 			return nil
 		}
 
-		u, err := s.Client.updateObjectStatus(s.Client.Objects[id], newStatus)
+		u, err := s.Client.updateObjectStatus(cachedObj, newStatus)
 		if err != nil {
 			return err
 		}

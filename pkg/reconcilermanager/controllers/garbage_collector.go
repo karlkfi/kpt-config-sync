@@ -23,10 +23,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
 	"kpt.dev/configsync/pkg/core"
@@ -35,72 +35,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Cleanup namespace controller resources when reposync is not found since,
-// we don't leverage ownerRef because namespace controller resources are
-// created in config-management-system namespace instead of reposync namespace.
-//
-// NOTE: Update this method when resources created by namespace controller changes.
-func (r *RepoSyncReconciler) cleanupNSControllerResources(ctx context.Context, ns, rsName string) error {
-	reconcilerName := core.NsReconcilerName(ns, rsName)
-	r.log.Info("Cleaning up namespace controller resources", "reconcilerName", reconcilerName)
+func (r *reconcilerBase) cleanup(ctx context.Context, reconcilerKey types.NamespacedName, gvk schema.GroupVersionKind) error {
+	log := r.log.WithValues("object", reconcilerKey.String(), "kind", gvk.Kind)
 
-	reposyncList := &v1beta1.RepoSyncList{}
-	if err := r.client.List(ctx, reposyncList, client.InNamespace(ns)); err != nil {
-		return errors.Wrapf(err, "failed to list the RepoSync objects in namespace %q", ns)
-	}
-
-	// Delete namespace controller resources and return to reconcile loop in case
-	// of errors to try cleaning up resources again.
-
-	// Deployment
-	if err := r.deleteDeployment(ctx, reconcilerName); err != nil {
-		return err
-	}
-	// configmaps
-	if err := r.deleteConfigmap(ctx, reconcilerName); err != nil {
-		return err
-	}
-	// serviceaccount
-	if err := r.deleteServiceAccount(ctx, reconcilerName); err != nil {
-		return err
-	}
-	// rolebinding
-	if err := r.deleteRoleBinding(ctx, ns, reposyncList); err != nil {
-		return err
-	}
-	// secret
-	if err := r.deleteSecret(ctx, reconcilerName); err != nil {
-		return err
-	}
-
-	delete(r.repoSyncs, types.NamespacedName{Namespace: ns, Name: rsName})
-	return nil
-}
-
-func (r *RepoSyncReconciler) cleanup(ctx context.Context, name, namespace string, gvk schema.GroupVersionKind) error {
 	u := &unstructured.Unstructured{}
-	u.SetName(name)
-	u.SetNamespace(namespace)
+	u.SetName(reconcilerKey.Name)
+	if reconcilerKey.Namespace != "" {
+		u.SetNamespace(reconcilerKey.Namespace)
+	}
 	u.SetGroupVersionKind(gvk)
-	err := r.client.Delete(ctx, u)
+	err := r.client.Delete(ctx, u,
+		client.PropagationPolicy(metav1.DeletePropagationForeground))
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.V(4).Info("resource not present", "namespace", namespace, "resource", name)
+			log.V(4).Info("Object already deleted")
 			return nil
 		}
 	}
-	return err
+	log.Info("Object deleted successfully")
+	return nil
 }
 
-func (r *RepoSyncReconciler) deleteSecret(ctx context.Context, reconcilerName string) error {
+func (r *RepoSyncReconciler) deleteSecret(ctx context.Context, reconcilerKey types.NamespacedName) error {
 	secretList := &corev1.SecretList{}
-	if err := r.client.List(ctx, secretList, client.InNamespace(configsync.ControllerNamespace)); err != nil {
+	if err := r.client.List(ctx, secretList, client.InNamespace(reconcilerKey.Namespace)); err != nil {
 		return err
 	}
 
 	for _, s := range secretList.Items {
-		if strings.HasPrefix(s.Name, reconcilerName) {
-			if err := r.cleanup(ctx, s.Name, s.Namespace, kinds.Secret()); err != nil {
+		if strings.HasPrefix(s.Name, reconcilerKey.Name) {
+			if err := r.cleanup(ctx, client.ObjectKeyFromObject(&s), kinds.Secret()); err != nil {
 				return err
 			}
 		}
@@ -108,44 +72,59 @@ func (r *RepoSyncReconciler) deleteSecret(ctx context.Context, reconcilerName st
 	return nil
 }
 
-func (r *RepoSyncReconciler) deleteConfigmap(ctx context.Context, reconcilerName string) error {
+func (r *reconcilerBase) deleteConfigmap(ctx context.Context, reconcilerKey types.NamespacedName) error {
 	cms := []string{
-		ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler),
-		ReconcilerResourceName(reconcilerName, reconcilermanager.HydrationController),
-		ReconcilerResourceName(reconcilerName, reconcilermanager.GitSync),
+		ReconcilerResourceName(reconcilerKey.Name, reconcilermanager.Reconciler),
+		ReconcilerResourceName(reconcilerKey.Name, reconcilermanager.HydrationController),
+		ReconcilerResourceName(reconcilerKey.Name, reconcilermanager.GitSync),
 	}
 	for _, c := range cms {
-		if err := r.cleanup(ctx, c, v1.NSConfigManagementSystem, kinds.ConfigMap()); err != nil {
+		key := types.NamespacedName{Namespace: reconcilerKey.Namespace, Name: c}
+		if err := r.cleanup(ctx, key, kinds.ConfigMap()); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *RepoSyncReconciler) deleteServiceAccount(ctx context.Context, reconcilerName string) error {
-	return r.cleanup(ctx, reconcilerName, v1.NSConfigManagementSystem, kinds.ServiceAccount())
+func (r *reconcilerBase) deleteServiceAccount(ctx context.Context, reconcilerKey types.NamespacedName) error {
+	return r.cleanup(ctx, reconcilerKey, kinds.ServiceAccount())
 }
 
-func (r *RepoSyncReconciler) deleteRoleBinding(ctx context.Context, namespace string, reposyncList *v1beta1.RepoSyncList) error {
-	rbName := RepoSyncPermissionsName()
-	if len(reposyncList.Items) == 0 {
-		return r.cleanup(ctx, rbName, namespace, kinds.RoleBinding())
+func (r *RepoSyncReconciler) deleteRoleBinding(ctx context.Context, namespace string, reconcilerKey types.NamespacedName) error {
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      RepoSyncPermissionsName(),
 	}
+	log := r.log.WithValues("object", key.String(), "kind", kinds.RoleBinding())
+
 	rb := &rbacv1.RoleBinding{}
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: rbName}, rb); err != nil {
-		return errors.Wrapf(err, "failed to get the RoleBinding object %s/%s", namespace, rbName)
+	if err := r.client.Get(ctx, key, rb); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.V(4).Info("Object already deleted")
+			return nil
+		}
+		return errors.Wrapf(err, "failed to get the RoleBinding object %s", key)
 	}
-	if err := r.updateRoleBindingSubjects(rb, reposyncList); err != nil {
-		return errors.Wrapf(err, "failed to update subjects of the RoleBinding object %s/%s", namespace, rbName)
+	if !r.deleteRoleBindingSubject(rb, reconcilerKey) {
+		log.V(4).Info("Subject already deleted")
+		return nil
 	}
-	return r.client.Update(ctx, rb)
+	if len(rb.Subjects) == 0 {
+		return r.cleanup(ctx, key, kinds.RoleBinding())
+	}
+	err := r.client.Update(ctx, rb)
+	if err != nil {
+		log.Info("Subject delete successful")
+	}
+	return err
 }
 
-func (r *RepoSyncReconciler) deleteDeployment(ctx context.Context, reconcilerName string) error {
-	return r.cleanup(ctx, reconcilerName, v1.NSConfigManagementSystem, kinds.Deployment())
+func (r *reconcilerBase) deleteDeployment(ctx context.Context, reconcilerKey types.NamespacedName) error {
+	return r.cleanup(ctx, reconcilerKey, kinds.Deployment())
 }
 
-func (r *RepoSyncReconciler) updateRoleBindingSubjects(rb *rbacv1.RoleBinding, rsList *v1beta1.RepoSyncList) error {
+func (r *RepoSyncReconciler) updateRoleBindingSubjects(rb *rbacv1.RoleBinding, rsList *v1beta1.RepoSyncList) {
 	var subjects []rbacv1.Subject
 	for _, rs := range rsList.Items {
 		subjects = append(subjects, subject(core.NsReconcilerName(rs.Namespace, rs.Name),
@@ -156,42 +135,58 @@ func (r *RepoSyncReconciler) updateRoleBindingSubjects(rb *rbacv1.RoleBinding, r
 		return subjects[i].Name < subjects[j].Name
 	})
 	rb.Subjects = subjects
-	return nil
 }
 
-func (r *RootSyncReconciler) deleteClusterRoleBinding(ctx context.Context) error {
-	rootsyncList := &v1beta1.RootSyncList{}
-	if err := r.client.List(ctx, rootsyncList, client.InNamespace(configsync.ControllerNamespace)); err != nil {
-		return errors.Wrapf(err, "failed to list the RootSync objects")
-	}
-	crbName := RootSyncPermissionsName()
-	if len(rootsyncList.Items) == 0 {
-		return r.cleanup(ctx, crbName, kinds.ClusterRoleBinding())
-	}
-	crb := &rbacv1.ClusterRoleBinding{}
-	if err := r.client.Get(ctx, client.ObjectKey{Name: crbName}, crb); err != nil {
-		return errors.Wrapf(err, "failed to get the ClusterRoleBinding object %s", crbName)
-	}
-	return r.updateClusterRoleBindingSubjects(crb, rootsyncList)
-}
-
-// cleanup cleans up cluster-scoped resources that are created for RootSync.
-// Other namespace-scoped resources are garbage collected via OwnerReferences.
-// Cluster-scoped resources cannot be handled via OwnerReferences because
-// RootSync is namespace-scoped, and cluster-scoped dependents can only specify
-// cluster-scoped owners.
-func (r *RootSyncReconciler) cleanup(ctx context.Context, name string, gvk schema.GroupVersionKind) error {
-	u := &unstructured.Unstructured{}
-	u.SetName(name)
-	u.SetGroupVersionKind(gvk)
-	err := r.client.Delete(ctx, u)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			r.log.V(4).Info("cluster-scoped resource not present", "resource", name)
-			return nil
+func (r *RepoSyncReconciler) deleteRoleBindingSubject(rb *rbacv1.RoleBinding, reconcilerKey types.NamespacedName) bool {
+	subjectToDelete := subject(reconcilerKey.Name, reconcilerKey.Namespace, "ServiceAccount")
+	found := false
+	for i, subject := range rb.Subjects {
+		if subject == subjectToDelete {
+			found = true
+			rb.Subjects = append(rb.Subjects[:i], rb.Subjects[i+1:]...)
+			break
 		}
 	}
+	return found
+}
+
+func (r *RootSyncReconciler) deleteClusterRoleBinding(ctx context.Context, reconcilerKey types.NamespacedName) error {
+	key := client.ObjectKey{Name: RootSyncPermissionsName()}
+	log := r.log.WithValues("object", key.String(), "kind", kinds.ClusterRoleBinding())
+
+	crb := &rbacv1.ClusterRoleBinding{}
+	if err := r.client.Get(ctx, key, crb); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.V(4).Info("Object already deleted")
+			return nil
+		}
+		return errors.Wrapf(err, "failed to get the ClusterRoleBinding object %s", key)
+	}
+	if !r.deleteClusterRoleBindingSubject(crb, reconcilerKey) {
+		log.V(4).Info("Subject already deleted")
+		return nil
+	}
+	if len(crb.Subjects) == 0 {
+		return r.cleanup(ctx, key, kinds.ClusterRoleBinding())
+	}
+	err := r.client.Update(ctx, crb)
+	if err != nil {
+		r.log.Info("Subject delete successful")
+	}
 	return err
+}
+
+func (r *RootSyncReconciler) deleteClusterRoleBindingSubject(crb *rbacv1.ClusterRoleBinding, reconcilerKey types.NamespacedName) bool {
+	subjectToDelete := subject(reconcilerKey.Name, reconcilerKey.Namespace, "ServiceAccount")
+	found := false
+	for i, subject := range crb.Subjects {
+		if subject == subjectToDelete {
+			found = true
+			crb.Subjects = append(crb.Subjects[:i], crb.Subjects[i+1:]...)
+			break
+		}
+	}
+	return found
 }
 
 func (r *RootSyncReconciler) updateClusterRoleBindingSubjects(crb *rbacv1.ClusterRoleBinding, rsList *v1beta1.RootSyncList) error {

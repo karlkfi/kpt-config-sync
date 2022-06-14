@@ -25,6 +25,7 @@ import (
 	"kpt.dev/configsync/pkg/metadata"
 	"kpt.dev/configsync/pkg/testing/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
@@ -99,18 +100,20 @@ func fakeClient(t *testing.T, objs ...client.Object) *syncerFake.Client {
 	return syncerFake.NewClient(t, s, objs...)
 }
 
-func TestCreate(t *testing.T) {
+func TestUpsertSecret(t *testing.T) {
 	testCases := []struct {
-		name       string
-		reposync   *v1beta1.RepoSync
-		client     *syncerFake.Client
-		wantError  bool
-		wantSecret *corev1.Secret
+		name          string
+		reposync      *v1beta1.RepoSync
+		client        *syncerFake.Client
+		wantOperation controllerutil.OperationResult
+		wantError     bool
+		wantSecret    *corev1.Secret
 	}{
 		{
-			name:     "Secret created for git source",
-			reposync: repoSyncWithAuth(reposyncNs, reposyncName, sshAuth, gitSource),
-			client:   fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, gitSource, core.Namespace(reposyncNs))),
+			name:          "Secret created for git source",
+			reposync:      repoSyncWithAuth(reposyncNs, reposyncName, sshAuth, gitSource),
+			client:        fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, gitSource, core.Namespace(reposyncNs))),
+			wantOperation: controllerutil.OperationResultCreated,
 			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, gitSource,
 				core.Namespace(v1.NSConfigManagementSystem),
 			),
@@ -121,26 +124,30 @@ func TestCreate(t *testing.T) {
 			client: fakeClient(t, secret(t, namespaceKey, updatedKeyData, sshAuth, gitSource, core.Namespace(reposyncNs)),
 				secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, gitSource, core.Namespace(v1.NSConfigManagementSystem)),
 			),
+			wantOperation: controllerutil.OperationResultUpdated,
 			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), updatedKeyData, sshAuth, gitSource,
 				core.Namespace(v1.NSConfigManagementSystem),
 			),
 		},
 		{
-			name:      "Secret not found for git source",
-			reposync:  repoSyncWithAuth(reposyncNs, reposyncName, sshAuth, gitSource),
-			client:    fakeClient(t),
-			wantError: true,
+			name:          "Secret not found for git source",
+			reposync:      repoSyncWithAuth(reposyncNs, reposyncName, sshAuth, gitSource),
+			client:        fakeClient(t),
+			wantOperation: controllerutil.OperationResultNone,
+			wantError:     true,
 		},
 		{
-			name:      "Secret not updated, secret not present for git source",
-			reposync:  repoSyncWithAuth(reposyncNs, reposyncName, sshAuth, gitSource),
-			client:    fakeClient(t, secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, gitSource, core.Namespace(v1.NSConfigManagementSystem))),
-			wantError: true,
+			name:          "Secret not updated, secret not present for git source",
+			reposync:      repoSyncWithAuth(reposyncNs, reposyncName, sshAuth, gitSource),
+			client:        fakeClient(t, secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, gitSource, core.Namespace(v1.NSConfigManagementSystem))),
+			wantOperation: controllerutil.OperationResultNone,
+			wantError:     true,
 		},
 		{
-			name:     "Secret created for helm source",
-			reposync: repoSyncWithAuth(reposyncNs, reposyncName, tokenAuth, helmSource),
-			client:   fakeClient(t, secret(t, tokenSecretName, tokenData, tokenAuth, helmSource, core.Namespace(reposyncNs))),
+			name:          "Secret created for helm source",
+			reposync:      repoSyncWithAuth(reposyncNs, reposyncName, tokenAuth, helmSource),
+			client:        fakeClient(t, secret(t, tokenSecretName, tokenData, tokenAuth, helmSource, core.Namespace(reposyncNs))),
+			wantOperation: controllerutil.OperationResultCreated,
 			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, tokenSecretName), tokenData, tokenAuth, helmSource,
 				core.Namespace(v1.NSConfigManagementSystem),
 			),
@@ -151,31 +158,37 @@ func TestCreate(t *testing.T) {
 			client: fakeClient(t, secret(t, tokenSecretName, updatedKeyData, tokenAuth, helmSource, core.Namespace(reposyncNs)),
 				secret(t, ReconcilerResourceName(nsReconcilerName, tokenSecretName), keyData, tokenAuth, helmSource, core.Namespace(v1.NSConfigManagementSystem)),
 			),
+			wantOperation: controllerutil.OperationResultUpdated,
 			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, tokenSecretName), updatedKeyData, tokenAuth, helmSource,
 				core.Namespace(v1.NSConfigManagementSystem),
 			),
 		},
 		{
-			name:      "Secret not found for helm source",
-			reposync:  repoSyncWithAuth(reposyncNs, reposyncName, tokenAuth, helmSource),
-			client:    fakeClient(t),
-			wantError: true,
+			name:          "Secret not found for helm source",
+			reposync:      repoSyncWithAuth(reposyncNs, reposyncName, tokenAuth, helmSource),
+			client:        fakeClient(t),
+			wantOperation: controllerutil.OperationResultNone,
+			wantError:     true,
 		},
 		{
-			name:      "Secret not updated, secret not present for helm source",
-			reposync:  repoSyncWithAuth(reposyncNs, reposyncName, tokenAuth, helmSource),
-			client:    fakeClient(t, secret(t, ReconcilerResourceName(nsReconcilerName, tokenSecretName), keyData, tokenAuth, helmSource, core.Namespace(v1.NSConfigManagementSystem))),
-			wantError: true,
+			name:          "Secret not updated, secret not present for helm source",
+			reposync:      repoSyncWithAuth(reposyncNs, reposyncName, tokenAuth, helmSource),
+			client:        fakeClient(t, secret(t, ReconcilerResourceName(nsReconcilerName, tokenSecretName), keyData, tokenAuth, helmSource, core.Namespace(v1.NSConfigManagementSystem))),
+			wantOperation: controllerutil.OperationResultNone,
+			wantError:     true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := upsertSecret(context.Background(), tc.reposync, tc.client, nsReconcilerName)
+			op, err := upsertSecret(context.Background(), tc.reposync, tc.client, nsReconcilerKey)
 			if tc.wantError && err == nil {
-				t.Errorf("Create() got error: %q, want error", err)
+				t.Errorf("upsertSecret() got error: %q, want error", err)
 			} else if !tc.wantError && err != nil {
-				t.Errorf("Create() got error: %q, want error: nil", err)
+				t.Errorf("upsertSecret() got error: %q, want error: nil", err)
+			}
+			if op != tc.wantOperation {
+				t.Errorf("upsertSecret() got operation: %q, want operation: %q", op, tc.wantOperation)
 			}
 			if !tc.wantError {
 				if diff := cmp.Diff(tc.client.Objects[core.IDOf(tc.wantSecret)], tc.wantSecret); diff != "" {

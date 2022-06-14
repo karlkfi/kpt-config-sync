@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
+	"sigs.k8s.io/cli-utils/pkg/testutil"
 )
 
 var reconcilerDeploymentReplicaCount int32 = 1
@@ -35,6 +37,10 @@ func setReplicas(specReplicaCount, statusReplicaCount int32) depMutator {
 		dep.Status.UpdatedReplicas = statusReplicaCount
 		dep.Status.ReadyReplicas = statusReplicaCount
 	}
+}
+
+func unsetGVK(dep *appsv1.Deployment) {
+	dep.SetGroupVersionKind(schema.GroupVersionKind{})
 }
 
 func setStateConditions(progressCondition string, availableStatus corev1.ConditionStatus) depMutator {
@@ -59,7 +65,7 @@ func TestDeploymentConditions(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		reconcilerDeployment *appsv1.Deployment
-		wantStatus           *deploymentStatus
+		wantStatus           *status.Result
 		wantError            bool
 	}{
 		{
@@ -68,9 +74,47 @@ func TestDeploymentConditions(t *testing.T) {
 				setReplicas(reconcilerDeploymentReplicaCount, reconcilerDeploymentReplicaCount),
 				setStateConditions("NewReplicaSetAvailable", corev1.ConditionTrue),
 			),
-			wantStatus: &deploymentStatus{
-				status:  statusCurrent,
-				message: fmt.Sprintf("Deployment is available. Replicas: %d", reconcilerDeploymentReplicaCount),
+			wantStatus: &status.Result{
+				Status:     status.CurrentStatus,
+				Message:    fmt.Sprintf("Deployment is available. Replicas: %d", reconcilerDeploymentReplicaCount),
+				Conditions: []status.Condition{},
+			},
+		},
+		{
+			name: "Deployment newly created",
+			reconcilerDeployment: repoSyncDeployment(nsReconcilerName,
+				setReplicas(reconcilerDeploymentReplicaCount, 0),
+			),
+			wantStatus: &status.Result{
+				Status:  status.InProgressStatus,
+				Message: fmt.Sprintf("Replicas: %d/%d", 0, reconcilerDeploymentReplicaCount),
+				Conditions: []status.Condition{
+					{
+						Type:    status.ConditionReconciling,
+						Status:  corev1.ConditionTrue,
+						Reason:  "LessReplicas",
+						Message: fmt.Sprintf("Replicas: %d/%d", 0, reconcilerDeploymentReplicaCount),
+					},
+				},
+			},
+		},
+		{
+			name: "Deployment newly created without GVK",
+			reconcilerDeployment: repoSyncDeployment(nsReconcilerName,
+				unsetGVK,
+				setReplicas(reconcilerDeploymentReplicaCount, 0),
+			),
+			wantStatus: &status.Result{
+				Status:  status.InProgressStatus,
+				Message: fmt.Sprintf("Replicas: %d/%d", 0, reconcilerDeploymentReplicaCount),
+				Conditions: []status.Condition{
+					{
+						Type:    status.ConditionReconciling,
+						Status:  corev1.ConditionTrue,
+						Reason:  "LessReplicas",
+						Message: fmt.Sprintf("Replicas: %d/%d", 0, reconcilerDeploymentReplicaCount),
+					},
+				},
 			},
 		},
 		{
@@ -79,20 +123,36 @@ func TestDeploymentConditions(t *testing.T) {
 				setReplicas(reconcilerDeploymentReplicaCount, reconcilerDeploymentReplicaCount),
 				setStateConditions("NewReplicaSetAvailable", corev1.ConditionFalse),
 			),
-			wantStatus: &deploymentStatus{
-				status:  statusInProgress,
-				message: "Reconciler Deployment not Available",
+			wantStatus: &status.Result{
+				Status:  status.InProgressStatus,
+				Message: "Deployment not Available",
+				Conditions: []status.Condition{
+					{
+						Type:    status.ConditionReconciling,
+						Status:  corev1.ConditionTrue,
+						Reason:  "DeploymentNotAvailable",
+						Message: "Deployment not Available",
+					},
+				},
 			},
 		},
 		{
 			name: "Not enough replicas available",
 			reconcilerDeployment: repoSyncDeployment(nsReconcilerName,
 				setReplicas(2, reconcilerDeploymentReplicaCount),
-				setStateConditions("Reconciler ReplicaSet not Available", corev1.ConditionTrue),
+				setStateConditions("ReplicaSet not Available", corev1.ConditionTrue),
 			),
-			wantStatus: &deploymentStatus{
-				status:  statusInProgress,
-				message: fmt.Sprintf("Replicas: %d/%d", reconcilerDeploymentReplicaCount, 2),
+			wantStatus: &status.Result{
+				Status:  status.InProgressStatus,
+				Message: fmt.Sprintf("Replicas: %d/%d", reconcilerDeploymentReplicaCount, 2),
+				Conditions: []status.Condition{
+					{
+						Type:    status.ConditionReconciling,
+						Status:  corev1.ConditionTrue,
+						Reason:  "LessReplicas",
+						Message: fmt.Sprintf("Replicas: %d/%d", reconcilerDeploymentReplicaCount, 2),
+					},
+				},
 			},
 		},
 		{
@@ -101,9 +161,17 @@ func TestDeploymentConditions(t *testing.T) {
 				setReplicas(reconcilerDeploymentReplicaCount, 0),
 				setStateConditions("ProgressDeadlineExceeded", corev1.ConditionFalse),
 			),
-			wantStatus: &deploymentStatus{
-				status:  statusFailed,
-				message: "Reconciler Deployment progress deadline exceeded",
+			wantStatus: &status.Result{
+				Status:  status.FailedStatus,
+				Message: "Progress deadline exceeded",
+				Conditions: []status.Condition{
+					{
+						Type:    status.ConditionStalled,
+						Status:  corev1.ConditionTrue,
+						Reason:  "ProgressDeadlineExceeded",
+						Message: "",
+					},
+				},
 			},
 		},
 	}
@@ -112,14 +180,12 @@ func TestDeploymentConditions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			gotResult, err := checkDeploymentConditions(tc.reconcilerDeployment)
 			if tc.wantError && err == nil {
-				t.Errorf("deploymentConditions() got error: %q, want error", err)
+				t.Errorf("checkDeploymentConditions() got error: %q, want error", err)
 			} else if !tc.wantError && err != nil {
-				t.Errorf("deploymentConditions() got error: %q, want error: nil", err)
+				t.Errorf("checkDeploymentConditions() got error: %q, want error: nil", err)
 			}
 			if !tc.wantError {
-				if !cmp.Equal(gotResult, tc.wantStatus, cmp.AllowUnexported(deploymentStatus{})) {
-					t.Errorf("deploymentConditions() got result: %v, want result: %v", gotResult, tc.wantStatus)
-				}
+				testutil.AssertEqual(t, tc.wantStatus, gotResult, "unexpected result")
 			}
 		})
 	}

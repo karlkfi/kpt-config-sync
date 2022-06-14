@@ -260,15 +260,45 @@ func (nt *NT) Update(obj client.Object, opts ...client.UpdateOption) error {
 	return nt.Client.Update(nt.Context, obj, opts...)
 }
 
-// Delete is identical to Delete defined for client.Client, but without requiring Context.
+// Delete is similar to Delete defined for client.Client, but without requiring Context.
+// If no policy is specified, foreground deletion is used.
 func (nt *NT) Delete(obj client.Object, opts ...client.DeleteOption) error {
+	policyFound := false
+	for _, opt := range opts {
+		if _, ok := opt.(client.PropagationPolicy); ok {
+			policyFound = true
+			break
+		}
+	}
+	// Default to foreground deletion if unspecified.
+	// This is almost always what people assume when they delete,
+	// and it should make tests less flakey.
+	if !policyFound {
+		opts = append(opts, client.PropagationPolicy(metav1.DeletePropagationForeground))
+	}
+
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.DebugLogf("deleting %s", fmtObj(obj))
 	return nt.Client.Delete(nt.Context, obj, opts...)
 }
 
-// DeleteAllOf is identical to DeleteAllOf defined for client.Client, but without requiring Context.
+// DeleteAllOf is similar to DeleteAllOf defined for client.Client, but without requiring Context.
+// If no policy is specified, foreground deletion is used.
 func (nt *NT) DeleteAllOf(obj client.Object, opts ...client.DeleteAllOfOption) error {
+	policyFound := false
+	for _, opt := range opts {
+		if _, ok := opt.(client.PropagationPolicy); ok {
+			policyFound = true
+			break
+		}
+	}
+	// Default to foreground deletion if unspecified.
+	// This is almost always what people assume when they delete,
+	// and it should make tests less flakey.
+	if !policyFound {
+		opts = append(opts, client.PropagationPolicy(metav1.DeletePropagationForeground))
+	}
+
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.DebugLogf("deleting all of %T", obj)
 	return nt.Client.DeleteAllOf(nt.Context, obj, opts...)

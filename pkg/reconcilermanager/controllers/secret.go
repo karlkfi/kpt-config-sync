@@ -20,13 +20,13 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "kpt.dev/configsync/pkg/api/configmanagement/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/api/configsync/v1beta1"
-	"kpt.dev/configsync/pkg/kinds"
 	"kpt.dev/configsync/pkg/metadata"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func shouldUpsertGitSecret(rs *v1beta1.RepoSync) bool {
@@ -38,10 +38,10 @@ func shouldUpsertHelmSecret(rs *v1beta1.RepoSync) bool {
 
 // upsertSecret creates or updates the secret in config-management-system
 // namespace using the existing secret in the reposync.namespace.
-func upsertSecret(ctx context.Context, rs *v1beta1.RepoSync, c client.Client, reconcilerName string) error {
+func upsertSecret(ctx context.Context, rs *v1beta1.RepoSync, c client.Client, reconcilerKey types.NamespacedName) (controllerutil.OperationResult, error) {
 	// Secret is only created if sourceType is git or helm and auth is not 'none', 'gcenode', or 'gcpserviceaccount'.
 	if !shouldUpsertGitSecret(rs) && !shouldUpsertHelmSecret(rs) {
-		return nil
+		return controllerutil.OperationResultNone, nil
 	}
 	// namespaceSecret represent secret in reposync.namespace.
 	namespaceSecret := &corev1.Secret{}
@@ -53,35 +53,29 @@ func upsertSecret(ctx context.Context, rs *v1beta1.RepoSync, c client.Client, re
 	}
 	if err := get(ctx, namespaceSecretName, rs.Namespace, namespaceSecret, c); err != nil {
 		if apierrors.IsNotFound(err) {
-			return errors.Errorf(
+			return controllerutil.OperationResultNone, errors.Errorf(
 				"%s not found. Create %s secret in %s namespace", namespaceSecretName, namespaceSecretName, rs.Namespace)
 		}
-		return errors.Wrapf(err, "error while retrieving namespace secret")
+		return controllerutil.OperationResultNone, errors.Wrapf(err, "error while retrieving namespace secret")
 	}
 
-	// existingsecret represent secret in config-management-system namespace.
-	existingsecret := &corev1.Secret{}
+	var reconcilerSecret corev1.Secret
+	reconcilerSecret.Name = ReconcilerResourceName(reconcilerKey.Name, namespaceSecretName)
+	reconcilerSecret.Namespace = reconcilerKey.Namespace
 
-	secretName := ReconcilerResourceName(reconcilerName, namespaceSecretName)
-	if err := get(ctx, secretName, v1.NSConfigManagementSystem, existingsecret, c); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return errors.Wrapf(err,
-				"failed to get secret %s in namespace %s", secretName, v1.NSConfigManagementSystem)
+	return controllerruntime.CreateOrUpdate(ctx, c, &reconcilerSecret, func() error {
+		labels := reconcilerSecret.Labels
+		if labels == nil {
+			labels = make(map[string]string, 2)
 		}
-		// Secret not present in config-management-system namespace. Create one using
-		// secret in reposync.namespace.
-		if err := create(ctx, namespaceSecret, reconcilerName, c, rs.Name, rs.Namespace); err != nil {
-			return errors.Wrapf(err,
-				"failed to create %s secret in %s namespace",
-				rs.Spec.SecretRef.Name, v1.NSConfigManagementSystem)
-		}
+		labels[metadata.SyncNamespaceLabel] = rs.Namespace
+		labels[metadata.SyncNameLabel] = rs.Name
+		reconcilerSecret.Labels = labels
+
+		reconcilerSecret.Data = namespaceSecret.Data
+		reconcilerSecret.Type = namespaceSecret.Type
 		return nil
-	}
-	// Update the existing secret in config-management-system.
-	if err := update(ctx, existingsecret, namespaceSecret, c); err != nil {
-		return errors.Wrapf(err, "failed to update the secret %s", existingsecret.Name)
-	}
-	return nil
+	})
 }
 
 // GetKeys returns the keys that are contained in the Secret.
@@ -106,42 +100,6 @@ func get(ctx context.Context, name, namespace string, secret *corev1.Secret, c c
 		Namespace: namespace,
 	}
 	return c.Get(ctx, nn, secret)
-}
-
-// create secret get the existing secret in reposync.namespace and use secret.data and
-// secret.type to create a new secret in config-management-system namespace.
-func create(ctx context.Context, namespaceSecret *corev1.Secret, reconcilerName string, c client.Client, syncName string, syncNamespace string) error {
-	newSecret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       kinds.Secret().Kind,
-			APIVersion: kinds.Secret().Version,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				metadata.SyncNamespaceLabel: syncNamespace,
-				metadata.SyncNameLabel:      syncName,
-			},
-		},
-	}
-
-	// mutate newSecret with values from the secret in reposync.namespace.
-	newSecret.Name = ReconcilerResourceName(reconcilerName, namespaceSecret.Name)
-	newSecret.Namespace = v1.NSConfigManagementSystem
-	newSecret.Data = namespaceSecret.Data
-	newSecret.Type = namespaceSecret.Type
-
-	return c.Create(ctx, newSecret)
-}
-
-// update secret fetch the existing secret from the cluster and use secret.data and
-// secret.type to create a new secret in config-management-system namespace.
-func update(ctx context.Context, existingsecret *corev1.Secret, namespaceSecret *corev1.Secret, c client.Client) error {
-	// Update data and type for the existing secret with values from the secret in
-	// reposync.namespace
-	existingsecret.Data = namespaceSecret.Data
-	existingsecret.Type = namespaceSecret.Type
-
-	return c.Update(ctx, existingsecret)
 }
 
 // SkipForAuth returns true if the passed auth is either 'none' or 'gcenode' or

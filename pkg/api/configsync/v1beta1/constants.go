@@ -12,22 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log
+package v1beta1
 
 import (
-	"flag"
-	"fmt"
-	"os"
+	"kpt.dev/configsync/pkg/api/configmanagement"
+	"kpt.dev/configsync/pkg/reconcilermanager"
 )
 
-// HandleError prints the error to the standard error, prints the usage if the `printUsage` flag is true,
-// exports the error to the error file and exits the process with the exit code.
-func HandleError(log *Logger, printUsage bool, format string, a ...interface{}) {
-	s := fmt.Sprintf(format, a...)
-	fmt.Fprintln(os.Stderr, s)
-	if printUsage {
-		flag.Usage()
-	}
-	log.ExportError(s)
-	os.Exit(1)
-}
+// SyncFinalizer is a finalizer handled by ReconcilerManager to ensure
+// deletion of managed resource objects complete before the RootSync/RepoSync is
+// deleted
+const SyncFinalizer = reconcilermanager.ManagerName + "." + configmanagement.GroupName
