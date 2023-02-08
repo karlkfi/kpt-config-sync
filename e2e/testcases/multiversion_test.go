@@ -278,11 +278,7 @@ func anvilV1CRD() *apiextensionsv1.CustomResourceDefinition {
 
 func anvilCR(version, name string, weight int64) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "acme.com",
-		Version: version,
-		Kind:    "Anvil",
-	})
+	u.SetGroupVersionKind(anvilGVK(version))
 	if name != "" {
 		u.SetName(name)
 	}
@@ -292,6 +288,14 @@ func anvilCR(version, name string, weight int64) *unstructured.Unstructured {
 		}
 	}
 	return u
+}
+
+func anvilGVK(version string) schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   "acme.com",
+		Version: version,
+		Kind:    "Anvil",
+	}
 }
 
 func TestMultipleVersions_RoleBinding(t *testing.T) {

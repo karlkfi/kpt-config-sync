@@ -31,6 +31,7 @@ import (
 	nomostesting "kpt.dev/configsync/e2e/nomostest/testing"
 	"kpt.dev/configsync/pkg/api/configsync"
 	"kpt.dev/configsync/pkg/importer/analyzer/validation/nonhierarchical"
+	"kpt.dev/configsync/pkg/kinds"
 	"kpt.dev/configsync/pkg/testing/fake"
 	"kpt.dev/configsync/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -473,16 +474,14 @@ func TestLargeCRD(t *testing.T) {
 	nt.WaitForRepoSyncs()
 	nt.RenewClient()
 
-	_, err := nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Object())
-	})
+	err := nomostest.WatchObject(nt, kinds.CustomResourceDefinitionV1(), "challenges.acme.cert-manager.io", "", nil,
+		nomostest.WatchTimeout(30*time.Second))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
 
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("solrclouds.solr.apache.org", "", fake.CustomResourceDefinitionV1Object())
-	})
+	err = nomostest.WatchObject(nt, kinds.CustomResourceDefinitionV1(), "solrclouds.solr.apache.org", "", nil,
+		nomostest.WatchTimeout(30*time.Second))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -512,9 +511,9 @@ func TestLargeCRD(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Update label for one CRD")
 	nt.WaitForRepoSyncs()
 
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Object(), nomostest.HasLabel("random-key", "random-value"))
-	})
+	err = nomostest.WatchObject(nt, kinds.CustomResourceDefinitionV1(), "challenges.acme.cert-manager.io", "",
+		[]nomostest.Predicate{nomostest.HasLabel("random-key", "random-value")},
+		nomostest.WatchTimeout(30*time.Second))
 	if err != nil {
 		nt.T.Fatal(err)
 	}

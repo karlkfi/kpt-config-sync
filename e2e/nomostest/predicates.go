@@ -606,6 +606,21 @@ func ResourceVersionNotEquals(nt *NT, unexpected string) Predicate {
 	}
 }
 
+// HasGenerationAtLeast checks that the object's Generation is greater than or
+// equal to the specified value.
+func HasGenerationAtLeast(minGeneration int64) Predicate {
+	return func(obj client.Object) error {
+		if obj == nil {
+			return ErrObjectNotFound
+		}
+		gen := obj.GetGeneration()
+		if gen < minGeneration {
+			return fmt.Errorf("expected generation of at least %d, but found %d", minGeneration, gen)
+		}
+		return nil
+	}
+}
+
 // StatusEquals checks that the object's computed status matches the specified
 // status.
 func StatusEquals(nt *NT, expected status.Status) Predicate {
@@ -823,7 +838,7 @@ func MissingFinalizer(name string) Predicate {
 	}
 }
 
-// ObjectNotFoundPredicate returns an error unless the object is nil (deleted).
+// ObjectNotFoundPredicate returns an error unless the object is nil (not found).
 func ObjectNotFoundPredicate(o client.Object) error {
 	if o == nil {
 		// Success! Object Deleted.
@@ -832,4 +847,12 @@ func ObjectNotFoundPredicate(o client.Object) error {
 	// If you see this error, the WatchObject timeout was probably reached.
 	return errors.Errorf("expected %T object %s to be not found",
 		o, core.ObjectNamespacedName(o))
+}
+
+// ObjectFoundPredicate returns ErrObjectNotFound if the object is nil (not found).
+func ObjectFoundPredicate(o client.Object) error {
+	if o == nil {
+		return ErrObjectNotFound
+	}
+	return nil
 }

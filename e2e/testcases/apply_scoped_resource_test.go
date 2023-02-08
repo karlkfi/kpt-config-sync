@@ -18,13 +18,11 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"kpt.dev/configsync/e2e/nomostest"
 	"kpt.dev/configsync/e2e/nomostest/ntopts"
 	nomostesting "kpt.dev/configsync/e2e/nomostest/testing"
 	"kpt.dev/configsync/pkg/api/configsync"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestApplyScopedResources(t *testing.T) {
@@ -59,7 +57,10 @@ func TestApplyScopedResources(t *testing.T) {
 		// Wait for the kubevirt custom resource to be deleted to prevent the custom resource from
 		// being stuck in the Terminating state which can occur if the operator is deleted prior
 		// to the resource.
-		waitForKubeVirtDeletion(nt)
+		err := nomostest.WatchForNotFound(nt, kubevirtGVK(), "kubevirt", "kubevirt")
+		if err != nil {
+			nt.T.Fatal(err)
+		}
 
 		// Avoids KNV2006 since the repo contains a number of cluster scoped resources
 		// https://cloud.google.com/anthos-config-management/docs/reference/errors#knv2006
@@ -96,22 +97,10 @@ func TestApplyScopedResources(t *testing.T) {
 	}
 }
 
-func waitForKubeVirtDeletion(nt *nomostest.NT) {
-	_, err := nomostest.Retry(30*time.Second, func() error {
-		return nt.ValidateNotFound("kubevirt", "kubevirt", kubeVirtObject())
-	})
-	if err != nil {
-		nt.T.Error(err)
-	}
-}
-
-func kubeVirtObject() client.Object {
-	kubeVirtObj := &unstructured.Unstructured{}
-	kubeVirtObj.SetGroupVersionKind(schema.GroupVersionKind{
+func kubevirtGVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
 		Group:   "kubevirt.io",
 		Version: "v1",
 		Kind:    "kubevirt",
-	})
-
-	return kubeVirtObj
+	}
 }

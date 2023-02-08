@@ -17,7 +17,6 @@ package e2e
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -709,9 +708,9 @@ func TestClusterSelectorForCRD(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add a custom resource definition with an unselected cluster-name-selector annotation")
 	nt.WaitForRepoSyncs()
-	_, err := nomostest.Retry(10*time.Second, func() error {
-		return nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{})
-	})
+	// CRD should be marked as deleted, but may not be NotFound yet, because its
+	// finalizer will block until all objects of that type are deleted.
+	err := nomostest.WatchForNotFound(nt, kinds.CustomResourceDefinitionV1(), crd.Name, crd.Namespace)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -740,9 +739,9 @@ func TestClusterSelectorForCRD(t *testing.T) {
 	nt.RootRepos[configsync.RootSyncName].Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.RootRepos[configsync.RootSyncName].CommitAndPush("Add a custom resource definition with an unselected ClusterSelector")
 	nt.WaitForRepoSyncs()
-	_, err = nomostest.Retry(10*time.Second, func() error {
-		return nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{})
-	})
+	// CRD should be marked as deleted, but may not be NotFound yet, because its
+	// finalizer will block until all objects of that type are deleted.
+	err = nomostest.WatchForNotFound(nt, kinds.CustomResourceDefinitionV1(), crd.Name, crd.Namespace)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
