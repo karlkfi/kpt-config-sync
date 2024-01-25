@@ -135,6 +135,22 @@ func RecordApplyDuration(ctx context.Context, status, commit string, startTime t
 	record(tagCtx, durationMeasurement, lastApplyMeasurement)
 }
 
+// RecordSyncDuration produces measurements for the SyncDuration and LastSyncTimestamp views.
+func RecordSyncDuration(ctx context.Context, status, commit string, startTime time.Time) {
+	if commit == "" {
+		// TODO: Remove default value when otel-collector supports empty tag values correctly.
+		commit = CommitNone
+	}
+	now := time.Now()
+	tagCtx, _ := tag.New(ctx,
+		tag.Upsert(KeyStatus, status),
+		tag.Upsert(KeyCommit, commit),
+	)
+	durationMeasurement := SyncDuration.M(now.Sub(startTime).Seconds())
+	lastApplyMeasurement := LastSync.M(now.Unix())
+	record(tagCtx, durationMeasurement, lastApplyMeasurement)
+}
+
 // RecordResourceFight produces measurements for the ResourceFights view.
 func RecordResourceFight(ctx context.Context, _ string) {
 	//tagCtx, _ := tag.New(ctx,

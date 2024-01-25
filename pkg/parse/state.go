@@ -24,9 +24,10 @@ import (
 )
 
 type sourceStatus struct {
-	commit     string
-	errs       status.MultiError
-	lastUpdate metav1.Time
+	commit              string
+	commitFirstObserved metav1.Time
+	errs                status.MultiError
+	lastUpdate          metav1.Time
 }
 
 func (gs sourceStatus) equal(other sourceStatus) bool {
@@ -34,8 +35,9 @@ func (gs sourceStatus) equal(other sourceStatus) bool {
 }
 
 type renderingStatus struct {
-	commit     string
-	message    string
+	commit  string
+	message string
+	// TODO: figure out how to count render attempts
 	errs       status.MultiError
 	lastUpdate metav1.Time
 	// requiresRendering indicates whether the sync source has dry configs

@@ -50,6 +50,13 @@ var (
 		"The duration of the parse-apply-watch loop in seconds",
 		stats.UnitSeconds)
 
+	// SyncDuration metric measures the latency from commit first seen to
+	// sync attempt completion (success or failure).
+	SyncDuration = stats.Float64(
+		"sync_duration_seconds",
+		"The duration between commit first observed and sync attempt completion in seconds",
+		stats.UnitSeconds)
+
 	// LastSync metric measures the timestamp of the latest Git sync.
 	LastSync = stats.Int64(
 		"last_sync_timestamp",

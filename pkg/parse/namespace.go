@@ -294,9 +294,6 @@ func (p *namespace) setSyncStatusWithRetries(ctx context.Context, newStatus sync
 		klog.Infof("New sync errors for RepoSync %s/%s: %+v",
 			rs.Namespace, rs.Name, csErrs)
 	}
-	if !newStatus.syncing && rs.Status.Sync.Commit != "" {
-		metrics.RecordLastSync(ctx, metrics.StatusTagValueFromSummary(errorSummary), rs.Status.Sync.Commit, rs.Status.Sync.LastUpdate.Time)
-	}
 
 	if klog.V(5).Enabled() {
 		klog.Infof("Updating status for RepoSync %s/%s:\nDiff (- Expected, + Actual):\n%s",

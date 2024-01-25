@@ -218,7 +218,7 @@ func ReconcilerSourceMetrics(nt *NT, syncLabels prometheusmodel.LabelSet, commit
 }
 
 // ReconcilerSyncMetrics returns a MetricsPredicate that validates the
-// LastApplyTimestampView, ApplyDurationView, and LastSyncTimestampView metrics.
+// LastApplyTimestampView, ApplyDurationView, LastSyncTimestampView, and SyncDurationView metrics.
 func ReconcilerSyncMetrics(nt *NT, syncLabels prometheusmodel.LabelSet, commitHash string) MetricsPredicate {
 	nt.Logger.Debugf("[METRICS] Expecting last apply & sync status (commit: %s): %s", commitHash, metrics.StatusSuccess)
 	return func(ctx context.Context, v1api prometheusv1.API) error {
@@ -228,6 +228,8 @@ func ReconcilerSyncMetrics(nt *NT, syncLabels prometheusmodel.LabelSet, commitHa
 		err = multierr.Append(err, metricApplyDurationViewHasStatus(ctx, nt, v1api,
 			syncLabels, commitHash, metrics.StatusSuccess))
 		err = multierr.Append(err, metricLastSyncTimestampHasStatus(ctx, nt, v1api,
+			syncLabels, commitHash, metrics.StatusSuccess))
+		err = multierr.Append(err, metricSyncDurationViewHasStatus(ctx, nt, v1api,
 			syncLabels, commitHash, metrics.StatusSuccess))
 		return err
 	}
@@ -428,6 +430,19 @@ func metricLastApplyTimestampHasStatus(ctx context.Context, nt *NT, v1api promet
 func metricApplyDurationViewHasStatus(ctx context.Context, nt *NT, v1api prometheusv1.API, syncLabels prometheusmodel.LabelSet, commitHash, status string) error {
 	metricName := ocmetrics.ApplyDurationView.Name
 	// ApplyDurationView is a distribution. Query count to aggregate.
+	metricName = fmt.Sprintf("%s%s%s", prometheusConfigSyncMetricPrefix, metricName, prometheusDistributionCountSuffix)
+	labels := prometheusmodel.LabelSet{
+		prometheusmodel.LabelName(ocmetrics.KeyComponent.Name()): prometheusmodel.LabelValue(ocmetrics.OtelCollectorName),
+		prometheusmodel.LabelName(ocmetrics.KeyCommit.Name()):    prometheusmodel.LabelValue(commitHash),
+		prometheusmodel.LabelName(ocmetrics.KeyStatus.Name()):    prometheusmodel.LabelValue(status),
+	}.Merge(syncLabels)
+	query := fmt.Sprintf("%s%s", metricName, labels)
+	return metricExists(ctx, nt, v1api, query)
+}
+
+func metricSyncDurationViewHasStatus(ctx context.Context, nt *NT, v1api prometheusv1.API, syncLabels prometheusmodel.LabelSet, commitHash, status string) error {
+	metricName := ocmetrics.SyncDurationView.Name
+	// SyncDurationView is a distribution. Query count to aggregate.
 	metricName = fmt.Sprintf("%s%s%s", prometheusConfigSyncMetricPrefix, metricName, prometheusDistributionCountSuffix)
 	labels := prometheusmodel.LabelSet{
 		prometheusmodel.LabelName(ocmetrics.KeyComponent.Name()): prometheusmodel.LabelValue(ocmetrics.OtelCollectorName),

@@ -215,6 +215,10 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	// pull the source commit and directory with retries within 5 minutes.
 	gs.commit, syncDir, gs.errs = hydrate.SourceCommitAndDirWithRetry(util.SourceRetryBackoff, p.options().SourceType, p.options().SourceDir, p.options().SyncDir, p.options().ReconcilerName)
 
+	if gs.commit != state.sourceStatus.commit {
+		gs.commitFirstObserved = metav1.Now()
+	}
+
 	// If failed to fetch the source commit and directory, set `.status.source` to fail early.
 	// Otherwise, set `.status.rendering` before `.status.source` because the parser needs to
 	// read and parse the configs after rendering is done and there might have errors.
@@ -276,8 +280,9 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	oldSyncDir := state.cache.source.syncDir
 	// `read` is called no matter what the trigger is.
 	ps := sourceState{
-		commit:  gs.commit,
-		syncDir: syncDir,
+		commit:              gs.commit,
+		commitFirstObserved: gs.commitFirstObserved,
+		syncDir:             syncDir,
 	}
 	if errs := read(ctx, p, trigger, state, ps); errs != nil {
 		state.invalidate(errs)
@@ -411,7 +416,8 @@ func readFromSource(ctx context.Context, p Parser, trigger string, recState *rec
 		requiresRendering: options.RenderingEnabled,
 	}
 	srcStatus := sourceStatus{
-		commit: srcState.commit,
+		commit:              srcState.commit,
+		commitFirstObserved: srcState.commitFirstObserved,
 	}
 
 	srcState, hydrationStatus = parseHydrationState(p, srcState, hydrationStatus)
@@ -483,9 +489,10 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 	sourceErrs := parseSource(ctx, p, trigger, state)
 	klog.V(3).Info("Parser stopped")
 	newSourceStatus := sourceStatus{
-		commit:     state.cache.source.commit,
-		errs:       sourceErrs,
-		lastUpdate: metav1.Now(),
+		commit:              state.cache.source.commit,
+		commitFirstObserved: state.cache.source.commitFirstObserved,
+		errs:                sourceErrs,
+		lastUpdate:          metav1.Now(),
 	}
 	if state.needToSetSourceStatus(newSourceStatus) {
 		klog.V(3).Infof("Updating source status (after parse): %#v", newSourceStatus)
@@ -516,6 +523,16 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 
 	// This is to terminate `updateSyncStatusPeriodically`.
 	cancel()
+
+	syncStatus := metrics.StatusSuccess
+	if sourceErrs != nil || syncErrs != nil {
+		syncStatus = metrics.StatusError
+	}
+
+	// Send sync attempt metrics, even if the status hasn't changed.
+	// This allows querying when the last sync attempt was made and how long
+	// it's been since the commit was first seen.
+	metrics.RecordSyncDuration(ctx, syncStatus, state.sourceStatus.commit, state.sourceStatus.commitFirstObserved.Time)
 
 	klog.V(3).Info("Updating sync status (after sync)")
 	if err := setSyncStatus(ctx, p, state, false, syncErrs); err != nil {

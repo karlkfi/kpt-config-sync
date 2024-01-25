@@ -54,6 +54,7 @@ func RegisterReconcilerMetricsViews() error {
 		ReconcilerErrorsView,
 		ParserDurationView,
 		LastApplyTimestampView,
+		SyncDurationView,
 		LastSyncTimestampView,
 		DeclaredResourcesView,
 		ApplyOperationsView,

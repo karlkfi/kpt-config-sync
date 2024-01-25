@@ -74,11 +74,20 @@ var (
 		Aggregation: view.Distribution(longDistributionBounds...),
 	}
 
+	// SyncDurationView aggregates the SyncDuration metric measurements.
+	SyncDurationView = &view.View{
+		Name:        SyncDuration.Name(),
+		Measure:     SyncDuration,
+		Description: "The latency distribution of sync attempts from source",
+		TagKeys:     []tag.Key{KeyCommit, KeyStatus},
+		Aggregation: view.Distribution(longDistributionBounds...),
+	}
+
 	// LastSyncTimestampView aggregates the LastSyncTimestamp metric measurements.
 	LastSyncTimestampView = &view.View{
 		Name:        LastSync.Name(),
 		Measure:     LastSync,
-		Description: "The timestamp of the most recent sync from Git",
+		Description: "The timestamp of the most recent sync attempt from source",
 		TagKeys:     []tag.Key{KeyCommit, KeyStatus},
 		Aggregation: view.LastValue(),
 	}
@@ -87,7 +96,7 @@ var (
 	DeclaredResourcesView = &view.View{
 		Name:        DeclaredResources.Name(),
 		Measure:     DeclaredResources,
-		Description: "The current number of declared resources parsed from Git",
+		Description: "The current number of declared resources parsed from source",
 		TagKeys:     []tag.Key{KeyCommit},
 		Aggregation: view.LastValue(),
 	}

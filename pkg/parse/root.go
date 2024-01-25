@@ -415,9 +415,6 @@ func (p *root) setSyncStatusWithRetries(ctx context.Context, newStatus syncStatu
 		klog.Infof("New sync errors for RootSync %s/%s: %+v",
 			rs.Namespace, rs.Name, csErrs)
 	}
-	if !newStatus.syncing && rs.Status.Sync.Commit != "" {
-		metrics.RecordLastSync(ctx, metrics.StatusTagValueFromSummary(errorSummary), rs.Status.Sync.Commit, rs.Status.Sync.LastUpdate.Time)
-	}
 
 	if klog.V(5).Enabled() {
 		klog.Infof("Updating sync status for RootSync %s/%s:\nDiff (- Expected, + Actual):\n%s",

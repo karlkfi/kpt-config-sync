@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"kpt.dev/configsync/pkg/api/configsync"
@@ -69,6 +70,9 @@ type Files struct {
 type sourceState struct {
 	// commit is the commit read from the source of truth.
 	commit string
+	// commitFirstObserved is the timestamp when the latest commit was first
+	// observed by the reconciler (after being downloaded and rendered).
+	commitFirstObserved metav1.Time
 	// syncDir is the absolute path to the sync directory that includes the configurations.
 	syncDir cmpath.Absolute
 	// files is the list of all observed files in the sync directory (recursively).
